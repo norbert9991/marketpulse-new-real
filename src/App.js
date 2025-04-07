@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './frontend/LandingPage/Home';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import AdminDashboard from './Admin/admin-dashboard';
@@ -45,14 +45,22 @@ function App() {
       <CssBaseline /> {/* Normalize CSS and apply baseline styles */}
       <Router>
         <Routes>
-          <Route path="/home" element={<Home />} />
-          <Route 
-            path="/user-dashboard" 
-            element={<ProtectedRoute element={UserDashboard} />} 
-          />
+          <Route path="/" element={<Home />} />
           <Route 
             path="/admin-dashboard" 
-            element={<ProtectedRoute element={AdminDashboard} requiredRole="admin" />} 
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/user-dashboard" 
+            element={
+              <ProtectedRoute requiredRole="user">
+                <UserDashboard />
+              </ProtectedRoute>
+            } 
           />
           <Route 
             path="/UserManagement" 
