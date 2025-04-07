@@ -114,14 +114,19 @@ const LoginDialog = ({ open, onClose, isLogin, toggleForm }) => {
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
       
-      // Redirect based on role
+      // Redirect based on role - use hash router friendly paths
       if (response.data.user.role === 'admin') {
         navigate('/admin-dashboard');
+        // Close the dialog before navigation
+        onClose();
+        // Reload the page to ensure proper routing
+        setTimeout(() => {
+          window.location.href = '/#/admin-dashboard';
+        }, 100);
       } else {
         navigate('/user-dashboard');
+        onClose();
       }
-      
-      onClose();
     } catch (err) {
       console.error('Login error:', err);
       setError(err.response?.data?.message || 'Login failed');

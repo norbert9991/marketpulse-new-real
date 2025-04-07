@@ -46,6 +46,9 @@ function App() {
       <Router>
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/home" element={<Home />} />
+          
+          {/* Admin Routes */}
           <Route 
             path="/admin-dashboard" 
             element={
@@ -55,38 +58,63 @@ function App() {
             } 
           />
           <Route 
+            path="/UserManagement" 
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <UserManagement />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/TransactionPage" 
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <TransactionPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/adminsettings" 
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminSettings />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* User Routes */}
+          <Route 
             path="/user-dashboard" 
             element={
-              <ProtectedRoute requiredRole="user">
+              <ProtectedRoute>
                 <UserDashboard />
               </ProtectedRoute>
             } 
           />
           <Route 
-            path="/UserManagement" 
-            element={<ProtectedRoute element={UserManagement} requiredRole="admin" />} 
-          />
-          <Route 
-            path="/TransactionPage" 
-            element={<ProtectedRoute element={TransactionPage} requiredRole="admin" />} 
-          />
-          <Route 
             path="/trade" 
-            element={<ProtectedRoute element={Trade} />} 
+            element={
+              <ProtectedRoute>
+                <Trade />
+              </ProtectedRoute>
+            } 
           />
           <Route 
             path="/market" 
-            element={<ProtectedRoute element={Market} />} 
+            element={
+              <ProtectedRoute>
+                <Market />
+              </ProtectedRoute>
+            } 
           />
           <Route 
             path="/settings" 
-            element={<ProtectedRoute element={Settings} />} 
+            element={
+              <ProtectedRoute>
+                <Settings />
+              </ProtectedRoute>
+            } 
           />
-          <Route
-            path="/adminsettings"
-            element={<ProtectedRoute element={AdminSettings} requiredRole="admin" />}
-          />
-          {/* Add more routes as needed */}
         </Routes>
       </Router>
     </ThemeProvider>
