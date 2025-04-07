@@ -12,12 +12,9 @@ import {
   IconButton
 } from '@mui/material';
 import { styled } from '@mui/system';
-import axios from 'axios';
+import axiosInstance from '../../axiosConfig';
 import { useNavigate } from 'react-router-dom';
 import CloseIcon from '@mui/icons-material/Close';
-
-// API URL from environment variable
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 // Forex Trading Color Palette
 const colors = {
@@ -112,7 +109,7 @@ const LoginDialog = ({ open, onClose, isLogin, toggleForm }) => {
     setLoading(true);
     setError('');
     try {
-      const response = await axios.post(`${API_URL}/api/auth/login`, {
+      const response = await axiosInstance.post('/api/auth/login', {
         email,
         password
       });
@@ -129,6 +126,7 @@ const LoginDialog = ({ open, onClose, isLogin, toggleForm }) => {
       
       onClose();
     } catch (err) {
+      console.error('Login error:', err);
       setError(err.response?.data?.message || 'Login failed');
     } finally {
       setLoading(false);
@@ -144,7 +142,7 @@ const LoginDialog = ({ open, onClose, isLogin, toggleForm }) => {
     setLoading(true);
     setError('');
     try {
-      await axios.post(`${API_URL}/api/auth/register`, {
+      await axiosInstance.post('/api/auth/register', {
         username: fullName.split(' ')[0], // Simple username from first name
         email,
         password,
@@ -155,6 +153,7 @@ const LoginDialog = ({ open, onClose, isLogin, toggleForm }) => {
       toggleForm();
       setError('');
     } catch (err) {
+      console.error('Registration error:', err);
       setError(err.response?.data?.message || 'Registration failed');
     } finally {
       setLoading(false);

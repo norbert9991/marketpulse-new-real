@@ -18,13 +18,12 @@ load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fb4f4f255fb38f23a4d7379be97c837b')
 
-# Configure CORS to allow requests from the frontend, whether deployed or local
-allowed_origins = [
-    'https://marketpulse-frontend.onrender.com',  # Production frontend URL
-    'https://marketpulse-new-real-static.onrender.com', # Actual frontend static URL
-    'http://localhost:3000'  # Local development URL
-]
-CORS(app, resources={r"/*": {"origins": allowed_origins}})
+# Configure CORS to allow requests from any origin to ensure maximum compatibility
+CORS(app, 
+     resources={r"/*": {"origins": "*"}}, 
+     supports_credentials=True,
+     allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Origin"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
 # Register blueprints
 app.register_blueprint(auth_bp)
