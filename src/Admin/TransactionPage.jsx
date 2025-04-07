@@ -9,6 +9,7 @@ import {
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon
 } from '@mui/icons-material';
+import { API } from '../axiosConfig';
 
 // Define theme colors to match the user components
 const colors = {
@@ -49,6 +50,9 @@ const TransactionPage = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [feedback, setFeedback] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [performanceHistory, setPerformanceHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState(null);
 
   useEffect(() => {
     fetchRequests();
@@ -57,52 +61,47 @@ const TransactionPage = () => {
   const fetchRequests = async () => {
     try {
       setLoading(true);
-      setRefreshing(true);
-      const response = await fetch('http://localhost:5000/api/balance-requests');
-      const data = await response.json();
-      setRequests(data);
+      const response = await API.balance.getRequests();
+      setRequests(response.data.requests || []);
       setLoading(false);
-      setRefreshing(false);
-    } catch (err) {
-      setError('Failed to fetch requests');
+    } catch (error) {
+      console.error('Error fetching balance requests:', error);
+      setError('Failed to load balance requests');
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
-  const fetchPerformanceData = async (accountId) => {
+  const fetchPerformanceHistory = async (accountId) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/performance-history/${accountId}`);
-      const data = await response.json();
-      setPerformanceData(data);
-    } catch (err) {
-      setError('Failed to fetch performance data');
+      setHistoryLoading(true);
+      const response = await API.balance.getHistory(accountId);
+      setPerformanceHistory(response.data.history || []);
+      setHistoryLoading(false);
+    } catch (error) {
+      console.error('Error fetching performance history:', error);
+      setHistoryError('Failed to load performance history');
+      setHistoryLoading(false);
     }
   };
 
   const handleReview = (request) => {
     setSelectedRequest(request);
-    fetchPerformanceData(request.account_id);
+    fetchPerformanceHistory(request.account_id);
     setDialogOpen(true);
   };
 
   const handleApprove = async () => {
     try {
       setActionLoading(true);
-      await fetch('http://localhost:5000/api/balance-requests/approve', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          request_id: selectedRequest.request_id,
-          feedback: feedback,
-        }),
+      await API.balance.approve({
+        request_id: selectedRequest.request_id,
+        feedback: feedback,
       });
       setDialogOpen(false);
       fetchRequests();
       setFeedback('');
-    } catch (err) {
+    } catch (error) {
+      console.error('Error approving request:', error);
       setError('Failed to approve request');
     } finally {
       setActionLoading(false);
@@ -112,20 +111,15 @@ const TransactionPage = () => {
   const handleReject = async () => {
     try {
       setActionLoading(true);
-      await fetch('http://localhost:5000/api/balance-requests/reject', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          request_id: selectedRequest.request_id,
-          feedback: feedback,
-        }),
+      await API.balance.reject({
+        request_id: selectedRequest.request_id,
+        feedback: feedback,
       });
       setDialogOpen(false);
       fetchRequests();
       setFeedback('');
-    } catch (err) {
+    } catch (error) {
+      console.error('Error rejecting request:', error);
       setError('Failed to reject request');
     } finally {
       setActionLoading(false);
@@ -389,11 +383,11 @@ const TransactionPage = () => {
                   <Typography variant="h6" gutterBottom sx={{ color: colors.primaryText }}>
                     Performance History
                   </Typography>
-                  {performanceData.length > 0 ? (
+                  {performanceHistory.length > 0 ? (
                     <Box sx={{ height: 300, width: '100%' }}>
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart
-                          data={performanceData}
+                          data={performanceHistory}
                           margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                         >
                           <CartesianGrid strokeDasharray="3 3" stroke={colors.borderColor} />

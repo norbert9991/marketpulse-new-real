@@ -18,7 +18,6 @@ import {
   Tooltip,
   IconButton
 } from '@mui/material';
-import axios from 'axios';
 import { 
   TrendingUp as TrendingUpIcon,
   TrendingDown as TrendingDownIcon,
@@ -37,6 +36,7 @@ import {
   Legend,
   Filler
 } from 'chart.js';
+import { API } from '../axiosConfig';
 
 // Register ChartJS components
 ChartJS.register(
@@ -87,10 +87,7 @@ const MarketAnalysis = ({ selectedSymbol }) => {
     setLoading(true);
     setError(null);
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`http://localhost:5000/api/market-analysis/${symbol}`, {
-        headers: { 'Authorization': token }
-      });
+      const response = await API.market.analyze({ symbol });
       setAnalysisData(response.data);
     } catch (err) {
       console.error('Error fetching market analysis:', err);
@@ -102,10 +99,7 @@ const MarketAnalysis = ({ selectedSymbol }) => {
 
   const fetchPriceHistory = async (symbol) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`http://localhost:5000/api/market-analysis/${symbol}/history`, {
-        headers: { 'Authorization': token }
-      });
+      const response = await API.market.getHistory(symbol);
       setHistoryData(response.data);
     } catch (err) {
       console.error('Error fetching price history:', err);
@@ -116,20 +110,18 @@ const MarketAnalysis = ({ selectedSymbol }) => {
     if (selectedSymbol) {
       setLoading(true);
       setError(null);
-      const token = localStorage.getItem('token');
-      axios.post(`http://localhost:5000/api/market-analysis/refresh/${selectedSymbol}`, {}, {
-        headers: { 'Authorization': token }
-      })
-      .then(response => {
-        setAnalysisData(response.data);
-      })
-      .catch(err => {
-        console.error('Error refreshing market analysis:', err);
-        setError(err.response?.data?.error || 'Failed to refresh market analysis data');
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+      
+      API.market.refresh(selectedSymbol)
+        .then(response => {
+          setAnalysisData(response.data);
+        })
+        .catch(err => {
+          console.error('Error refreshing market analysis:', err);
+          setError(err.response?.data?.error || 'Failed to refresh market analysis data');
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     }
   };
 

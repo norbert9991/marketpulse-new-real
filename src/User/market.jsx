@@ -35,6 +35,7 @@ import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import InfoIcon from '@mui/icons-material/Info';
 import SettingsIcon from '@mui/icons-material/Settings';
 import Sidebar from './Sidebar';
+import { API } from '../axiosConfig';
 
 // Forex Trading Color Palette
 const colors = {
@@ -97,6 +98,8 @@ const Market = () => {
   const [error, setError] = useState(null);
   const [selectedPair, setSelectedPair] = useState('EURUSD=X');
   const [isFavorite, setIsFavorite] = useState(false);
+  const [favoriteMessage, setFavoriteMessage] = useState('');
+  const [showFavoriteAlert, setShowFavoriteAlert] = useState(false);
 
   const currencyPairs = [
     { value: 'EURUSD=X', label: 'EUR/USD' },
@@ -111,23 +114,11 @@ const Market = () => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          navigate('/login');
-          return;
-        }
-        
-        const response = await axios.get('http://localhost:5000/api/auth/me', {
-          headers: {
-            'Authorization': token
-          }
-        });
-        
+        const response = await API.auth.me();
         setUser(response.data.user);
-      } catch (err) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        navigate('/login');
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+        // Handle auth error
       }
     };
     
@@ -135,22 +126,17 @@ const Market = () => {
   }, [navigate]);
 
   useEffect(() => {
-    const checkFavoriteStatus = async () => {
+    const checkIfFavorite = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const response = await axios.get(`http://localhost:5000/api/favorites/check/${selectedPair}`, {
-          headers: {
-            'Authorization': token
-          }
-        });
-        setIsFavorite(response.data.is_favorite);
-      } catch (err) {
-        console.error('Error checking favorite status:', err);
+        const response = await API.favorites.check(selectedPair);
+        setIsFavorite(response.data.isFavorite);
+      } catch (error) {
+        console.error('Error checking favorite status:', error);
       }
     };
     
     if (user) {
-      checkFavoriteStatus();
+      checkIfFavorite();
     }
   }, [selectedPair, user]);
 
@@ -162,45 +148,31 @@ const Market = () => {
     setSelectedPair(event.target.value);
   };
 
-  const handleAnalyze = async () => {
-    setLoading(true);
-    setError(null);
+  const fetchMarketAnalysis = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/market/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ symbol: selectedPair }),
-      });
-      
-      const data = await response.json();
-      if (data.error) {
-        throw new Error(data.error);
-      }
-      setAnalysisData(data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
+      setLoading(true);
+      const response = await API.market.analyze({ symbol: selectedPair });
+      setAnalysisData(response.data);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching market data:', error);
+      setError('Failed to load market data');
       setLoading(false);
     }
   };
 
-  const handleToggleFavorite = async () => {
+  const toggleFavorite = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.post('http://localhost:5000/api/favorites/toggle', {
+      const response = await API.favorites.toggle({
         symbol: selectedPair,
-        pair_name: currencyPairs.find(pair => pair.value === selectedPair)?.label
-      }, {
-        headers: {
-          'Authorization': token
-        }
+        pair_name: selectedPairName || selectedPair
       });
-      
-      setIsFavorite(response.data.is_favorite);
-    } catch (err) {
-      console.error('Error toggling favorite:', err);
+      setIsFavorite(response.data.isFavorite);
+      setFavoriteMessage(response.data.message);
+      setShowFavoriteAlert(true);
+      setTimeout(() => setShowFavoriteAlert(false), 3000);
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
     }
   };
 
@@ -281,7 +253,7 @@ const Market = () => {
             <Box sx={{ display: 'flex', gap: 1 }}>
               <Button 
                 variant="contained" 
-                onClick={handleAnalyze}
+                onClick={fetchMarketAnalysis}
                 disabled={loading}
                 sx={{ 
                   backgroundColor: colors.accentBlue,
@@ -292,7 +264,7 @@ const Market = () => {
               </Button>
               <Button
                 variant="outlined"
-                onClick={handleToggleFavorite}
+                onClick={toggleFavorite}
                 sx={{
                   borderColor: isFavorite ? colors.buyGreen : colors.borderColor,
                   color: isFavorite ? colors.buyGreen : colors.secondaryText,

@@ -16,7 +16,6 @@ import {
   Chip,
   CircularProgress
 } from '@mui/material';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import MarketAnalysis from './MarketAnalysis';
@@ -26,6 +25,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import StarIcon from '@mui/icons-material/Star';
+import { API } from '../axiosConfig';
 
 // Forex Trading Color Palette
 const colors = {
@@ -64,12 +64,7 @@ const UserDashboard = () => {
           return;
         }
         
-        const response = await axios.get('http://localhost:5000/api/auth/me', {
-          headers: {
-            'Authorization': token
-          }
-        });
-        
+        const response = await API.auth.me();
         setUser(response.data.user);
       } catch (err) {
         localStorage.removeItem('token');
@@ -84,12 +79,8 @@ const UserDashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const token = localStorage.getItem('token');
-        
         // Fetch favorite markets
-        const favoritesResponse = await axios.get('http://localhost:5000/api/favorites', {
-          headers: { 'Authorization': token }
-        });
+        const favoritesResponse = await API.favorites.getAll();
         setFavoriteMarkets(favoritesResponse.data.favorites);
 
         setLoading(false);

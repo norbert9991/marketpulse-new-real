@@ -37,6 +37,8 @@ import {
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon
 } from '@mui/icons-material';
+import { API } from '../axiosConfig';
+
 
 // Define theme colors to match the user components
 const colors = {
@@ -109,21 +111,12 @@ const AdminSettings = () => {
         return;
       }
 
-      const response = await fetch('http://localhost:5000/api/admin/profile', {
-        headers: {
-          'Authorization': token
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch admin data');
-      }
-
-      const data = await response.json();
-      setCurrentAdmin(data.user);
+      const response = await API.admin.getProfile();
+      
+      setCurrentAdmin(response.data.user);
       setFormData({
-        username: data.user.username,
-        email: data.user.email,
+        username: response.data.user.username,
+        email: response.data.user.email,
         currentPassword: '',
         newPassword: '',
         confirmPassword: ''
@@ -143,18 +136,9 @@ const AdminSettings = () => {
         return;
       }
 
-      const response = await fetch('http://localhost:5000/api/admin/admins', {
-        headers: {
-          'Authorization': token
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch admins');
-      }
-
-      const data = await response.json();
-      setAdmins(data.admins);
+      const response = await API.admin.getAdmins();
+      
+      setAdmins(response.data.admins);
     } catch (err) {
       setError('Failed to load admins: ' + err.message);
     }
@@ -203,25 +187,12 @@ const AdminSettings = () => {
         }
       }
 
-      const response = await fetch('http://localhost:5000/api/admin/update-profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': token
-        },
-        body: JSON.stringify({
-          username: formData.username,
-          email: formData.email,
-          currentPassword: formData.currentPassword,
-          newPassword: formData.newPassword
-        })
+      const response = await API.admin.updateProfile({
+        username: formData.username,
+        email: formData.email,
+        currentPassword: formData.currentPassword,
+        newPassword: formData.newPassword
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to update profile');
-      }
 
       setSuccess('Profile updated successfully');
       setFormData({
@@ -238,7 +209,7 @@ const AdminSettings = () => {
         email: formData.email
       });
     } catch (err) {
-      setError('Failed to update profile: ' + err.message);
+      setError('Failed to update profile: ' + (err.response?.data?.message || err.message));
     } finally {
       setSaving(false);
     }
@@ -250,88 +221,53 @@ const AdminSettings = () => {
     setNewAdminError('');
 
     try {
-      // Validate passwords
+      // Validate form
+      if (!newAdmin.username || !newAdmin.email || !newAdmin.password) {
+        throw new Error('All fields are required');
+      }
+
       if (newAdmin.password !== newAdmin.confirmPassword) {
-        setNewAdminError('Passwords do not match');
-        setNewAdminLoading(false);
-        return;
+        throw new Error('Passwords do not match');
       }
 
-      const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
-
-      const response = await fetch('http://localhost:5000/api/admin/add-admin', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': token
-        },
-        body: JSON.stringify({
-          username: newAdmin.username,
-          email: newAdmin.email,
-          password: newAdmin.password
-        })
+      const response = await API.admin.addAdmin({
+        username: newAdmin.username,
+        email: newAdmin.email,
+        password: newAdmin.password
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to add admin');
-      }
-
-      // Reset form and close dialog
+      setSuccess('Admin added successfully');
+      setShowAddAdminDialog(false);
+      
+      // Reset form
       setNewAdmin({
         username: '',
         email: '',
         password: '',
         confirmPassword: ''
       });
-      setShowAddAdminDialog(false);
       
       // Refresh admin list
       fetchAdmins();
-      
-      setSuccess('Admin added successfully');
     } catch (err) {
-      setNewAdminError('Failed to add admin: ' + err.message);
+      setNewAdminError('Failed to add admin: ' + (err.response?.data?.message || err.message));
     } finally {
       setNewAdminLoading(false);
     }
   };
 
   const handleDeleteAdmin = async (adminId) => {
-    if (!window.confirm('Are you sure you want to delete this admin?')) {
-      return;
-    }
-
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/login');
-        return;
+      if (window.confirm('Are you sure you want to delete this admin?')) {
+        const response = await API.admin.deleteAdmin(adminId);
+        
+        setSuccess('Admin deleted successfully');
+        
+        // Refresh admin list
+        fetchAdmins();
       }
-
-      const response = await fetch(`http://localhost:5000/api/admin/delete-admin/${adminId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': token
-        }
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Failed to delete admin');
-      }
-
-      // Refresh admin list
-      fetchAdmins();
-      
-      setSuccess('Admin deleted successfully');
     } catch (err) {
-      setError('Failed to delete admin: ' + err.message);
+      setError('Failed to delete admin: ' + (err.response?.data?.message || err.message));
     }
   };
 

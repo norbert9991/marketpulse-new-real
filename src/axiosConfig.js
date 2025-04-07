@@ -1,7 +1,12 @@
 import axios from 'axios';
 
-// Get API URL from environment variable
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+// Get API URL from environment variable or use the production URL
+const API_URL = 
+  process.env.NODE_ENV === 'production' 
+    ? 'https://marketpulse-new-real.onrender.com'
+    : (process.env.REACT_APP_API_URL || 'http://localhost:5000');
+
+console.log('Using API URL:', API_URL); // Debug log
 
 // Create a custom axios instance
 const axiosInstance = axios.create({
@@ -19,7 +24,7 @@ axiosInstance.interceptors.request.use(
     // Get token from localStorage for authenticated requests
     const token = localStorage.getItem('token');
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      config.headers.Authorization = token;
     }
     return config;
   },
@@ -27,5 +32,59 @@ axiosInstance.interceptors.request.use(
     return Promise.reject(error);
   }
 );
+
+// Helper API functions
+export const API = {
+  // Auth endpoints
+  auth: {
+    login: (data) => axiosInstance.post('/api/auth/login', data),
+    register: (data) => axiosInstance.post('/api/auth/register', data),
+    me: () => axiosInstance.get('/api/auth/me'),
+  },
+  
+  // Settings endpoints
+  settings: {
+    updateEmail: (data) => axiosInstance.put('/api/settings/update-email', data),
+    updatePassword: (data) => axiosInstance.put('/api/settings/update-password', data),
+    deleteAccount: () => axiosInstance.delete('/api/settings/delete-account'),
+  },
+  
+  // Market endpoints
+  market: {
+    analyze: (data) => axiosInstance.get(`/api/market-analysis/${data.symbol}`),
+    getHistory: (symbol) => axiosInstance.get(`/api/market-analysis/${symbol}/history`),
+    refresh: (symbol) => axiosInstance.post(`/api/market-analysis/refresh/${symbol}`, {}),
+  },
+  
+  // Favorites endpoints
+  favorites: {
+    getAll: () => axiosInstance.get('/api/favorites'),
+    toggle: (data) => axiosInstance.post('/api/favorites/toggle', data),
+    check: (symbol) => axiosInstance.get(`/api/favorites/check/${symbol}`),
+  },
+  
+  // Admin endpoints
+  admin: {
+    getUsers: () => axiosInstance.get('/api/admin/users'),
+    getUserGrowth: () => axiosInstance.get('/api/admin/user-growth'),
+    getFavoriteSymbols: () => axiosInstance.get('/api/admin/favorite-symbols'),
+    getMarketTrends: () => axiosInstance.get('/api/market-trends'),
+    updateUserStatus: (userId, status) => 
+      axiosInstance.put(`/api/admin/users/${userId}/status`, { status }),
+    getProfile: () => axiosInstance.get('/api/admin/profile'),
+    getAdmins: () => axiosInstance.get('/api/admin/admins'),
+    updateProfile: (data) => axiosInstance.put('/api/admin/update-profile', data),
+    addAdmin: (data) => axiosInstance.post('/api/admin/add-admin', data),
+    deleteAdmin: (adminId) => axiosInstance.delete(`/api/admin/delete-admin/${adminId}`),
+  },
+  
+  // Balance requests
+  balance: {
+    getRequests: () => axiosInstance.get('/api/balance-requests'),
+    getHistory: (accountId) => axiosInstance.get(`/api/performance-history/${accountId}`),
+    approve: (data) => axiosInstance.post('/api/balance-requests/approve', data),
+    reject: (data) => axiosInstance.post('/api/balance-requests/reject', data),
+  },
+};
 
 export default axiosInstance; 

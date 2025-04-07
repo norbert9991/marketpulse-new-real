@@ -24,7 +24,7 @@ import LockIcon from '@mui/icons-material/Lock';
 import EmailIcon from '@mui/icons-material/Email';
 import SecurityIcon from '@mui/icons-material/Security';
 import DeleteIcon from '@mui/icons-material/Delete';
-import axios from 'axios';
+import { API } from '../axiosConfig';
 
 // Forex Trading Color Palette
 const colors = {
@@ -47,10 +47,10 @@ const Settings = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState({ type: '', text: '' });
-    const [email, setEmail] = useState('');
-    const [currentPassword, setCurrentPassword] = useState('');
-    const [newPassword, setNewPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
+  const [email, setEmail] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [username, setUsername] = useState('');
   const [openEmailDialog, setOpenEmailDialog] = useState(false);
   const [openPasswordDialog, setOpenPasswordDialog] = useState(false);
@@ -58,73 +58,42 @@ const Settings = () => {
   const [deletePassword, setDeletePassword] = useState('');
   const [processing, setProcessing] = useState(false);
 
-    useEffect(() => {
-        fetchUserProfile();
-    }, []);
+  useEffect(() => {
+    fetchUserData();
+  }, []);
 
-    const fetchUserProfile = async () => {
-        try {
-            const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
+  const fetchUserData = async () => {
+    try {
+      setLoading(true);
+      const userResponse = await API.auth.me();
+      setUser(userResponse.data.user);
+      setEmail(userResponse.data.user.email);
+      setUsername(userResponse.data.user.username);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      setMessage({ type: 'error', text: 'Failed to load user data' });
+      setLoading(false);
+    }
+  };
 
-      // First get the user data from the auth/me endpoint
-      const userResponse = await axios.get('http://localhost:5000/api/auth/me', {
-                headers: {
-          'Authorization': token
-        }
+  const handleEmailUpdate = async (e) => {
+    e.preventDefault();
+    setProcessing(true);
+    try {
+      const response = await API.settings.updateEmail({
+        current_password: currentPassword,
+        new_email: email
       });
       
-      if (userResponse.data && userResponse.data.user) {
-        setUser(userResponse.data.user);
-        setEmail(userResponse.data.user.email || '');
-        setUsername(userResponse.data.user.username || '');
-      } else {
-        setMessage({ type: 'error', text: 'Failed to load user data' });
-            }
-        } catch (error) {
-      console.error('Error fetching profile:', error);
-            setMessage({ type: 'error', text: 'Failed to load profile data' });
-    } finally {
-      setLoading(false);
-        }
-    };
-
-    const handleEmailUpdate = async (e) => {
-        e.preventDefault();
-    setProcessing(true);
-        try {
-            const token = localStorage.getItem('token');
-      const response = await axios.put('http://localhost:5000/api/settings/update-email', 
-        {
-          email,
-          password: currentPassword
-        },
-        {
-                headers: {
-                    'Content-Type': 'application/json',
-            'Authorization': token
-          }
-        }
-      );
-      
-      if (response.data.status === 'success') {
-        setMessage({
-          type: 'success',
-          text: response.data.message || 'Email updated successfully'
-        });
-        setCurrentPassword('');
-        setOpenEmailDialog(false);
-        fetchUserProfile();
-      } else {
-            setMessage({
-          type: 'error',
-          text: response.data.message || 'Failed to update email'
-            });
-            }
-        } catch (error) {
+      setMessage({
+        type: 'success',
+        text: response.data.message || 'Email updated successfully'
+      });
+      setCurrentPassword('');
+      setOpenEmailDialog(false);
+      fetchUserData();
+    } catch (error) {
       console.error('Error updating email:', error);
       setMessage({ 
         type: 'error', 
@@ -133,53 +102,37 @@ const Settings = () => {
     } finally {
       setProcessing(false);
     }
-    };
+  };
 
-    const handlePasswordUpdate = async (e) => {
-        e.preventDefault();
+  const handlePasswordUpdate = async (e) => {
+    e.preventDefault();
     
-        if (newPassword !== confirmPassword) {
-            setMessage({ type: 'error', text: 'Passwords do not match' });
-            return;
-        }
+    if (newPassword !== confirmPassword) {
+      setMessage({ type: 'error', text: 'Passwords do not match' });
+      return;
+    }
     
-        if (newPassword.length < 8) {
-            setMessage({ type: 'error', text: 'Password must be at least 8 characters long' });
-            return;
-        }
+    if (newPassword.length < 8) {
+      setMessage({ type: 'error', text: 'Password must be at least 8 characters long' });
+      return;
+    }
 
     setProcessing(true);
-        try {
-            const token = localStorage.getItem('token');
-      const response = await axios.put('http://localhost:5000/api/settings/update-password', 
-        {
-          currentPassword,
-          newPassword
-        },
-        {
-                headers: {
-                    'Content-Type': 'application/json',
-            'Authorization': token
-          }
-        }
-      );
+    try {
+      const response = await API.settings.updatePassword({
+        current_password: currentPassword,
+        new_password: newPassword
+      });
       
-      if (response.data.status === 'success') {
-            setMessage({
-          type: 'success',
-          text: response.data.message || 'Password updated successfully'
-            });
-                setCurrentPassword('');
-                setNewPassword('');
-                setConfirmPassword('');
-        setOpenPasswordDialog(false);
-      } else {
-        setMessage({
-          type: 'error',
-          text: response.data.message || 'Failed to update password'
-        });
-            }
-        } catch (error) {
+      setMessage({
+        type: 'success',
+        text: response.data.message || 'Password updated successfully'
+      });
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setOpenPasswordDialog(false);
+    } catch (error) {
       console.error('Error updating password:', error);
       setMessage({ 
         type: 'error', 
@@ -198,26 +151,11 @@ const Settings = () => {
 
     setProcessing(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.delete('http://localhost:5000/api/settings/delete-account', 
-        {
-          data: { password: deletePassword },
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': token
-          }
-        }
-      );
+      await API.settings.deleteAccount();
       
-      if (response.data.status === 'success') {
-        localStorage.removeItem('token');
-        navigate('/login');
-      } else {
-        setMessage({
-          type: 'error',
-          text: response.data.message || 'Failed to delete account'
-        });
-      }
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      navigate('/');
     } catch (error) {
       console.error('Error deleting account:', error);
       setMessage({ 
@@ -243,7 +181,7 @@ const Settings = () => {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: colors.darkBg }}>
-            <Sidebar />
+      <Sidebar />
       <Box component="main" sx={{ flexGrow: 1, p: 3, ml: '250px' }}>
         <Box sx={{ maxWidth: 1000, mx: 'auto', mt: 4, mb: 4 }}>
           <Typography 
@@ -256,10 +194,10 @@ const Settings = () => {
               mb: 4
             }}
           >
-                        Account Settings
-                    </Typography>
-                    
-                    {message.text && (
+            Account Settings
+          </Typography>
+          
+          {message.text && (
             <Alert 
               severity={message.type} 
               sx={{ 
@@ -270,11 +208,11 @@ const Settings = () => {
               }}
               onClose={() => setMessage({ type: '', text: '' })}
             >
-                            {message.text}
-                        </Alert>
-                    )}
+              {message.text}
+            </Alert>
+          )}
 
-                    <Grid container spacing={3}>
+          <Grid container spacing={3}>
             {/* Profile Information */}
             <Grid item xs={12}>
               <Paper 
@@ -349,7 +287,7 @@ const Settings = () => {
                     </Button>
                   </Grid>
                   
-                        <Grid item xs={12} md={6}>
+                  <Grid item xs={12} md={6}>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                       <LockIcon sx={{ color: colors.accentBlue, mr: 1 }} />
                       <Typography sx={{ color: colors.primaryText, mr: 1 }}>
@@ -421,7 +359,7 @@ const Settings = () => {
                   sx={{ color: colors.secondaryText, mt: 1 }}
                 >
                   Warning: This action cannot be undone. All your data will be permanently deleted.
-                                </Typography>
+                </Typography>
               </Paper>
             </Grid>
           </Grid>
@@ -446,14 +384,14 @@ const Settings = () => {
         </DialogTitle>
         <DialogContent>
           <Box component="form" onSubmit={handleEmailUpdate} sx={{ mt: 2 }}>
-                                    <TextField
-                                        fullWidth
+            <TextField
+              fullWidth
               label="New Email"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        margin="normal"
-                                        type="email"
-                                        required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              margin="normal"
+              type="email"
+              required
               sx={{
                 '& .MuiOutlinedInput-root': {
                   color: colors.primaryText,
@@ -468,15 +406,15 @@ const Settings = () => {
                   color: colors.secondaryText,
                 },
               }}
-                                    />
-                                    <TextField
-                                        fullWidth
-                                        label="Current Password"
-                                        value={currentPassword}
-                                        onChange={(e) => setCurrentPassword(e.target.value)}
-                                        margin="normal"
-                                        type="password"
-                                        required
+            />
+            <TextField
+              fullWidth
+              label="Current Password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              margin="normal"
+              type="password"
+              required
               sx={{
                 '& .MuiOutlinedInput-root': {
                   color: colors.primaryText,
@@ -502,9 +440,9 @@ const Settings = () => {
           >
             Cancel
           </Button>
-                                    <Button
+          <Button
             onClick={handleEmailUpdate} 
-                                        variant="contained"
+            variant="contained"
             disabled={processing}
             sx={{ 
               background: `linear-gradient(135deg, ${colors.gradientStart}, ${colors.gradientEnd})`,
@@ -514,7 +452,7 @@ const Settings = () => {
             }}
           >
             {processing ? <CircularProgress size={24} color="inherit" /> : 'Update Email'}
-                                    </Button>
+          </Button>
         </DialogActions>
       </Dialog>
       
@@ -532,18 +470,18 @@ const Settings = () => {
         }}
       >
         <DialogTitle sx={{ color: colors.primaryText }}>
-                                    Change Password
+          Change Password
         </DialogTitle>
         <DialogContent>
           <Box component="form" onSubmit={handlePasswordUpdate} sx={{ mt: 2 }}>
-                                    <TextField
-                                        fullWidth
-                                        label="Current Password"
-                                        value={currentPassword}
-                                        onChange={(e) => setCurrentPassword(e.target.value)}
-                                        margin="normal"
-                                        type="password"
-                                        required
+            <TextField
+              fullWidth
+              label="Current Password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              margin="normal"
+              type="password"
+              required
               sx={{
                 '& .MuiOutlinedInput-root': {
                   color: colors.primaryText,
@@ -558,15 +496,15 @@ const Settings = () => {
                   color: colors.secondaryText,
                 },
               }}
-                                    />
-                                    <TextField
-                                        fullWidth
-                                        label="New Password"
-                                        value={newPassword}
-                                        onChange={(e) => setNewPassword(e.target.value)}
-                                        margin="normal"
-                                        type="password"
-                                        required
+            />
+            <TextField
+              fullWidth
+              label="New Password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              margin="normal"
+              type="password"
+              required
               sx={{
                 '& .MuiOutlinedInput-root': {
                   color: colors.primaryText,
@@ -581,15 +519,15 @@ const Settings = () => {
                   color: colors.secondaryText,
                 },
               }}
-                                    />
-                                    <TextField
-                                        fullWidth
-                                        label="Confirm New Password"
-                                        value={confirmPassword}
-                                        onChange={(e) => setConfirmPassword(e.target.value)}
-                                        margin="normal"
-                                        type="password"
-                                        required
+            />
+            <TextField
+              fullWidth
+              label="Confirm New Password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              margin="normal"
+              type="password"
+              required
               sx={{
                 '& .MuiOutlinedInput-root': {
                   color: colors.primaryText,
@@ -683,9 +621,9 @@ const Settings = () => {
           >
             Cancel
           </Button>
-                                    <Button
+          <Button
             onClick={handleDeleteAccount} 
-                                        variant="contained"
+            variant="contained"
             disabled={processing}
             sx={{ 
               bgcolor: colors.errorRed,
@@ -695,11 +633,11 @@ const Settings = () => {
             }}
           >
             {processing ? <CircularProgress size={24} color="inherit" /> : 'Delete Account'}
-                                    </Button>
+          </Button>
         </DialogActions>
       </Dialog>
-        </Box>
-    );
+    </Box>
+  );
 };
 
 export default Settings;

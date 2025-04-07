@@ -12,7 +12,7 @@ import {
   IconButton
 } from '@mui/material';
 import { styled } from '@mui/system';
-import axiosInstance from '../../axiosConfig';
+import { API } from '../../axiosConfig';
 import { useNavigate } from 'react-router-dom';
 import CloseIcon from '@mui/icons-material/Close';
 
@@ -109,10 +109,7 @@ const LoginDialog = ({ open, onClose, isLogin, toggleForm }) => {
     setLoading(true);
     setError('');
     try {
-      const response = await axiosInstance.post('/api/auth/login', {
-        email,
-        password
-      });
+      const response = await API.auth.login({ email, password });
       
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
@@ -142,7 +139,7 @@ const LoginDialog = ({ open, onClose, isLogin, toggleForm }) => {
     setLoading(true);
     setError('');
     try {
-      await axiosInstance.post('/api/auth/register', {
+      await API.auth.register({
         username: fullName.split(' ')[0], // Simple username from first name
         email,
         password,

@@ -29,6 +29,7 @@ import {
   Person as PersonIcon,
   Settings as SettingsIcon
 } from '@mui/icons-material';
+import { API } from '../axiosConfig';
 
 // Define theme colors to match the user components
 const colors = {
@@ -165,99 +166,40 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchDashboardData = async () => {
+      setLoading(true);
       try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          navigate('/login');
-          return;
-        }
-
-        // Fetch user data
-        const userResponse = await axios.get('http://localhost:5000/api/auth/me', {
-          headers: {
-            'Authorization': token
-          }
-        });
-
-        if (!userResponse.data || !userResponse.data.user) {
-          throw new Error('Invalid user data received');
-        }
-
+        // Get current admin user info
+        const userResponse = await API.auth.me();
         setUser(userResponse.data.user);
-
-        // If admin, fetch all data
-        if (userResponse.data.user.role === 'admin') {
-          try {
-            // Fetch users
-            const usersResponse = await axios.get('http://localhost:5000/api/admin/users', {
-              headers: {
-                'Authorization': token
-              }
-            });
-
-            setUsers(usersResponse.data.users);
-            setUserCount(usersResponse.data.users.length);
-
-            // Fetch user growth data
-            const growthResponse = await axios.get('http://localhost:5000/api/admin/user-growth', {
-              headers: {
-                'Authorization': token
-              }
-            });
-            
-            if (growthResponse.data.success) {
-              setUserGrowthData(growthResponse.data.data);
-            }
-
-            // Fetch favorite symbols data
-            const symbolsResponse = await axios.get('http://localhost:5000/api/admin/favorite-symbols', {
-              headers: {
-                'Authorization': token
-              }
-            });
-
-            if (symbolsResponse.data.status === 'success') {
-              setFavoriteSymbolsData(symbolsResponse.data.data);
-            }
-
-            // Fetch market trends data
-            const trendsResponse = await axios.get('http://localhost:5000/api/market-trends', {
-              headers: {
-                'Authorization': token
-              }
-            });
-
-            if (trendsResponse.data.status === 'success') {
-              setMarketTrendsData(trendsResponse.data.data);
-            }
-          } catch (err) {
-            console.error('Error fetching admin data:', err);
-            setError('Failed to load admin data');
-          } finally {
-            setLoadingChart(false);
-          }
-        } else {
-          // If not admin, redirect to appropriate dashboard
-          navigate(userResponse.data.user.role === 'user' ? '/user-dashboard' : '/');
-        }
-      } catch (err) {
-        console.error('Authentication error:', err);
-        if (err.response?.status === 401) {
-          // Only logout if it's an authentication error
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          navigate('/login');
-        } else {
-          setError(err.message || 'Failed to load dashboard');
-        }
-      } finally {
+        
+        // Get all users
+        const usersResponse = await API.admin.getUsers();
+        setUsers(usersResponse.data.users);
+        setUserCount(usersResponse.data.users.length);
+        
+        // Get user growth stats
+        const growthResponse = await API.admin.getUserGrowth();
+        setUserGrowthData(growthResponse.data);
+        
+        // Get popular symbols/pairs
+        const symbolsResponse = await API.admin.getFavoriteSymbols();
+        setFavoriteSymbolsData(symbolsResponse.data.symbols);
+        
+        // Get current market trends
+        const trendsResponse = await API.admin.getMarketTrends();
+        setMarketTrendsData(trendsResponse.data.trends);
+        
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        setError('Failed to load dashboard data');
         setLoading(false);
       }
     };
 
-    fetchData();
-  }, [navigate]);
+    fetchDashboardData();
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
