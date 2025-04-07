@@ -1,9 +1,9 @@
 Flask==3.0.2
 Flask-CORS==4.0.0
 psycopg2-binary==2.9.9
-numpy==1.26.4
-pandas==2.2.1
-scikit-learn==1.4.1
+numpy==1.23.5
+pandas==2.0.3
+scikit-learn==1.2.2
 yfinance==0.2.37
 requests==2.31.0
 textblob==0.17.1
