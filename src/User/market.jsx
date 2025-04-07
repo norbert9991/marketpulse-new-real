@@ -163,9 +163,12 @@ const Market = () => {
 
   const toggleFavorite = async () => {
     try {
+      const pairInfo = currencyPairs.find(pair => pair.value === selectedPair);
+      const pairName = pairInfo ? pairInfo.label : selectedPair;
+      
       const response = await API.favorites.toggle({
         symbol: selectedPair,
-        pair_name: selectedPairName || selectedPair
+        pair_name: pairName
       });
       setIsFavorite(response.data.isFavorite);
       setFavoriteMessage(response.data.message);
