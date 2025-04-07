@@ -12,11 +12,12 @@ class DatabaseConnection:
         # Get database credentials from environment variables
         # with names matching Render's configuration
         self.config = {
-            'host': os.environ.get('DB_HOST', 'localhost'),
-            'user': os.environ.get('DB_USER', 'postgres'),
-            'password': os.environ.get('DB_PASSWORD', ''),
-            'database': os.environ.get('DB_NAME', 'finals'),
-            'port': os.environ.get('DB_PORT', 5432)
+            'host': os.environ.get('DB_HOST', 'dpg-cvpr2b8dl3ps73866gc0-a'),
+            'user': os.environ.get('DB_USER', 'finals_gzev_user'),
+            'password': os.environ.get('DB_PASSWORD', 'prnrRDareyMyh720g7BGCHfDE7eSjdjV'),
+            'database': os.environ.get('DB_NAME', 'finals_gzev'),
+            'port': os.environ.get('DB_PORT', 5432),
+            'databaseurl': os.environ.get('DATABASE_URL', 'postgresql://finals_gzev_user:prnrRDareyMyh720g7BGCHfDE7eSjdjV@dpg-cvpr2b8dl3ps73866gc0-a.oregon-postgres.render.com/finals_gzev')
         }
         
         logging.basicConfig(
