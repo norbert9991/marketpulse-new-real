@@ -16,11 +16,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here')
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fb4f4f255fb38f23a4d7379be97c837b')
 
 # Configure CORS to allow requests from the frontend, whether deployed or local
 allowed_origins = [
     'https://marketpulse-frontend.onrender.com',  # Production frontend URL
+    'https://marketpulse-new-real-static.onrender.com', # Actual frontend static URL
     'http://localhost:3000'  # Local development URL
 ]
 CORS(app, resources={r"/api/*": {"origins": allowed_origins}})
