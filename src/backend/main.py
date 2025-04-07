@@ -24,7 +24,7 @@ allowed_origins = [
     'https://marketpulse-new-real-static.onrender.com', # Actual frontend static URL
     'http://localhost:3000'  # Local development URL
 ]
-CORS(app, resources={r"/api/*": {"origins": allowed_origins}})
+CORS(app, resources={r"/*": {"origins": allowed_origins}})
 
 # Register blueprints
 app.register_blueprint(auth_bp)
@@ -33,6 +33,21 @@ app.register_blueprint(dashboard_bp)
 app.register_blueprint(settings_bp)  # Register the settings blueprint
 app.register_blueprint(market_analysis_bp)  # Register the market analysis blueprint
 app.register_blueprint(admin_settings_bp)  # Register the admin settings blueprint
+
+# Root route for testing
+@app.route('/', methods=['GET'])
+def index():
+    return jsonify({
+        "message": "MarketPulse API is running",
+        "endpoints": {
+            "auth": "/api/auth",
+            "admin": "/api/admin",
+            "dashboard": "/api/dashboard",
+            "settings": "/api/settings",
+            "market_analysis": "/api/market-analysis",
+            "health": "/health"
+        }
+    })
 
 @app.route('/api/market/analyze', methods=['POST'])
 def analyze_market():

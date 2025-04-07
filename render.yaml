@@ -5,7 +5,7 @@ services:
     env: python
     region: oregon
     buildCommand: pip install -r requirements.txt
-    startCommand: cd src/backend && PYTHONPATH=. gunicorn main:app
+    startCommand: cd src/backend && FLASK_APP=main.py PYTHONPATH=. python -m gunicorn --bind 0.0.0.0:$PORT main:app
     envVars:
       - key: PYTHON_VERSION
         value: 3.9.18
@@ -25,6 +25,8 @@ services:
         value: finals_gzev
       - key: DB_PORT
         value: 5432
+      - key: FRONTEND_URL
+        value: https://marketpulse-new-real-static.onrender.com
   
   - type: web
     name: marketpulse-frontend

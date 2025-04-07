@@ -21,7 +21,7 @@ def token_required(f):
             token = auth_header.split(' ')[1] if ' ' in auth_header else auth_header
             data = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
             conn = db_manager.get_connection()
-            cursor = conn.cursor(dictionary=True)
+            cursor = conn.cursor()
             cursor.execute("SELECT * FROM login WHERE user_id = %s", (data['user_id'],))
             current_user = cursor.fetchone()
             cursor.close()
@@ -44,7 +44,7 @@ def login():
     
     try:
         conn = db_manager.get_connection()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
         cursor.execute("SELECT * FROM login WHERE email = %s", (email,))
         user = cursor.fetchone()
         
@@ -52,30 +52,32 @@ def login():
             cursor.close()
             return jsonify({'message': 'User not found'}), 404
         
-        if not check_password_hash(user['pass'], password):
+        # In PostgreSQL, results are returned as tuples, so we need to access by index
+        # Assuming column order: user_id, username, email, pass, role, last_login, account_status, created_at
+        if not check_password_hash(user[3], password):  # user[3] is the password hash
             cursor.close()
             return jsonify({'message': 'Invalid credentials'}), 401
         
-        if user['account_status'] != 'active':
+        if user[6] != 'active':  # user[6] is account_status
             cursor.close()
             return jsonify({'message': 'Account is not active'}), 403
         
-        cursor.execute("UPDATE login SET last_login = NOW() WHERE user_id = %s", (user['user_id'],))
+        cursor.execute("UPDATE login SET last_login = NOW() WHERE user_id = %s", (user[0],))
         conn.commit()
         cursor.close()
         
         token = jwt.encode({
-            'user_id': user['user_id'],
+            'user_id': user[0],  # user[0] is user_id
             'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)
         }, current_app.config['SECRET_KEY'])
         
         return jsonify({
             'token': token,
             'user': {
-                'user_id': user['user_id'],
-                'username': user['username'],
-                'email': user['email'],
-                'role': user['role']
+                'user_id': user[0],
+                'username': user[1],  # user[1] is username
+                'email': user[2],     # user[2] is email
+                'role': user[4]       # user[4] is role
             }
         })
     except Exception as e:
@@ -100,7 +102,7 @@ def register():
     
     try:
         conn = db_manager.get_connection()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
         cursor.execute("SELECT * FROM login WHERE email = %s", (email,))
         existing_user = cursor.fetchone()
         
@@ -110,14 +112,14 @@ def register():
         
         hashed_password = generate_password_hash(password)
         cursor.execute(
-            "INSERT INTO login (username, email, pass, role, account_status, created_at) VALUES (%s, %s, %s, %s, 'active', NOW())",
+            "INSERT INTO login (username, email, pass, role, account_status, created_at) VALUES (%s, %s, %s, %s, 'active', NOW()) RETURNING user_id",
             (username, email, hashed_password, role)
         )
         conn.commit()
-        user_id = cursor.lastrowid
+        user_id = cursor.fetchone()[0]  # Get the returned user_id
         cursor.close()
         
-        return jsonify({'message': 'User registered successfully'}), 201
+        return jsonify({'message': 'User registered successfully', 'user_id': user_id}), 201
     except Exception as e:
         print(f"Database error: {e}")
-        return jsonify({'message': 'Database error occurred'}), 500
+        return jsonify({'message': f'Database error occurred: {str(e)}'}), 500
