@@ -9,12 +9,21 @@ from market_analysis_routes import market_analysis_bp  # Import the market analy
 from admin_settings_routes import admin_settings_bp  # Import the admin settings blueprint
 from db_connection import db_manager
 from market_analysis import analyze_stock
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key-here'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here')
 
-# Configure CORS
-CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
+# Configure CORS to allow requests from the frontend, whether deployed or local
+allowed_origins = [
+    'https://marketpulse-frontend.onrender.com',  # Production frontend URL
+    'http://localhost:3000'  # Local development URL
+]
+CORS(app, resources={r"/api/*": {"origins": allowed_origins}})
 
 # Register blueprints
 app.register_blueprint(auth_bp)
@@ -39,5 +48,12 @@ def close_db_connection(exception=None):
     """Ensure database connection is closed when app context tears down"""
     db_manager.disconnect()
 
+# Health check endpoint for Render
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({"status": "healthy"}), 200
+
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    # Use PORT from environment variables for Render compatibility
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=(os.environ.get('FLASK_ENV') == 'development'))
