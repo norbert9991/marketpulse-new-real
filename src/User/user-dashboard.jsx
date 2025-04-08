@@ -146,10 +146,21 @@ const UserDashboard = () => {
         // Fetch favorite markets
         const favoritesResponse = await API.favorites.getAll();
         console.log('UserDashboard - Got favorites:', favoritesResponse.data);
-        setFavoriteMarkets(favoritesResponse.data.favorites);
+        setFavoriteMarkets(favoritesResponse.data.favorites || []);
         setLoading(false);
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
+        
+        // Handle 500 Internal Server Error specifically
+        if (err.response && err.response.status === 500) {
+          console.log('Server error occurred. Continuing with empty favorites list.');
+          // Don't show error to user, just proceed with empty list
+        } else if (err.response && err.response.status) {
+          console.log(`API error status ${err.response.status}. Continuing with empty favorites list.`);
+        } else {
+          console.log('Network or other error. Continuing with empty favorites list.');
+        }
+        
         // Still use the User object even if we can't fetch favorites
         setFavoriteMarkets([]);
         setLoading(false);
