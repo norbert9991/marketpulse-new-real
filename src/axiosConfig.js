@@ -80,11 +80,9 @@ export const API = {
   
   // Market endpoints
   market: {
-    analyze: (data) => axiosInstance.post('/api/market/analyze', data),
-    getHistoricalData: (symbol) => axiosInstance.get(`/api/market/history/${symbol}`),
-    saveTrade: (tradeData) => axiosInstance.post('/api/market/trades', tradeData),
-    getTradeHistory: () => axiosInstance.get('/api/market/trades'),
-    getTrade: (tradeId) => axiosInstance.get(`/api/market/trades/${tradeId}`),
+    analyze: (data) => axiosInstance.get(`/api/market-analysis/${data.symbol}`),
+    getHistory: (symbol) => axiosInstance.get(`/api/market-analysis/${symbol}/history`),
+    refresh: (symbol) => axiosInstance.post(`/api/market-analysis/refresh/${symbol}`, {}),
   },
   
   // Favorites endpoints
@@ -97,9 +95,9 @@ export const API = {
   // Admin endpoints
   admin: {
     getUsers: () => axiosInstance.get('/api/admin/users'),
-    getUserGrowth: () => axiosInstance.get('/api/admin/users/growth'),
-    getFavoriteSymbols: () => axiosInstance.get('/api/admin/favorites/popular'),
-    getMarketTrends: () => axiosInstance.get('/api/admin/market/trends'),
+    getUserGrowth: () => axiosInstance.get('/api/admin/user-growth'),
+    getFavoriteSymbols: () => axiosInstance.get('/api/admin/favorite-symbols'),
+    getMarketTrends: () => axiosInstance.get('/api/market-trends'),
     updateUserStatus: (userId, status) => 
       axiosInstance.put(`/api/admin/users/${userId}/status`, { status }),
     getProfile: () => axiosInstance.get('/api/admin/profile'),
@@ -111,14 +109,10 @@ export const API = {
   
   // Balance requests
   balance: {
-    get: () => axiosInstance.get('/api/balance'),
-    update: (data) => axiosInstance.put('/api/balance', data),
-    deposit: (data) => axiosInstance.post('/api/balance/deposit', data),
-    withdraw: (data) => axiosInstance.post('/api/balance/withdraw', data),
-    getRequests: () => axiosInstance.get('/api/balance/requests'),
-    getHistory: (accountId) => axiosInstance.get(`/api/balance/history/${accountId}`),
-    approve: (requestId) => axiosInstance.put(`/api/balance/requests/${requestId}/approve`),
-    reject: (requestId) => axiosInstance.put(`/api/balance/requests/${requestId}/reject`),
+    getRequests: () => axiosInstance.get('/api/balance-requests'),
+    getHistory: (accountId) => axiosInstance.get(`/api/performance-history/${accountId}`),
+    approve: (data) => axiosInstance.post('/api/balance-requests/approve', data),
+    reject: (data) => axiosInstance.post('/api/balance-requests/reject', data),
   },
 };
 
