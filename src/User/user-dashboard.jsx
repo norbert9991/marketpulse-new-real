@@ -48,6 +48,8 @@ const colors = {
 };
 
 const UserDashboard = () => {
+  console.log('UserDashboard - Component rendering');
+  
   const [user, setUser] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const [favoriteMarkets, setFavoriteMarkets] = useState([]);
@@ -55,17 +57,30 @@ const UserDashboard = () => {
   const [selectedSymbol, setSelectedSymbol] = useState(null);
   const navigate = useNavigate();
 
+  // Debug current location
   useEffect(() => {
+    console.log('UserDashboard - Current path:', window.location.pathname);
+    console.log('UserDashboard - Current hash:', window.location.hash);
+    console.log('UserDashboard - Is user set:', !!user);
+  }, [user]);
+
+  useEffect(() => {
+    console.log('UserDashboard - Fetching user data');
     const fetchUser = async () => {
       try {
         const token = localStorage.getItem('token');
+        console.log('UserDashboard - Token exists:', !!token);
+        
         if (!token) {
+          console.log('UserDashboard - No token, redirecting to home');
           // Redirect to home page if no token
-          window.location.href = '/#/';
+          window.location.href = window.location.origin + '/#/';
           return;
         }
         
+        console.log('UserDashboard - Calling API.auth.me()');
         const response = await API.auth.me();
+        console.log('UserDashboard - Got user data:', response.data);
         setUser(response.data.user);
       } catch (err) {
         console.error('Authentication error:', err);
@@ -73,7 +88,7 @@ const UserDashboard = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         // Redirect to home page
-        window.location.href = '/#/';
+        window.location.href = window.location.origin + '/#/';
       }
     };
     
@@ -82,9 +97,11 @@ const UserDashboard = () => {
 
   useEffect(() => {
     const fetchDashboardData = async () => {
+      console.log('UserDashboard - Fetching dashboard data');
       try {
         // Fetch favorite markets
         const favoritesResponse = await API.favorites.getAll();
+        console.log('UserDashboard - Got favorites:', favoritesResponse.data);
         setFavoriteMarkets(favoritesResponse.data.favorites);
 
         setLoading(false);
@@ -95,16 +112,18 @@ const UserDashboard = () => {
     };
 
     if (user) {
+      console.log('UserDashboard - User exists, fetching dashboard data');
       fetchDashboardData();
     }
   }, [user]);
 
   const handleLogout = () => {
+    console.log('UserDashboard - Logging out');
     // Clear authentication data
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     // Use window location for more reliable redirect with hash router
-    window.location.href = '/#/';
+    window.location.href = window.location.origin + '/#/';
   };
 
   const handleMenuOpen = (event) => {

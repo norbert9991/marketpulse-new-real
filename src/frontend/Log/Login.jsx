@@ -123,14 +123,28 @@ const LoginDialog = ({ open, onClose, isLogin, toggleForm }) => {
         // Properly close the dialog
         onClose();
         
-        // Redirect based on role
+        // Redirect based on role with absolute URL to ensure proper redirection
+        const baseUrl = window.location.origin;
+        
         if (response.data.user.role === 'admin') {
-          // Use window.location.href for more reliable navigation with hash router
-          window.location.href = '/#/admin-dashboard';
+          window.location.href = `${baseUrl}/#/admin-dashboard`;
         } else {
-          // User dashboard
-          window.location.href = '/#/user-dashboard';
+          // Force full page reload to ensure proper state reset
+          window.location.href = `${baseUrl}/#/user-dashboard`;
         }
+        
+        // Add a small delay to ensure the location change happens
+        setTimeout(() => {
+          if (window.location.hash !== '/#/user-dashboard' && 
+              window.location.hash !== '/#/admin-dashboard') {
+            console.log('Redirecting again...');
+            if (response.data.user.role === 'admin') {
+              window.location.replace(`${baseUrl}/#/admin-dashboard`);
+            } else {
+              window.location.replace(`${baseUrl}/#/user-dashboard`);
+            }
+          }
+        }, 500);
       } else {
         throw new Error('Invalid response from server');
       }
