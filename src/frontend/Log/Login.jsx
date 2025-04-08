@@ -121,11 +121,19 @@ const LoginDialog = ({ open, onClose, isLogin, toggleForm }) => {
         // Important: Clear any existing reload attempts when logging in fresh
         sessionStorage.removeItem('reloadAttempts');
         
-        // Store token exactly as received from the server
-        localStorage.setItem('token', token);
+        // Clear previous token
+        localStorage.removeItem('token');
+        
+        // Store token with proper formatting - ensure Bearer prefix is present
+        const formattedToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+        localStorage.setItem('token', formattedToken);
+        
+        // Store user data
+        localStorage.removeItem('user');
         localStorage.setItem('user', JSON.stringify(response.data.user));
+        
         console.log('User data stored, role:', response.data.user.role);
-        console.log('Token stored as received from server');
+        console.log('Token stored with format:', formattedToken.substring(0, 20) + '...');
         
         // Close the dialog
         onClose();

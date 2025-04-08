@@ -49,6 +49,24 @@ axiosInstance.interceptors.response.use(
   error => {
     console.error(`API Error [${error.config?.method}] ${error.config?.url}:`, 
       error.response?.status, error.response?.data);
+      
+    // If we get a 401 unauthorized error, it might be due to an expired token
+    if (error.response && error.response.status === 401) {
+      console.log('Received 401 error - possible token expiration');
+      
+      // If we're not already on the login page and not trying to log in
+      if (!window.location.hash.includes('/login') && 
+          !error.config.url.includes('/api/auth/login')) {
+        console.log('Redirecting to login page due to auth failure');
+        
+        // Clear token if it's invalid
+        localStorage.removeItem('token');
+        
+        // Redirect to home/login page
+        window.location.href = window.location.origin + '/#/';
+      }
+    }
+    
     return Promise.reject(error);
   }
 );
