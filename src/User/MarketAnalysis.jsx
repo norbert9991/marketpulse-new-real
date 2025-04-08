@@ -129,15 +129,51 @@ const MarketAnalysis = ({ selectedSymbol }) => {
     setHistoryLoading(true);
     setHistoryError(null);
     try {
-      // The symbol cleaning is now handled in axiosConfig.js
-      console.log('Fetching price history for symbol:', symbol);
+      // Try to strip the -X suffix for troubleshooting
+      // Even though this is now also handled in axiosConfig.js
+      const plainSymbol = symbol.includes('-X') ? symbol.split('-X')[0] : symbol;
       
-      const response = await API.market.getHistory(symbol);
-      console.log('Price history response:', response.status);
-      setHistoryData(response.data);
+      console.log('Fetching price history for symbol:', symbol);
+      console.log('Plain symbol (without -X):', plainSymbol);
+      
+      // First try with the original symbol
+      try {
+        const response = await API.market.getHistory(symbol);
+        console.log('Price history response:', response.status);
+        setHistoryData(response.data);
+        return; // Exit the function if successful
+      } catch (firstErr) {
+        console.error('Error with original symbol, trying plain symbol:', firstErr);
+        
+        // If that fails, try with the plain symbol without -X as a fallback
+        if (symbol !== plainSymbol) {
+          try {
+            const plainResponse = await API.market.getHistory(plainSymbol);
+            console.log('Price history response with plain symbol:', plainResponse.status);
+            setHistoryData(plainResponse.data);
+            return; // Exit the function if successful
+          } catch (secondErr) {
+            console.error('Error with plain symbol too:', secondErr);
+            // Continue to the final catch block
+            throw secondErr;
+          }
+        } else {
+          // If symbols are identical, just throw the original error
+          throw firstErr;
+        }
+      }
     } catch (err) {
-      console.error('Error fetching price history:', err);
-      setHistoryError(err.response?.data?.error || 'No historical data is available for this symbol');
+      console.error('Error fetching price history (all attempts failed):', err);
+      
+      // Create a helpful error message
+      let errorMessage = 'No historical data is available for this symbol';
+      if (err.response?.status === 404) {
+        errorMessage = `No historical data available for ${symbol}. The data may not exist in our database.`;
+      } else if (err.response?.status === 500) {
+        errorMessage = 'Server error while retrieving historical data. Please try again later.';
+      }
+      
+      setHistoryError(errorMessage);
       
       // Create empty history data structure for a better UX
       setHistoryData({

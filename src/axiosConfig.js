@@ -111,16 +111,62 @@ export const API = {
   market: {
     analyze: (data) => axiosInstance.get(`/api/market-analysis/${data.symbol}`),
     getHistory: (symbol) => {
-      // Clean the symbol by removing the "-X" suffix if present
-      const cleanSymbol = symbol.includes('-X') ? symbol.split('-X')[0] : symbol;
-      console.log('In axiosConfig - getHistory for symbol:', symbol, 'cleaned to:', cleanSymbol);
-      return axiosInstance.get(`/api/market-analysis/${cleanSymbol}/history`);
+      try {
+        // Carefully clean the symbol by removing the "-X" suffix if present
+        const originalSymbol = symbol;
+        let cleanSymbol = symbol;
+        
+        if (typeof symbol === 'string') {
+          // First method: Split at -X and take first part
+          if (symbol.includes('-X')) {
+            cleanSymbol = symbol.split('-X')[0];
+          }
+          
+          // Safety check: Make sure we don't send an empty string
+          if (!cleanSymbol) {
+            cleanSymbol = originalSymbol;
+          }
+        }
+        
+        // Extensive debug logging
+        console.log('[API] getHistory - Original Symbol:', originalSymbol);
+        console.log('[API] getHistory - Cleaned Symbol:', cleanSymbol);
+        console.log('[API] getHistory - Full URL:', `${API_URL}/api/market-analysis/${cleanSymbol}/history`);
+        
+        return axiosInstance.get(`/api/market-analysis/${cleanSymbol}/history`);
+      } catch (error) {
+        console.error('[API] Error in getHistory:', error);
+        return Promise.reject(error);
+      }
     },
     refresh: (symbol) => {
-      // Clean the symbol by removing the "-X" suffix if present
-      const cleanSymbol = symbol.includes('-X') ? symbol.split('-X')[0] : symbol;
-      console.log('In axiosConfig - refresh for symbol:', symbol, 'cleaned to:', cleanSymbol);
-      return axiosInstance.post(`/api/market-analysis/refresh/${cleanSymbol}`, {});
+      try {
+        // Carefully clean the symbol by removing the "-X" suffix if present
+        const originalSymbol = symbol;
+        let cleanSymbol = symbol;
+        
+        if (typeof symbol === 'string') {
+          // First method: Split at -X and take first part
+          if (symbol.includes('-X')) {
+            cleanSymbol = symbol.split('-X')[0];
+          }
+          
+          // Safety check: Make sure we don't send an empty string
+          if (!cleanSymbol) {
+            cleanSymbol = originalSymbol;
+          }
+        }
+        
+        // Extensive debug logging
+        console.log('[API] refresh - Original Symbol:', originalSymbol);
+        console.log('[API] refresh - Cleaned Symbol:', cleanSymbol);
+        console.log('[API] refresh - Full URL:', `${API_URL}/api/market-analysis/refresh/${cleanSymbol}`);
+        
+        return axiosInstance.post(`/api/market-analysis/refresh/${cleanSymbol}`, {});
+      } catch (error) {
+        console.error('[API] Error in refresh:', error);
+        return Promise.reject(error);
+      }
     },
   },
   
