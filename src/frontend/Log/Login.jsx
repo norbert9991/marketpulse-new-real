@@ -109,16 +109,19 @@ const LoginDialog = ({ open, onClose, isLogin, toggleForm }) => {
     setLoading(true);
     setError('');
     try {
+      console.log('Attempting login with:', { email });
       const response = await API.auth.login({ email, password });
+      console.log('Login response:', response.data ? 'Success' : 'Failed');
       
       if (response.data && response.data.token) {
-        // Store token without the "Bearer " prefix if it's already included
-        const token = response.data.token.startsWith('Bearer ') 
-          ? response.data.token 
-          : `Bearer ${response.data.token}`;
+        // Store token correctly based on backend format
+        const token = response.data.token;
+        console.log('Received token (first 10 chars):', token.substring(0, 10) + '...');
         
+        // Store token as-is - the axios interceptor will handle the format
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
+        console.log('User data stored, role:', response.data.user.role);
         
         // Properly close the dialog
         onClose();
@@ -126,25 +129,18 @@ const LoginDialog = ({ open, onClose, isLogin, toggleForm }) => {
         // Redirect based on role with absolute URL to ensure proper redirection
         const baseUrl = window.location.origin;
         
-        if (response.data.user.role === 'admin') {
-          window.location.href = `${baseUrl}/#/admin-dashboard`;
-        } else {
-          // Force full page reload to ensure proper state reset
-          window.location.href = `${baseUrl}/#/user-dashboard`;
-        }
+        // For debugging
+        console.log('Current URL:', window.location.href);
+        console.log('Base URL:', baseUrl);
         
-        // Add a small delay to ensure the location change happens
-        setTimeout(() => {
-          if (window.location.hash !== '/#/user-dashboard' && 
-              window.location.hash !== '/#/admin-dashboard') {
-            console.log('Redirecting again...');
-            if (response.data.user.role === 'admin') {
-              window.location.replace(`${baseUrl}/#/admin-dashboard`);
-            } else {
-              window.location.replace(`${baseUrl}/#/user-dashboard`);
-            }
-          }
-        }, 500);
+        // Directly go to the dashboard page without any redirection
+        if (response.data.user.role === 'admin') {
+          console.log('Redirecting to admin dashboard');
+          window.location.replace(`${baseUrl}/#/admin-dashboard`);
+        } else {
+          console.log('Redirecting to user dashboard');
+          window.location.replace(`${baseUrl}/#/user-dashboard`);
+        }
       } else {
         throw new Error('Invalid response from server');
       }

@@ -78,10 +78,45 @@ const UserDashboard = () => {
           return;
         }
         
+        // Log the token format for debugging
+        if (token) {
+          const tokenStart = token.substring(0, 15);
+          console.log('UserDashboard - Token format check:', 
+                      `Starts with 'Bearer': ${token.startsWith('Bearer ')}`, 
+                      `First chars: ${tokenStart}...`);
+        }
+        
         console.log('UserDashboard - Calling API.auth.me()');
-        const response = await API.auth.me();
-        console.log('UserDashboard - Got user data:', response.data);
-        setUser(response.data.user);
+        try {
+          const response = await API.auth.me();
+          console.log('UserDashboard - Got user data:', response.data);
+          setUser(response.data.user);
+        } catch (apiError) {
+          console.error('UserDashboard - API.auth.me() failed:', apiError.response?.status, apiError.message);
+          
+          // If we're getting 401 unauthorized, let's try to repair the token format
+          if (apiError.response?.status === 401 && token) {
+            console.log('UserDashboard - Attempting to fix token format and retry');
+            // Clear existing token
+            localStorage.removeItem('token');
+            
+            // Fix token format if needed
+            let fixedToken = token;
+            if (!token.startsWith('Bearer ')) {
+              fixedToken = `Bearer ${token}`;
+            }
+            
+            // Store fixed token
+            localStorage.setItem('token', fixedToken);
+            console.log('UserDashboard - Token format updated, reloading page');
+            
+            // Reload the page to try again with the fixed token
+            window.location.reload();
+            return;
+          }
+          
+          throw apiError; // Re-throw for the main catch block to handle
+        }
       } catch (err) {
         console.error('Authentication error:', err);
         // Clear user data on authentication failure

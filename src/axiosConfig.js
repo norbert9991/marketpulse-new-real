@@ -23,13 +23,38 @@ axiosInstance.interceptors.request.use(
   config => {
     // Get token from localStorage for authenticated requests
     const token = localStorage.getItem('token');
+    console.log('Token from localStorage:', token ? token.substring(0, 20) + '...' : 'none'); // Log partial token for debugging
+    
     if (token) {
-      // Make sure to use Bearer format if your backend expects it
-      config.headers.Authorization = `Bearer ${token}`;
+      // Ensure correct token format based on what the backend expects
+      // Some backends expect "Bearer " prefix, others don't
+      let formattedToken = token;
+      
+      // If token already has Bearer prefix, use it as is
+      if (!token.startsWith('Bearer ')) {
+        formattedToken = `Bearer ${token}`;
+      }
+      
+      console.log('Using authorization header:', formattedToken.substring(0, 20) + '...'); // Log partial token
+      config.headers.Authorization = formattedToken;
     }
+    
     return config;
   },
   error => {
+    return Promise.reject(error);
+  }
+);
+
+// Add a response interceptor to log API responses for debugging
+axiosInstance.interceptors.response.use(
+  response => {
+    console.log(`API Response [${response.config.method}] ${response.config.url}:`, response.status);
+    return response;
+  },
+  error => {
+    console.error(`API Error [${error.config?.method}] ${error.config?.url}:`, 
+      error.response?.status, error.response?.data);
     return Promise.reject(error);
   }
 );
