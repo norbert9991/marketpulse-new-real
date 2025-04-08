@@ -121,16 +121,11 @@ const LoginDialog = ({ open, onClose, isLogin, toggleForm }) => {
         // Important: Clear any existing reload attempts when logging in fresh
         sessionStorage.removeItem('reloadAttempts');
         
-        // Store token WITHOUT Bearer prefix - backend will expect it without prefix
-        let tokenToStore = token;
-        if (token.startsWith('Bearer ')) {
-          tokenToStore = token.substring(7);
-        }
-        
-        localStorage.setItem('token', tokenToStore);
+        // Store token exactly as received from the server
+        localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
         console.log('User data stored, role:', response.data.user.role);
-        console.log('Token stored (without Bearer):', tokenToStore.substring(0, 10) + '...');
+        console.log('Token stored as received from server');
         
         // Close the dialog
         onClose();

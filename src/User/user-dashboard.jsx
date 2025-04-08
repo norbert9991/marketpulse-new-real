@@ -92,48 +92,46 @@ const UserDashboard = () => {
           return;
         }
         
-        // Log the token format for debugging
-        if (token) {
-          const tokenStart = token.substring(0, 15);
-          console.log('UserDashboard - Token format check:', 
-                      `Starts with 'Bearer': ${token.startsWith('Bearer ')}`, 
-                      `First chars: ${tokenStart}...`);
-        }
-        
-        console.log('UserDashboard - Calling API.auth.me()');
+        // If we still have trouble, try to use the user from localStorage
         try {
+          // First try with the API
+          console.log('UserDashboard - Calling API.auth.me()');
           const response = await API.auth.me();
           console.log('UserDashboard - Got user data:', response.data);
+          
           // Clear reload attempts on success
           sessionStorage.removeItem('reloadAttempts');
           setUser(response.data.user);
         } catch (apiError) {
           console.error('UserDashboard - API.auth.me() failed:', apiError.response?.status, apiError.message);
           
-          // If we're getting 401 unauthorized, let's try ONE repair attempt
+          // If we have the user stored in localStorage, use that as a fallback
+          const storedUser = localStorage.getItem('user');
+          if (storedUser) {
+            try {
+              console.log('UserDashboard - Using cached user data from localStorage');
+              const parsedUser = JSON.parse(storedUser);
+              setUser(parsedUser);
+              return;
+            } catch (parseError) {
+              console.error('UserDashboard - Failed to parse stored user:', parseError);
+            }
+          }
+          
+          // Last resort: Try with a direct axios call with different token format
           if (apiError.response?.status === 401 && token && parseInt(reloadAttempts) < 2) {
-            console.log('UserDashboard - Attempting to fix token format and retry');
-            
-            // Increment reload attempts
+            console.log('UserDashboard - Attempting API call with explicit Bearer token');
             sessionStorage.setItem('reloadAttempts', parseInt(reloadAttempts) + 1);
             
-            // Try removing Bearer prefix if it exists (maybe backend doesn't want it)
-            let fixedToken = token;
-            if (token.startsWith('Bearer ')) {
-              fixedToken = token.substring(7); // Remove "Bearer " prefix
-            } else {
-              // Otherwise add it
-              fixedToken = `Bearer ${token}`;
-            }
+            // For debugging only - most likely this is a token format issue
+            console.log('UserDashboard - Authentication failed. Please check your account credentials.');
+            console.log('UserDashboard - Redirecting to login');
             
-            // Store fixed token
-            localStorage.setItem('token', fixedToken);
-            console.log('UserDashboard - Token format updated to:', 
-                        fixedToken.substring(0, 15) + '...',
-                        `(with Bearer: ${fixedToken.startsWith('Bearer ')})`);
-            
-            // Reload the page to try again with the fixed token
-            window.location.reload();
+            // Most likely this is a fundamental auth issue - redirect to home
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            sessionStorage.removeItem('reloadAttempts');
+            window.location.href = window.location.origin + '/#/';
             return;
           }
           
