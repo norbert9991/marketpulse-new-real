@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, Typography, Button, Paper, TextField, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+import { Box, Typography, Button, Paper, TextField, Select, MenuItem, FormControl, InputLabel, Alert, Snackbar } from '@mui/material';
 import { createChart } from 'lightweight-charts';
 import Sidebar from './Sidebar';
+import { API } from '../axiosConfig';
 
 // Forex Trading Color Palette
 const colors = {
@@ -42,6 +43,9 @@ const Trade = () => {
   const [currentPrice, setCurrentPrice] = useState(null);
   const [isBuying, setIsBuying] = useState(true);
   const [trades, setTrades] = useState([]);
+  const [userId, setUserId] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [alert, setAlert] = useState({ show: false, message: '', severity: 'info' });
 
   const totalBalance = availableBalance + lockedMargin;
 
@@ -61,6 +65,40 @@ const Trade = () => {
     'EUR/USD', 'USD/JPY', 'GBP/USD', 'USD/CHF', 
     'AUD/USD', 'USD/CAD', 'NZD/USD', 'EUR/GBP'
   ];
+
+  // Fetch user data and trade history
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        setIsLoading(true);
+        const { data } = await API.auth.me();
+        setUserId(data.user._id);
+        
+        // Fetch user balance from backend
+        const balanceResponse = await API.balance.get();
+        if (balanceResponse.data) {
+          setAvailableBalance(balanceResponse.data.amount || 10000);
+        }
+
+        // Fetch trade history
+        const tradeHistoryResponse = await API.market.getTradeHistory();
+        if (tradeHistoryResponse.data && tradeHistoryResponse.data.trades) {
+          setTrades(tradeHistoryResponse.data.trades);
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+        setAlert({
+          show: true, 
+          message: 'Error loading user data. Please try again.',
+          severity: 'error'
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, []);
 
   // Initialize chart
   useEffect(() => {
@@ -203,11 +241,113 @@ const Trade = () => {
     return priceDiff * position.amount * position.leverage;
   };
 
-  const handleTrade = () => {
+  const handleTrade = async () => {
     if (!currentPrice) return;
     
     if (position) {
-      // Close existing position
+      try {
+        setIsLoading(true);
+        // Close existing position
+        const pnl = calculatePnl(position, currentPrice);
+        const closedTrade = {
+          ...position,
+          exitPrice: currentPrice,
+          exitTime: new Date().toISOString(),
+          pnl,
+        };
+        
+        // Save the closed trade to backend
+        await API.market.saveTrade({
+          pair: position.pair,
+          type: position.type,
+          openPrice: position.price,
+          closePrice: currentPrice,
+          amount: position.amount,
+          leverage: position.leverage,
+          pnl: pnl,
+          openTime: position.time,
+          closeTime: new Date().toISOString()
+        });
+        
+        // Update balance in backend
+        const newBalance = availableBalance + position.marginUsed + pnl;
+        await API.balance.update({ amount: newBalance });
+        
+        setTrades(prev => [...prev, closedTrade]);
+        setAvailableBalance(newBalance);
+        setLockedMargin(0);
+        setPosition(null);
+        
+        setAlert({
+          show: true, 
+          message: `Position closed with ${pnl >= 0 ? 'profit' : 'loss'}: $${pnl.toFixed(2)}`,
+          severity: pnl >= 0 ? 'success' : 'warning'
+        });
+      } catch (error) {
+        console.error('Error closing position:', error);
+        setAlert({
+          show: true, 
+          message: 'Error closing position. Please try again.',
+          severity: 'error'
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      // Open new position
+      if (availableBalance < amount) {
+        setAlert({
+          show: true, 
+          message: "Not enough available balance!",
+          severity: 'error'
+        });
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        const trade = {
+          pair: selectedPair,
+          type: isBuying ? 'buy' : 'sell',
+          orderType,
+          amount,
+          leverage,
+          price: currentPrice,
+          marginUsed: amount,
+          time: new Date().toISOString(),
+        };
+
+        // Update balance in backend
+        const newBalance = availableBalance - amount;
+        await API.balance.update({ amount: newBalance });
+        
+        setPosition(trade);
+        setAvailableBalance(newBalance);
+        setLockedMargin(amount);
+        
+        setAlert({
+          show: true, 
+          message: `${isBuying ? 'Buy' : 'Sell'} position opened for ${selectedPair}`,
+          severity: 'info'
+        });
+      } catch (error) {
+        console.error('Error opening position:', error);
+        setAlert({
+          show: true, 
+          message: 'Error opening position. Please try again.',
+          severity: 'error'
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  const closePosition = async () => {
+    if (!position || !currentPrice) return;
+    
+    try {
+      setIsLoading(true);
       const pnl = calculatePnl(position, currentPrice);
       const closedTrade = {
         ...position,
@@ -216,49 +356,47 @@ const Trade = () => {
         pnl,
       };
       
+      // Save the closed trade to backend
+      await API.market.saveTrade({
+        pair: position.pair,
+        type: position.type,
+        openPrice: position.price,
+        closePrice: currentPrice,
+        amount: position.amount,
+        leverage: position.leverage,
+        pnl: pnl,
+        openTime: position.time,
+        closeTime: new Date().toISOString()
+      });
+      
+      // Update balance in backend
+      const newBalance = availableBalance + position.marginUsed + pnl;
+      await API.balance.update({ amount: newBalance });
+      
       setTrades(prev => [...prev, closedTrade]);
-      setAvailableBalance(prev => prev + position.marginUsed + pnl);
+      setAvailableBalance(newBalance);
       setLockedMargin(0);
       setPosition(null);
-    } else {
-      // Open new position
-      if (availableBalance < amount) {
-        alert("Not enough available balance!");
-        return;
-      }
-
-      const trade = {
-        pair: selectedPair,
-        type: isBuying ? 'buy' : 'sell',
-        orderType,
-        amount,
-        leverage,
-        price: currentPrice,
-        marginUsed: amount,
-        time: new Date().toISOString(),
-      };
-
-      setPosition(trade);
-      setAvailableBalance(prev => prev - amount);
-      setLockedMargin(amount);
+      
+      setAlert({
+        show: true, 
+        message: `Position closed with ${pnl >= 0 ? 'profit' : 'loss'}: $${pnl.toFixed(2)}`,
+        severity: pnl >= 0 ? 'success' : 'warning'
+      });
+    } catch (error) {
+      console.error('Error closing position:', error);
+      setAlert({
+        show: true, 
+        message: 'Error closing position. Please try again.',
+        severity: 'error'
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const closePosition = () => {
-    if (!position || !currentPrice) return;
-    
-    const pnl = calculatePnl(position, currentPrice);
-    const closedTrade = {
-      ...position,
-      exitPrice: currentPrice,
-      exitTime: new Date().toISOString(),
-      pnl,
-    };
-    
-    setTrades(prev => [...prev, closedTrade]);
-    setAvailableBalance(prev => prev + position.marginUsed + pnl);
-    setLockedMargin(0);
-    setPosition(null);
+  const handleCloseAlert = () => {
+    setAlert({ ...alert, show: false });
   };
 
   return (
@@ -682,6 +820,17 @@ const Trade = () => {
           </Paper>
         </Box>
       </Box>
+
+      <Snackbar 
+        open={alert.show} 
+        autoHideDuration={6000} 
+        onClose={handleCloseAlert}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert onClose={handleCloseAlert} severity={alert.severity}>
+          {alert.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
