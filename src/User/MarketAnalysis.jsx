@@ -38,6 +38,12 @@ import {
 } from 'chart.js';
 import { API } from '../axiosConfig';
 
+// Get the base API URL for logging
+const API_URL = 
+  process.env.NODE_ENV === 'production' 
+    ? 'https://marketpulse-new-real.onrender.com'
+    : (process.env.REACT_APP_API_URL || 'http://localhost:5000');
+
 // Register ChartJS components
 ChartJS.register(
   CategoryScale,
@@ -123,9 +129,15 @@ const MarketAnalysis = ({ selectedSymbol }) => {
     setHistoryLoading(true);
     setHistoryError(null);
     try {
-      // Create a formatted symbol for history API call - properly remove the "-X" suffix
-      const formattedSymbol = symbol.endsWith('-X') ? symbol.substring(0, symbol.length - 2) : symbol;
-      console.log('Fetching price history for symbol:', formattedSymbol);
+      // Clean the symbol - completely remove the "-X" suffix if present
+      let formattedSymbol = symbol;
+      if (symbol.includes('-X')) {
+        formattedSymbol = symbol.split('-X')[0];
+      }
+      
+      console.log('Original symbol:', symbol);
+      console.log('Formatted symbol for history API:', formattedSymbol);
+      console.log('API URL will be:', `${API_URL}/api/market-analysis/${formattedSymbol}/history`);
       
       const response = await API.market.getHistory(formattedSymbol);
       console.log('Price history response:', response.status);
@@ -149,8 +161,14 @@ const MarketAnalysis = ({ selectedSymbol }) => {
       setLoading(true);
       setError(null);
       
-      // Create a formatted symbol for refresh API call - properly remove the "-X" suffix
-      const formattedSymbol = selectedSymbol.endsWith('-X') ? selectedSymbol.substring(0, selectedSymbol.length - 2) : selectedSymbol;
+      // Clean the symbol - completely remove the "-X" suffix if present
+      let formattedSymbol = selectedSymbol;
+      if (selectedSymbol.includes('-X')) {
+        formattedSymbol = selectedSymbol.split('-X')[0];
+      }
+      
+      console.log('Original symbol:', selectedSymbol);
+      console.log('Formatted symbol for refresh:', formattedSymbol);
       
       API.market.refresh(formattedSymbol)
         .then(response => {
