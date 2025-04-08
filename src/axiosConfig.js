@@ -1,94 +1,148 @@
 import axios from 'axios';
 
-// Set the API URL based on environment
-const API_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://marketpulse-new-real.onrender.com'
-  : 'http://localhost:5000';
+// Get API URL from environment variable or use the production URL
+const API_URL = 
+  process.env.NODE_ENV === 'production' 
+    ? 'https://marketpulse-new-real.onrender.com'
+    : (process.env.REACT_APP_API_URL || 'http://localhost:5000');
 
-console.log('Using API URL:', API_URL);
+console.log('Using API URL:', API_URL); // Debug log
 
-// Create axios instance with base URL
-const instance = axios.create({
+// Create a custom axios instance
+const axiosInstance = axios.create({
   baseURL: API_URL,
-  timeout: 10000
+  withCredentials: false, // Set to false for cross-domain requests without credentials
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  }
 });
 
-// Request interceptor to add auth token
-instance.interceptors.request.use(
+// Add a request interceptor
+axiosInstance.interceptors.request.use(
   config => {
+    // Get token from localStorage for authenticated requests
     const token = localStorage.getItem('token');
+    console.log('Token from localStorage:', token ? token.substring(0, 20) + '...' : 'none'); // Log partial token for debugging
+    
     if (token) {
-      console.log('Using token:', token);
-      config.headers.Authorization = `Bearer ${token}`;
+      // IMPORTANT: Always ensure token has the "Bearer " prefix
+      // Backend requires the "Bearer " prefix for authentication
+      const formattedToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+      console.log('Using authorization header:', formattedToken.substring(0, 20) + '...'); // Log partial token
+      config.headers.Authorization = formattedToken;
     }
+    
     return config;
   },
   error => {
+    console.error('Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
 
-// Response interceptor for error handling
-instance.interceptors.response.use(
+// Add a response interceptor to log API responses for debugging
+axiosInstance.interceptors.response.use(
   response => {
+    console.log(`API Response [${response.config.method}] ${response.config.url}:`, response.status);
     return response;
   },
   error => {
-    // Handle errors centrally here if needed
+    // Check if the request was made and the server responded
+    if (error.response) {
+      console.error(`API Error [${error.config?.method}] ${error.config?.url}:`, 
+        error.response?.status, error.response?.data);
+      
+      // Handle 401 Unauthorized errors
+      if (error.response.status === 401) {
+        console.log('Received 401 error - possible token expiration');
+        
+        // Check if token is explicitly marked as expired by the server
+        const isExpired = error.response.data?.expired === true;
+        
+        // If we're not already on the login page and not trying to log in
+        const isLoginPage = window.location.hash.includes('/login');
+        const isLoginRequest = error.config.url.includes('/api/auth/login');
+        
+        if (!isLoginPage && !isLoginRequest) {
+          console.log('Auth failure detected, handling session...');
+          
+          // If token is explicitly expired, clear it
+          if (isExpired) {
+            console.log('Token expired, clearing authentication data');
+            localStorage.removeItem('token');
+          }
+          
+          // On 401 errors, we should either redirect to login or 
+          // rely on the fallback to localStorage user data
+          console.log('Redirecting to login page due to auth failure');
+          window.location.href = window.location.origin + '/#/';
+        }
+      }
+    } else if (error.request) {
+      // The request was made but no response was received
+      console.error('No response received from API:', error.request);
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      console.error('Error setting up request:', error.message);
+    }
+    
     return Promise.reject(error);
   }
 );
 
-// API utility object with helper functions for different endpoints
+// Helper API functions
 export const API = {
   // Auth endpoints
   auth: {
-    login: (credentials) => instance.post('/api/auth/login', credentials),
-    register: (userData) => instance.post('/api/auth/register', userData),
-    me: () => instance.get('/api/auth/me')
+    login: (data) => axiosInstance.post('/api/auth/login', data),
+    register: (data) => axiosInstance.post('/api/auth/register', data),
+    me: () => axiosInstance.get('/api/auth/me'),
   },
   
   // Settings endpoints
   settings: {
-    updateEmail: (data) => instance.put('/api/users/email', data),
-    updatePassword: (data) => instance.put('/api/users/password', data),
-    deleteAccount: () => instance.delete('/api/users')
+    updateEmail: (data) => axiosInstance.put('/api/settings/update-email', data),
+    updatePassword: (data) => axiosInstance.put('/api/settings/update-password', data),
+    deleteAccount: () => axiosInstance.delete('/api/settings/delete-account'),
   },
   
-  // Market analysis endpoints
+  // Market endpoints
   market: {
-    analyze: (params) => instance.get(`/api/market-analysis/${params.symbol}`),
-    refresh: (symbol) => instance.post(`/api/market-analysis/${symbol}/refresh`),
-    getHistory: (symbol) => instance.get(`/api/market-analysis/${symbol}/history`),
-    getAll: () => instance.get('/api/market-analysis')
+    analyze: (data) => axiosInstance.get(`/api/market-analysis/${data.symbol}`),
+    getHistory: (symbol) => axiosInstance.get(`/api/market-analysis/${symbol}/history`),
+    refresh: (symbol) => axiosInstance.post(`/api/market-analysis/refresh/${symbol}`, {}),
   },
   
   // Favorites endpoints
   favorites: {
-    getAll: () => instance.get('/api/favorites'),
-    toggle: (data) => instance.post('/api/favorites/toggle', data),
-    check: (symbol) => instance.get(`/api/favorites/check/${symbol}`)
+    getAll: () => axiosInstance.get('/api/favorites'),
+    toggle: (data) => axiosInstance.post('/api/favorites/toggle', data),
+    check: (symbol) => axiosInstance.get(`/api/favorites/check/${symbol}`),
   },
   
   // Admin endpoints
   admin: {
-    getUsers: () => instance.get('/api/admin/users'),
-    updateUserStatus: (userId, status) => instance.put(`/api/admin/users/${userId}/status`, { status }),
-    getUserGrowth: () => instance.get('/api/admin/users/growth'),
-    getFavoriteSymbols: () => instance.get('/api/admin/favorites/popular'),
-    getMarketTrends: () => instance.get('/api/admin/market/trends')
+    getUsers: () => axiosInstance.get('/api/admin/users'),
+    getUserGrowth: () => axiosInstance.get('/api/admin/user-growth'),
+    getFavoriteSymbols: () => axiosInstance.get('/api/admin/favorite-symbols'),
+    getMarketTrends: () => axiosInstance.get('/api/market-trends'),
+    updateUserStatus: (userId, status) => 
+      axiosInstance.put(`/api/admin/users/${userId}/status`, { status }),
+    getProfile: () => axiosInstance.get('/api/admin/profile'),
+    getAdmins: () => axiosInstance.get('/api/admin/admins'),
+    updateProfile: (data) => axiosInstance.put('/api/admin/update-profile', data),
+    addAdmin: (data) => axiosInstance.post('/api/admin/add-admin', data),
+    deleteAdmin: (adminId) => axiosInstance.delete(`/api/admin/delete-admin/${adminId}`),
   },
   
-  // Balance endpoints
+  // Balance requests
   balance: {
-    getBalance: () => instance.get('/api/balance'),
-    deposit: (amount) => instance.post('/api/balance/deposit', { amount }),
-    withdraw: (amount) => instance.post('/api/balance/withdraw', { amount }),
-    getRequests: () => instance.get('/api/balance/requests'),
-    getHistory: (accountId) => instance.get(`/api/balance/history/${accountId}`),
-    approve: (requestId) => instance.post(`/api/balance/requests/${requestId}/approve`),
-    reject: (requestId) => instance.post(`/api/balance/requests/${requestId}/reject`)
-  }
+    getRequests: () => axiosInstance.get('/api/balance-requests'),
+    getHistory: (accountId) => axiosInstance.get(`/api/performance-history/${accountId}`),
+    approve: (data) => axiosInstance.post('/api/balance-requests/approve', data),
+    reject: (data) => axiosInstance.post('/api/balance-requests/reject', data),
+  },
 };
 
-export default instance;
+export default axiosInstance; 
