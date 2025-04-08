@@ -123,12 +123,16 @@ const MarketAnalysis = ({ selectedSymbol }) => {
     setHistoryLoading(true);
     setHistoryError(null);
     try {
-      const response = await API.market.getHistory(symbol);
+      // Create a formatted symbol for history API call - remove the "-X" suffix if present
+      const formattedSymbol = symbol.endsWith('-X') ? symbol.slice(0, -2) : symbol;
+      console.log('Fetching price history for symbol:', formattedSymbol);
+      
+      const response = await API.market.getHistory(formattedSymbol);
       console.log('Price history response:', response.status);
       setHistoryData(response.data);
     } catch (err) {
       console.error('Error fetching price history:', err);
-      setHistoryError(err.response?.data?.error || 'Failed to fetch price history data');
+      setHistoryError(err.response?.data?.error || 'No historical data is available for this symbol');
       
       // Create empty history data structure for a better UX
       setHistoryData({
@@ -145,12 +149,15 @@ const MarketAnalysis = ({ selectedSymbol }) => {
       setLoading(true);
       setError(null);
       
-      API.market.refresh(selectedSymbol)
+      // Create a formatted symbol for refresh API call - remove the "-X" suffix if present
+      const formattedSymbol = selectedSymbol.endsWith('-X') ? selectedSymbol.slice(0, -2) : selectedSymbol;
+      
+      API.market.refresh(formattedSymbol)
         .then(response => {
           console.log('Market refresh response:', response.status);
           setAnalysisData(response.data);
           // Refresh history data too
-          fetchPriceHistory(selectedSymbol);
+          fetchPriceHistory(formattedSymbol);
         })
         .catch(err => {
           console.error('Error refreshing market analysis:', err);
@@ -240,7 +247,32 @@ const MarketAnalysis = ({ selectedSymbol }) => {
   };
 
   const renderPriceHistoryChart = () => {
-    if (!historyData || !historyData.history) return null;
+    if (!historyData || !historyData.history || historyData.history.length === 0) {
+      return (
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          py: 4 
+        }}>
+          <Typography sx={{ color: colors.secondaryText, mb: 2 }}>
+            No historical price data available for this symbol
+          </Typography>
+          <Button 
+            variant="outlined" 
+            startIcon={<RefreshIcon />}
+            onClick={() => fetchPriceHistory(selectedSymbol)}
+            sx={{ 
+              color: colors.accentBlue,
+              borderColor: colors.accentBlue
+            }}
+          >
+            Try Again
+          </Button>
+        </Box>
+      );
+    }
 
     // Sort history data by date in ascending order
     const sortedHistory = [...historyData.history].sort((a, b) => 
@@ -778,6 +810,11 @@ const MarketAnalysis = ({ selectedSymbol }) => {
             {historyError && (
               <Alert 
                 severity="warning" 
+                action={
+                  <Button color="inherit" size="small" onClick={() => fetchPriceHistory(selectedSymbol)}>
+                    Retry
+                  </Button>
+                }
                 sx={{ 
                   mb: 2,
                   backgroundColor: `${colors.warningOrange}10`,
@@ -793,15 +830,7 @@ const MarketAnalysis = ({ selectedSymbol }) => {
               <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
                 <CircularProgress size={40} sx={{ color: colors.accentBlue }} />
               </Box>
-            ) : (
-              historyData?.history?.length > 0 ? (
-                renderPriceHistoryChart()
-              ) : (
-                <Typography sx={{ color: colors.secondaryText, textAlign: 'center', py: 3 }}>
-                  No historical price data available
-                </Typography>
-              )
-            )}
+            ) : renderPriceHistoryChart()}
           </Paper>
           
           {/* Rest of your component remains unchanged */}
