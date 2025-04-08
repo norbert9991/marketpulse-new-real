@@ -110,8 +110,18 @@ export const API = {
   // Market endpoints
   market: {
     analyze: (data) => axiosInstance.get(`/api/market-analysis/${data.symbol}`),
-    getHistory: (symbol) => axiosInstance.get(`/api/market-analysis/${symbol}/history`),
-    refresh: (symbol) => axiosInstance.post(`/api/market-analysis/refresh/${symbol}`, {}),
+    getHistory: (symbol) => {
+      // Clean the symbol by removing the "-X" suffix if present
+      const cleanSymbol = symbol.includes('-X') ? symbol.split('-X')[0] : symbol;
+      console.log('In axiosConfig - getHistory for symbol:', symbol, 'cleaned to:', cleanSymbol);
+      return axiosInstance.get(`/api/market-analysis/${cleanSymbol}/history`);
+    },
+    refresh: (symbol) => {
+      // Clean the symbol by removing the "-X" suffix if present
+      const cleanSymbol = symbol.includes('-X') ? symbol.split('-X')[0] : symbol;
+      console.log('In axiosConfig - refresh for symbol:', symbol, 'cleaned to:', cleanSymbol);
+      return axiosInstance.post(`/api/market-analysis/refresh/${cleanSymbol}`, {});
+    },
   },
   
   // Favorites endpoints

@@ -129,17 +129,10 @@ const MarketAnalysis = ({ selectedSymbol }) => {
     setHistoryLoading(true);
     setHistoryError(null);
     try {
-      // Clean the symbol - completely remove the "-X" suffix if present
-      let formattedSymbol = symbol;
-      if (symbol.includes('-X')) {
-        formattedSymbol = symbol.split('-X')[0];
-      }
+      // The symbol cleaning is now handled in axiosConfig.js
+      console.log('Fetching price history for symbol:', symbol);
       
-      console.log('Original symbol:', symbol);
-      console.log('Formatted symbol for history API:', formattedSymbol);
-      console.log('API URL will be:', `${API_URL}/api/market-analysis/${formattedSymbol}/history`);
-      
-      const response = await API.market.getHistory(formattedSymbol);
+      const response = await API.market.getHistory(symbol);
       console.log('Price history response:', response.status);
       setHistoryData(response.data);
     } catch (err) {
@@ -161,21 +154,15 @@ const MarketAnalysis = ({ selectedSymbol }) => {
       setLoading(true);
       setError(null);
       
-      // Clean the symbol - completely remove the "-X" suffix if present
-      let formattedSymbol = selectedSymbol;
-      if (selectedSymbol.includes('-X')) {
-        formattedSymbol = selectedSymbol.split('-X')[0];
-      }
+      // Symbol cleaning is now handled in axiosConfig.js
+      console.log('Refreshing data for symbol:', selectedSymbol);
       
-      console.log('Original symbol:', selectedSymbol);
-      console.log('Formatted symbol for refresh:', formattedSymbol);
-      
-      API.market.refresh(formattedSymbol)
+      API.market.refresh(selectedSymbol)
         .then(response => {
           console.log('Market refresh response:', response.status);
           setAnalysisData(response.data);
           // Refresh history data too
-          fetchPriceHistory(formattedSymbol);
+          fetchPriceHistory(selectedSymbol);
         })
         .catch(err => {
           console.error('Error refreshing market analysis:', err);
