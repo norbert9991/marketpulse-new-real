@@ -36,6 +36,7 @@ axiosInstance.interceptors.request.use(
     return config;
   },
   error => {
+    console.error('Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
@@ -47,24 +48,43 @@ axiosInstance.interceptors.response.use(
     return response;
   },
   error => {
-    console.error(`API Error [${error.config?.method}] ${error.config?.url}:`, 
-      error.response?.status, error.response?.data);
+    // Check if the request was made and the server responded
+    if (error.response) {
+      console.error(`API Error [${error.config?.method}] ${error.config?.url}:`, 
+        error.response?.status, error.response?.data);
       
-    // If we get a 401 unauthorized error, it might be due to an expired token
-    if (error.response && error.response.status === 401) {
-      console.log('Received 401 error - possible token expiration');
-      
-      // If we're not already on the login page and not trying to log in
-      if (!window.location.hash.includes('/login') && 
-          !error.config.url.includes('/api/auth/login')) {
-        console.log('Redirecting to login page due to auth failure');
+      // Handle 401 Unauthorized errors
+      if (error.response.status === 401) {
+        console.log('Received 401 error - possible token expiration');
         
-        // Clear token if it's invalid
-        localStorage.removeItem('token');
+        // Check if token is explicitly marked as expired by the server
+        const isExpired = error.response.data?.expired === true;
         
-        // Redirect to home/login page
-        window.location.href = window.location.origin + '/#/';
+        // If we're not already on the login page and not trying to log in
+        const isLoginPage = window.location.hash.includes('/login');
+        const isLoginRequest = error.config.url.includes('/api/auth/login');
+        
+        if (!isLoginPage && !isLoginRequest) {
+          console.log('Auth failure detected, handling session...');
+          
+          // If token is explicitly expired, clear it
+          if (isExpired) {
+            console.log('Token expired, clearing authentication data');
+            localStorage.removeItem('token');
+          }
+          
+          // On 401 errors, we should either redirect to login or 
+          // rely on the fallback to localStorage user data
+          console.log('Redirecting to login page due to auth failure');
+          window.location.href = window.location.origin + '/#/';
+        }
       }
+    } else if (error.request) {
+      // The request was made but no response was received
+      console.error('No response received from API:', error.request);
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      console.error('Error setting up request:', error.message);
     }
     
     return Promise.reject(error);

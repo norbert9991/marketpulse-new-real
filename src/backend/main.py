@@ -61,7 +61,7 @@ def analyze_market():
 @app.teardown_appcontext
 def close_db_connection(exception=None):
     """Ensure database connection is closed when app context tears down"""
-    db_manager.disconnect()
+    db_manager.close_all_connections()
 
 # Health check endpoint for Render
 @app.route('/health', methods=['GET'])

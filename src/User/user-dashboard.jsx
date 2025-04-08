@@ -84,6 +84,10 @@ const UserDashboard = () => {
           console.log('UserDashboard - Calling API.auth.me()');
           const response = await API.auth.me();
           console.log('UserDashboard - Got user data:', response.data);
+          
+          // Store the latest user data in localStorage for offline access
+          localStorage.setItem('user', JSON.stringify(response.data.user));
+          
           setUser(response.data.user);
         } catch (apiError) {
           console.error('UserDashboard - API.auth.me() failed:', apiError.response?.status, apiError.message);
@@ -95,6 +99,10 @@ const UserDashboard = () => {
               console.log('UserDashboard - Using cached user data from localStorage');
               const parsedUser = JSON.parse(storedUser);
               setUser(parsedUser);
+              
+              // If we're using cached data, don't try to load favorites from API
+              setFavoriteMarkets([]);
+              setLoading(false);
             } catch (parseError) {
               console.error('UserDashboard - Failed to parse stored user:', parseError);
               throw new Error('Authentication failed - invalid user data');
@@ -125,6 +133,15 @@ const UserDashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       console.log('UserDashboard - Fetching dashboard data');
+      
+      // Skip API call if we're using cached user data (API is likely unavailable)
+      if (user && !navigator.onLine) {
+        console.log('UserDashboard - Browser is offline, skipping API calls');
+        setFavoriteMarkets([]);
+        setLoading(false);
+        return;
+      }
+      
       try {
         // Fetch favorite markets
         const favoritesResponse = await API.favorites.getAll();
