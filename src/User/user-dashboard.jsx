@@ -14,7 +14,8 @@ import {
   IconButton,
   Tooltip,
   Chip,
-  CircularProgress
+  CircularProgress,
+  Alert
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
@@ -55,6 +56,7 @@ const UserDashboard = () => {
   const [favoriteMarkets, setFavoriteMarkets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedSymbol, setSelectedSymbol] = useState(null);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   // Debug current location
@@ -71,36 +73,17 @@ const UserDashboard = () => {
         const token = localStorage.getItem('token');
         console.log('UserDashboard - Token exists:', !!token);
         
-        // Check if we're in an infinite loop by checking a session flag
-        const reloadAttempts = sessionStorage.getItem('reloadAttempts') || 0;
-        console.log('UserDashboard - Reload attempts:', reloadAttempts);
-        
-        if (parseInt(reloadAttempts) > 2) {
-          console.error('UserDashboard - Too many reload attempts, clearing auth and redirecting');
-          // Clear tokens and redirect to home
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          sessionStorage.removeItem('reloadAttempts');
-          window.location.href = window.location.origin + '/#/';
-          return;
-        }
-        
         if (!token) {
           console.log('UserDashboard - No token, redirecting to home');
-          // Redirect to home page if no token
           window.location.href = window.location.origin + '/#/';
           return;
         }
         
-        // If we still have trouble, try to use the user from localStorage
+        // Try to get user data from API
         try {
-          // First try with the API
           console.log('UserDashboard - Calling API.auth.me()');
           const response = await API.auth.me();
           console.log('UserDashboard - Got user data:', response.data);
-          
-          // Clear reload attempts on success
-          sessionStorage.removeItem('reloadAttempts');
           setUser(response.data.user);
         } catch (apiError) {
           console.error('UserDashboard - API.auth.me() failed:', apiError.response?.status, apiError.message);
@@ -112,44 +95,32 @@ const UserDashboard = () => {
               console.log('UserDashboard - Using cached user data from localStorage');
               const parsedUser = JSON.parse(storedUser);
               setUser(parsedUser);
-              return;
             } catch (parseError) {
               console.error('UserDashboard - Failed to parse stored user:', parseError);
+              throw new Error('Authentication failed - invalid user data');
             }
-          }
-          
-          // Last resort: Try with a direct axios call with different token format
-          if (apiError.response?.status === 401 && token && parseInt(reloadAttempts) < 2) {
-            console.log('UserDashboard - Attempting API call with explicit Bearer token');
-            sessionStorage.setItem('reloadAttempts', parseInt(reloadAttempts) + 1);
-            
-            // For debugging only - most likely this is a token format issue
-            console.log('UserDashboard - Authentication failed. Please check your account credentials.');
-            console.log('UserDashboard - Redirecting to login');
-            
-            // Most likely this is a fundamental auth issue - redirect to home
+          } else {
+            // No stored user, redirect to login
             localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            sessionStorage.removeItem('reloadAttempts');
             window.location.href = window.location.origin + '/#/';
             return;
           }
-          
-          throw apiError; // Re-throw for the main catch block to handle
         }
       } catch (err) {
         console.error('Authentication error:', err);
-        // Clear user data and reload attempts on authentication failure
+        setError('Authentication failed. Please login again.');
+        // Clear user data on authentication failure
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        sessionStorage.removeItem('reloadAttempts');
-        // Redirect to home page
-        window.location.href = window.location.origin + '/#/';
+        // Redirect after a short delay to show the error
+        setTimeout(() => {
+          window.location.href = window.location.origin + '/#/';
+        }, 2000);
       }
     };
     
     fetchUser();
-  }, [navigate]);
+  }, []);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -159,10 +130,11 @@ const UserDashboard = () => {
         const favoritesResponse = await API.favorites.getAll();
         console.log('UserDashboard - Got favorites:', favoritesResponse.data);
         setFavoriteMarkets(favoritesResponse.data.favorites);
-
         setLoading(false);
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
+        // Still use the User object even if we can't fetch favorites
+        setFavoriteMarkets([]);
         setLoading(false);
       }
     };
@@ -194,8 +166,27 @@ const UserDashboard = () => {
     setSelectedSymbol(symbol);
   };
 
+  const handleSettings = () => {
+    navigate('/settings');
+    handleMenuClose();
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: colors.darkBg }}>
+        <Alert severity="error" sx={{ width: '80%', maxWidth: '500px' }}>
+          {error}
+        </Alert>
+      </Box>
+    );
+  }
+
   if (!user) {
-    return null;
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: colors.darkBg }}>
+        <CircularProgress />
+      </Box>
+    );
   }
 
   return (
@@ -232,19 +223,19 @@ const UserDashboard = () => {
                 </IconButton>
               </Tooltip>
               <Tooltip title="Settings">
-                <IconButton sx={{ color: colors.secondaryText }}>
+                <IconButton sx={{ color: colors.secondaryText }} onClick={handleSettings}>
                   <SettingsIcon />
                 </IconButton>
               </Tooltip>
               <Button 
-                startIcon={<Avatar sx={{ width: 30, height: 30, backgroundColor: colors.accentBlue }}>{user.username.charAt(0).toUpperCase()}</Avatar>}
+                startIcon={<Avatar sx={{ width: 30, height: 30, backgroundColor: colors.accentBlue }}>{user.username ? user.username.charAt(0).toUpperCase() : 'U'}</Avatar>}
                 onClick={handleMenuOpen}
                 sx={{ 
                   color: colors.primaryText,
                   '&:hover': { backgroundColor: colors.hoverBg }
                 }}
               >
-                {user.username}
+                {user.username || 'User'}
               </Button>
               <Menu
                 anchorEl={anchorEl}
@@ -262,7 +253,7 @@ const UserDashboard = () => {
                 <MenuItem onClick={handleMenuClose} sx={{ color: colors.secondaryText }}>
                   <PersonIcon sx={{ mr: 1 }} /> Profile
                 </MenuItem>
-                <MenuItem onClick={handleMenuClose} sx={{ color: colors.secondaryText }}>
+                <MenuItem onClick={handleSettings} sx={{ color: colors.secondaryText }}>
                   <SettingsIcon sx={{ mr: 1 }} /> Settings
                 </MenuItem>
                 <Divider sx={{ backgroundColor: colors.borderColor }} />

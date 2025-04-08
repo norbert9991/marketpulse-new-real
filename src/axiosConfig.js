@@ -26,18 +26,9 @@ axiosInstance.interceptors.request.use(
     console.log('Token from localStorage:', token ? token.substring(0, 20) + '...' : 'none'); // Log partial token for debugging
     
     if (token) {
-      // IMPORTANT: Backend requires the Bearer prefix for tokens
-      // Format token properly for the backend
-      let formattedToken;
-      
-      // If token already has Bearer prefix, use it as is
-      if (token.startsWith('Bearer ')) {
-        formattedToken = token;
-      } else {
-        // Add Bearer prefix if it doesn't have it
-        formattedToken = `Bearer ${token}`;
-      }
-      
+      // IMPORTANT: Always ensure token has the "Bearer " prefix
+      // Backend requires the "Bearer " prefix for authentication
+      const formattedToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
       console.log('Using authorization header:', formattedToken.substring(0, 20) + '...'); // Log partial token
       config.headers.Authorization = formattedToken;
     }
