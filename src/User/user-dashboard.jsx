@@ -60,16 +60,20 @@ const UserDashboard = () => {
       try {
         const token = localStorage.getItem('token');
         if (!token) {
-          navigate('/login');
+          // Redirect to home page if no token
+          window.location.href = '/#/';
           return;
         }
         
         const response = await API.auth.me();
         setUser(response.data.user);
       } catch (err) {
+        console.error('Authentication error:', err);
+        // Clear user data on authentication failure
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        navigate('/login');
+        // Redirect to home page
+        window.location.href = '/#/';
       }
     };
     
@@ -96,9 +100,11 @@ const UserDashboard = () => {
   }, [user]);
 
   const handleLogout = () => {
+    // Clear authentication data
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    navigate('/home');
+    // Use window location for more reliable redirect with hash router
+    window.location.href = '/#/';
   };
 
   const handleMenuOpen = (event) => {

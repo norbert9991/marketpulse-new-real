@@ -111,25 +111,32 @@ const LoginDialog = ({ open, onClose, isLogin, toggleForm }) => {
     try {
       const response = await API.auth.login({ email, password });
       
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-      
-      // Redirect based on role - use hash router friendly paths
-      if (response.data.user.role === 'admin') {
-        navigate('/admin-dashboard');
-        // Close the dialog before navigation
+      if (response.data && response.data.token) {
+        // Store token without the "Bearer " prefix if it's already included
+        const token = response.data.token.startsWith('Bearer ') 
+          ? response.data.token 
+          : `Bearer ${response.data.token}`;
+        
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        
+        // Properly close the dialog
         onClose();
-        // Reload the page to ensure proper routing
-        setTimeout(() => {
+        
+        // Redirect based on role
+        if (response.data.user.role === 'admin') {
+          // Use window.location.href for more reliable navigation with hash router
           window.location.href = '/#/admin-dashboard';
-        }, 100);
+        } else {
+          // User dashboard
+          window.location.href = '/#/user-dashboard';
+        }
       } else {
-        navigate('/user-dashboard');
-        onClose();
+        throw new Error('Invalid response from server');
       }
     } catch (err) {
       console.error('Login error:', err);
-      setError(err.response?.data?.message || 'Login failed');
+      setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
