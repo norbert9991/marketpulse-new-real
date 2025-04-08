@@ -71,6 +71,20 @@ const UserDashboard = () => {
         const token = localStorage.getItem('token');
         console.log('UserDashboard - Token exists:', !!token);
         
+        // Check if we're in an infinite loop by checking a session flag
+        const reloadAttempts = sessionStorage.getItem('reloadAttempts') || 0;
+        console.log('UserDashboard - Reload attempts:', reloadAttempts);
+        
+        if (parseInt(reloadAttempts) > 2) {
+          console.error('UserDashboard - Too many reload attempts, clearing auth and redirecting');
+          // Clear tokens and redirect to home
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          sessionStorage.removeItem('reloadAttempts');
+          window.location.href = window.location.origin + '/#/';
+          return;
+        }
+        
         if (!token) {
           console.log('UserDashboard - No token, redirecting to home');
           // Redirect to home page if no token
@@ -90,25 +104,33 @@ const UserDashboard = () => {
         try {
           const response = await API.auth.me();
           console.log('UserDashboard - Got user data:', response.data);
+          // Clear reload attempts on success
+          sessionStorage.removeItem('reloadAttempts');
           setUser(response.data.user);
         } catch (apiError) {
           console.error('UserDashboard - API.auth.me() failed:', apiError.response?.status, apiError.message);
           
-          // If we're getting 401 unauthorized, let's try to repair the token format
-          if (apiError.response?.status === 401 && token) {
+          // If we're getting 401 unauthorized, let's try ONE repair attempt
+          if (apiError.response?.status === 401 && token && parseInt(reloadAttempts) < 2) {
             console.log('UserDashboard - Attempting to fix token format and retry');
-            // Clear existing token
-            localStorage.removeItem('token');
             
-            // Fix token format if needed
+            // Increment reload attempts
+            sessionStorage.setItem('reloadAttempts', parseInt(reloadAttempts) + 1);
+            
+            // Try removing Bearer prefix if it exists (maybe backend doesn't want it)
             let fixedToken = token;
-            if (!token.startsWith('Bearer ')) {
+            if (token.startsWith('Bearer ')) {
+              fixedToken = token.substring(7); // Remove "Bearer " prefix
+            } else {
+              // Otherwise add it
               fixedToken = `Bearer ${token}`;
             }
             
             // Store fixed token
             localStorage.setItem('token', fixedToken);
-            console.log('UserDashboard - Token format updated, reloading page');
+            console.log('UserDashboard - Token format updated to:', 
+                        fixedToken.substring(0, 15) + '...',
+                        `(with Bearer: ${fixedToken.startsWith('Bearer ')})`);
             
             // Reload the page to try again with the fixed token
             window.location.reload();
@@ -119,9 +141,10 @@ const UserDashboard = () => {
         }
       } catch (err) {
         console.error('Authentication error:', err);
-        // Clear user data on authentication failure
+        // Clear user data and reload attempts on authentication failure
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        sessionStorage.removeItem('reloadAttempts');
         // Redirect to home page
         window.location.href = window.location.origin + '/#/';
       }
