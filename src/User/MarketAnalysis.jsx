@@ -123,8 +123,8 @@ const MarketAnalysis = ({ selectedSymbol }) => {
     setHistoryLoading(true);
     setHistoryError(null);
     try {
-      // Create a formatted symbol for history API call - remove the "-X" suffix if present
-      const formattedSymbol = symbol.endsWith('-X') ? symbol.slice(0, -2) : symbol;
+      // Create a formatted symbol for history API call - properly remove the "-X" suffix
+      const formattedSymbol = symbol.endsWith('-X') ? symbol.substring(0, symbol.length - 2) : symbol;
       console.log('Fetching price history for symbol:', formattedSymbol);
       
       const response = await API.market.getHistory(formattedSymbol);
@@ -149,8 +149,8 @@ const MarketAnalysis = ({ selectedSymbol }) => {
       setLoading(true);
       setError(null);
       
-      // Create a formatted symbol for refresh API call - remove the "-X" suffix if present
-      const formattedSymbol = selectedSymbol.endsWith('-X') ? selectedSymbol.slice(0, -2) : selectedSymbol;
+      // Create a formatted symbol for refresh API call - properly remove the "-X" suffix
+      const formattedSymbol = selectedSymbol.endsWith('-X') ? selectedSymbol.substring(0, selectedSymbol.length - 2) : selectedSymbol;
       
       API.market.refresh(formattedSymbol)
         .then(response => {
