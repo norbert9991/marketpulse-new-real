@@ -78,6 +78,7 @@ const MarketAnalysis = ({ selectedSymbol }) => {
   const [error, setError] = useState(null);
   const [historyError, setHistoryError] = useState(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [historyRetryCount, setHistoryRetryCount] = useState(0);
 
   useEffect(() => {
     if (selectedSymbol) {
@@ -126,9 +127,30 @@ const MarketAnalysis = ({ selectedSymbol }) => {
       const response = await API.market.getHistory(symbol);
       console.log('Price history response:', response.status);
       setHistoryData(response.data);
+      // Reset retry count on successful fetch
+      setHistoryRetryCount(0);
     } catch (err) {
       console.error('Error fetching price history:', err);
-      setHistoryError(err.response?.data?.error || 'Failed to fetch price history data');
+      
+      // Handle specific error cases
+      if (err.response?.status === 500) {
+        console.log('Server error encountered when fetching price history');
+        if (historyRetryCount < 2) {
+          // Try again after a delay for server errors
+          console.log(`Retrying price history fetch (attempt ${historyRetryCount + 1})`);
+          setTimeout(() => {
+            setHistoryRetryCount(prev => prev + 1);
+            fetchPriceHistory(symbol);
+          }, 2000);
+        } else {
+          setHistoryError('Server error retrieving price history. This could be temporary.');
+        }
+      } else if (err.response?.status === 404) {
+        // Handle 404 "No historical data available" errors
+        setHistoryError('No historical price data available for this symbol yet. Try refreshing the analysis to generate data.');
+      } else {
+        setHistoryError(err.response?.data?.error || 'Failed to fetch price history data');
+      }
       
       // Create empty history data structure for a better UX
       setHistoryData({
@@ -144,13 +166,16 @@ const MarketAnalysis = ({ selectedSymbol }) => {
     if (selectedSymbol) {
       setLoading(true);
       setError(null);
+      setHistoryError(null);
       
       API.market.refresh(selectedSymbol)
         .then(response => {
           console.log('Market refresh response:', response.status);
           setAnalysisData(response.data);
-          // Refresh history data too
-          fetchPriceHistory(selectedSymbol);
+          // Refresh history data too after a short delay
+          setTimeout(() => {
+            fetchPriceHistory(selectedSymbol);
+          }, 1000); // Small delay to allow backend to process data
         })
         .catch(err => {
           console.error('Error refreshing market analysis:', err);
@@ -240,7 +265,7 @@ const MarketAnalysis = ({ selectedSymbol }) => {
   };
 
   const renderPriceHistoryChart = () => {
-    if (!historyData || !historyData.history) return null;
+    if (!historyData || !historyData.history || historyData.history.length === 0) return null;
 
     // Sort history data by date in ascending order
     const sortedHistory = [...historyData.history].sort((a, b) => 
@@ -778,6 +803,11 @@ const MarketAnalysis = ({ selectedSymbol }) => {
             {historyError && (
               <Alert 
                 severity="warning" 
+                action={
+                  <Button color="inherit" size="small" onClick={handleRefresh}>
+                    Refresh
+                  </Button>
+                }
                 sx={{ 
                   mb: 2,
                   backgroundColor: `${colors.warningOrange}10`,
@@ -798,7 +828,7 @@ const MarketAnalysis = ({ selectedSymbol }) => {
                 renderPriceHistoryChart()
               ) : (
                 <Typography sx={{ color: colors.secondaryText, textAlign: 'center', py: 3 }}>
-                  No historical price data available
+                  {historyError ? 'Error loading price history' : 'No historical price data available'}
                 </Typography>
               )
             )}
