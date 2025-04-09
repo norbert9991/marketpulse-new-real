@@ -294,7 +294,7 @@ const UserDashboard = () => {
                 WebkitTextFillColor: 'transparent'
               }}
             >
-              MARKEPULSE
+              MARKETPULSE
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <Tooltip title="Notifications">
@@ -395,41 +395,46 @@ const UserDashboard = () => {
 
           {/* Combined Market Analysis and Overview Section */}
           {selectedSymbol && (
-            <Paper
-              sx={{ 
-                backgroundColor: colors.cardBg,
-                border: `1px solid ${colors.borderColor}`,
-                borderRadius: '12px',
-                boxShadow: `0 4px 12px ${colors.shadowColor}`,
-                overflow: 'hidden'
-              }}
-            >
-              <Grid container>
-  {/* Left Section - Market Analysis (75%) */}
-  <Grid item xs={12} md={9} lg={9}>
-    <Box sx={{ 
-      height: '100%',
-      borderRight: `1px solid ${colors.borderColor}`,
-    }}>
-      <MarketAnalysis selectedSymbol={selectedSymbol} />
-    </Box>
-  </Grid>
-  
-  {/* Right Section - Market Overview (25%) */}
-  <Grid item xs={12} md={3} lg={3} sx={{ 
-    borderLeft: `1px solid ${colors.borderColor}`,
-    margin: '-1px 0 0 -1px', // Fix double border
-    backgroundColor: `${colors.cardBg}05`
-  }}>
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: { xs: 'column', md: 'row' },
+              gap: 2
+            }}>
+              {/* Market Analysis - 75% width */}
+              <Box sx={{
+                width: { xs: '100%', md: '75%' },
+                flexShrink: 0
+              }}>
+                <Paper sx={{ 
+                  backgroundColor: colors.cardBg,
+                  border: `1px solid ${colors.borderColor}`,
+                  borderRadius: '12px',
+                  boxShadow: `0 4px 12px ${colors.shadowColor}`,
+                  height: '100%'
+                }}>
+                  <MarketAnalysis selectedSymbol={selectedSymbol} />
+                </Paper>
+              </Box>
+              
+              {/* Market Overview - 25% width */}
+              <Box sx={{
+                width: { xs: '100%', md: '25%' },
+                flexShrink: 0
+              }}>
+                <Paper sx={{ 
+                  backgroundColor: colors.cardBg,
+                  border: `1px solid ${colors.borderColor}`,
+                  borderRadius: '12px',
+                  boxShadow: `0 4px 12px ${colors.shadowColor}`,
+                  height: '100%',
+                  p: 2
+                }}>
                   {marketData && (
                     <Box sx={{ 
-                      p: 2,
                       height: '100%',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: 2,
-                      maxWidth: '100%',
-                      overflow: 'auto'
+                      gap: 2
                     }}>
                       <Typography variant="h6" sx={{ 
                         color: colors.primaryText, 
@@ -798,9 +803,9 @@ const UserDashboard = () => {
                       )}
                     </Box>
                   )}
-                </Grid>
-              </Grid>
-            </Paper>
+                </Paper>
+              </Box>
+            </Box>
           )}
         </Box>
       </Box>
@@ -809,4 +814,3 @@ const UserDashboard = () => {
 };
 
 export default UserDashboard;
-
