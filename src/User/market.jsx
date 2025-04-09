@@ -131,8 +131,19 @@ const Market = () => {
   useEffect(() => {
     const checkIfFavorite = async () => {
       try {
+        // Handle case where selectedPair might be an object
+        let pairSymbol = selectedPair;
+        
+        if (typeof selectedPair === 'object' && selectedPair !== null) {
+          pairSymbol = selectedPair.value || 'EURUSD=X';
+          console.warn('Selected pair is object in favorite check, using value:', pairSymbol);
+        }
+        
         // Handle case where the symbol might have -X suffix
-        const cleanSymbol = selectedPair.includes('-X') ? selectedPair.split('-X')[0] : selectedPair;
+        const cleanSymbol = typeof pairSymbol === 'string' && pairSymbol.includes('-X') 
+          ? pairSymbol.split('-X')[0] 
+          : pairSymbol;
+          
         console.log('Checking favorite status for clean symbol:', cleanSymbol);
         
         const response = await API.favorites.check(cleanSymbol);
@@ -160,7 +171,16 @@ const Market = () => {
   };
 
   const handlePairChange = (event) => {
-    const newPair = event.target.value;
+    // Make sure we're getting a string value, not an object
+    let newPair = event.target.value;
+    
+    // If it's an object with a value property, use that instead
+    if (typeof newPair === 'object' && newPair !== null) {
+      console.warn('Selected pair is an object instead of string:', newPair);
+      newPair = newPair.value || 'EURUSD=X';
+    }
+    
+    console.log('Setting new pair to:', newPair);
     setSelectedPair(newPair);
     
     // Reset data when changing pairs
@@ -271,17 +291,27 @@ const Market = () => {
 
   const toggleFavorite = async () => {
     try {
-      const pairInfo = currencyPairs.find(pair => pair.value === selectedPair);
-      const pairName = pairInfo ? pairInfo.label : selectedPair;
+      // Handle case where selectedPair might be an object
+      let pairSymbol = selectedPair;
+      
+      if (typeof selectedPair === 'object' && selectedPair !== null) {
+        pairSymbol = selectedPair.value || 'EURUSD=X';
+        console.warn('Selected pair is object in toggle favorite, using value:', pairSymbol);
+      }
+
+      const pairInfo = currencyPairs.find(pair => pair.value === pairSymbol);
+      const pairName = pairInfo ? pairInfo.label : pairSymbol;
       
       // Log request data for debugging
       console.log('Toggling favorite with data:', { 
-        symbol: selectedPair, 
+        symbol: pairSymbol, 
         pair_name: pairName 
       });
       
       // Handle case where the symbol might have -X suffix
-      const cleanSymbol = selectedPair.includes('-X') ? selectedPair.split('-X')[0] : selectedPair;
+      const cleanSymbol = typeof pairSymbol === 'string' && pairSymbol.includes('-X') 
+        ? pairSymbol.split('-X')[0] 
+        : pairSymbol;
       
       const response = await API.favorites.toggle({
         symbol: cleanSymbol,
@@ -402,7 +432,17 @@ const Market = () => {
             <Box sx={{ display: 'flex', gap: 1 }}>
               <Button 
                 variant="contained" 
-                onClick={fetchMarketAnalysis}
+                onClick={() => {
+                  console.log('Selected pair before analysis:', selectedPair);
+                  if (typeof selectedPair === 'object') {
+                    console.warn('selectedPair is an object instead of a string, extracting value');
+                    const actualValue = selectedPair?.value || 'EURUSD=X';
+                    setSelectedPair(actualValue);
+                    setTimeout(() => fetchMarketAnalysis(actualValue), 100);
+                  } else {
+                    fetchMarketAnalysis(selectedPair);
+                  }
+                }}
                 disabled={loading}
                 sx={{ 
                   backgroundColor: colors.accentBlue,
