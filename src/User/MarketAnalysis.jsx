@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Box, 
   Typography, 
@@ -16,8 +16,7 @@ import {
   TableHead,
   TableRow,
   Tooltip,
-  IconButton,
-  useTheme
+  IconButton
 } from '@mui/material';
 import { 
   TrendingUp as TrendingUpIcon,
@@ -39,8 +38,11 @@ import {
 } from 'chart.js';
 import { API } from '../axiosConfig';
 
-// Get the base API URL for logging if needed
-const API_URL = API.baseURL;
+// Get the base API URL for logging
+const API_URL = 
+  process.env.NODE_ENV === 'production' 
+    ? 'https://marketpulse-new-real.onrender.com'
+    : (process.env.REACT_APP_API_URL || 'http://localhost:5000');
 
 // Register ChartJS components
 ChartJS.register(
@@ -54,192 +56,163 @@ ChartJS.register(
   Filler
 );
 
-// Theme constants
-const lightThemeColors = {
-  primaryText: '#333333',
-  secondaryText: '#666666',
-  background: '#ffffff',
-  cardBackground: '#f5f7fa',
-  positiveColor: '#4caf50',
-  negativeColor: '#f44336',
-  neutralColor: '#757575',
-  chartLine: '#1976d2'
+// Forex Trading Color Palette
+const colors = {
+  darkBg: '#0A0C14',
+  panelBg: '#141620',
+  cardBg: '#1E2235',
+  primaryText: '#FFFFFF',
+  secondaryText: '#A0A5B8',
+  buyGreen: '#00E676',
+  sellRed: '#FF3D57',
+  accentBlue: '#2196F3',
+  warningOrange: '#FFA726',
+  profitGreen: '#00C853',
+  lossRed: '#D50000',
+  gradientStart: '#2196F3',
+  gradientEnd: '#00E676',
+  hoverBg: 'rgba(33, 150, 243, 0.1)',
+  borderColor: '#2A2F45',
+  shadowColor: 'rgba(0, 0, 0, 0.3)'
 };
 
-// Dark theme colors
-const darkThemeColors = {
-  primaryText: '#ffffff',
-  secondaryText: '#cccccc',
-  background: '#1c2025',
-  cardBackground: '#2d333b',
-  positiveColor: '#81c784',
-  negativeColor: '#e57373',
-  neutralColor: '#b0bec5',
-  chartLine: '#64b5f6'
-};
-
-const MarketAnalysis = ({ selectedSymbol, darkMode = false }) => {
-  const theme = useTheme();
+const MarketAnalysis = ({ selectedSymbol }) => {
   const [analysisData, setAnalysisData] = useState(null);
-  const [historyData, setHistoryData] = useState({ priceHistory: [] });
-  const [loading, setLoading] = useState(true);
-  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyData, setHistoryData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [error, setError] = useState(null);
   const [historyError, setHistoryError] = useState(null);
-  const [timeframe, setTimeframe] = useState('1mo');
-  const colors = darkMode ? darkThemeColors : lightThemeColors;
+  const [retryCount, setRetryCount] = useState(0);
 
-  // Clean symbol to ensure consistent API calls
-  const cleanSymbol = useCallback((symbol) => {
-    if (!symbol) return '';
-    
-    // Handle case where symbol might be an object
-    let symbolString = symbol;
-    if (typeof symbol === 'object' && symbol !== null) {
-      symbolString = symbol.value || '';
-      console.warn('Symbol is an object, using value property:', symbolString);
+  useEffect(() => {
+    if (selectedSymbol) {
+      fetchMarketAnalysis(selectedSymbol);
+      fetchPriceHistory(selectedSymbol);
     }
-    
-    // Remove -X suffix if present
-    if (typeof symbolString === 'string' && symbolString.includes('-X')) {
-      console.log(`Cleaning symbol: ${symbolString} -> ${symbolString.split('-X')[0]}`);
-      return symbolString.split('-X')[0];
-    }
-    
-    return symbolString;
-  }, []);
+  }, [selectedSymbol]);
 
-  // Memoized fetch functions to prevent unnecessary rerenders
-  const fetchMarketAnalysis = useCallback(async () => {
-    if (!selectedSymbol) return;
-    
+  const fetchMarketAnalysis = async (symbol) => {
     setLoading(true);
     setError(null);
-    
     try {
-      // Clean the symbol before API call
-      const cleanedSymbol = cleanSymbol(selectedSymbol);
-      console.log(`Fetching market analysis for: ${cleanedSymbol} (original: ${selectedSymbol})`);
-      
-      const response = await API.market.analyze({ symbol: cleanedSymbol });
-      console.log('Analysis data received:', response);
-      
-      // Ensure we have a proper data structure
-      const data = response.data || response;
-      
-      // Create a comprehensive data object with fallbacks for missing properties
-      const processedData = {
-        ...data,
-        technical_indicators: data.technical_indicators || {},
-        support_resistance: data.support_resistance || { support: [], resistance: [] },
-        sentiment: data.sentiment || {},
-        historical_data: data.historical_data || { prices: [], dates: [] }
-      };
-      
-      // Process support/resistance data if available
-      if (processedData.support_resistance) {
-        console.log('Support/resistance data:', processedData.support_resistance);
-        
-        // Extract support values if they're in objects with level_value property
-        if (Array.isArray(processedData.support_resistance.support)) {
-          processedData.support_resistance.support = processedData.support_resistance.support.map(item => 
-            typeof item === 'object' && item.level_value ? parseFloat(item.level_value) : parseFloat(item)
-          );
-        }
-        
-        // Extract resistance values if they're in objects with level_value property
-        if (Array.isArray(processedData.support_resistance.resistance)) {
-          processedData.support_resistance.resistance = processedData.support_resistance.resistance.map(item => 
-            typeof item === 'object' && item.level_value ? parseFloat(item.level_value) : parseFloat(item)
-          );
-        }
-      }
-      
-      console.log('Processed analysis data:', processedData);
-      setAnalysisData(processedData);
+      const response = await API.market.analyze({ symbol });
+      console.log('Market analysis response:', response.status);
+      setAnalysisData(response.data);
+      // Reset retry count on successful fetch
+      setRetryCount(0);
     } catch (err) {
       console.error('Error fetching market analysis:', err);
-      setError('Failed to load market analysis. Please try again later.');
+      
+      // Handle specific error cases
+      if (err.response?.status === 500) {
+        console.log('Server error encountered when fetching market analysis');
+        if (retryCount < 2) {
+          // Try again after a delay for server errors
+          console.log(`Retrying market analysis fetch (attempt ${retryCount + 1})`);
+          setTimeout(() => {
+            setRetryCount(prev => prev + 1);
+            fetchMarketAnalysis(symbol);
+          }, 2000);
+        } else {
+          setError('The server encountered an error processing this request. Please try again later.');
+        }
+      } else {
+        setError(err.response?.data?.error || 'Failed to fetch market analysis data');
+      }
     } finally {
       setLoading(false);
     }
-  }, [selectedSymbol, cleanSymbol]);
+  };
 
-  const fetchPriceHistory = useCallback(async () => {
-    if (!selectedSymbol) return;
-    
+  const fetchPriceHistory = async (symbol) => {
     setHistoryLoading(true);
     setHistoryError(null);
-    
     try {
-      // Clean the symbol before API call
-      const cleanedSymbol = cleanSymbol(selectedSymbol);
-      console.log(`Fetching price history for: ${cleanedSymbol} (original: ${selectedSymbol})`);
+      // Try to strip the -X suffix for troubleshooting
+      // Even though this is now also handled in axiosConfig.js
+      const plainSymbol = symbol.includes('-X') ? symbol.split('-X')[0] : symbol;
       
-      const response = await API.market.getPriceHistory(cleanedSymbol, timeframe);
-      console.log('Price history received:', response);
+      console.log('Fetching price history for symbol:', symbol);
+      console.log('Plain symbol (without -X):', plainSymbol);
       
-      // Check if response has the expected format
-      if (!response || !response.history || response.history.length === 0) {
-        console.warn('No price history data available for this symbol');
-        setHistoryError('No historical data available for this pair');
-        setHistoryData({ priceHistory: [] });
-        return;
+      // First try with the original symbol
+      try {
+        const response = await API.market.getHistory(symbol);
+        console.log('Price history response:', response.status);
+        setHistoryData(response.data);
+        return; // Exit the function if successful
+      } catch (firstErr) {
+        console.error('Error with original symbol, trying plain symbol:', firstErr);
+        
+        // If that fails, try with the plain symbol without -X as a fallback
+        if (symbol !== plainSymbol) {
+          try {
+            const plainResponse = await API.market.getHistory(plainSymbol);
+            console.log('Price history response with plain symbol:', plainResponse.status);
+            setHistoryData(plainResponse.data);
+            return; // Exit the function if successful
+          } catch (secondErr) {
+            console.error('Error with plain symbol too:', secondErr);
+            // Continue to the final catch block
+            throw secondErr;
+          }
+        } else {
+          // If symbols are identical, just throw the original error
+          throw firstErr;
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching price history (all attempts failed):', err);
+      
+      // Create a helpful error message
+      let errorMessage = 'No historical data is available for this symbol';
+      if (err.response?.status === 404) {
+        errorMessage = `No historical data available for ${symbol}. The data may not exist in our database.`;
+      } else if (err.response?.status === 500) {
+        errorMessage = 'Server error while retrieving historical data. Please try again later.';
       }
       
-      // Format the data for the chart
-      const formattedHistory = {
-        priceHistory: response.history.map(item => ({
-          date: item.date,
-          open: parseFloat(item.open),
-          high: parseFloat(item.high),
-          low: parseFloat(item.low),
-          close: parseFloat(item.close)
-        }))
-      };
+      setHistoryError(errorMessage);
       
-      console.log('Processed history data:', formattedHistory);
-      setHistoryData(formattedHistory);
-    } catch (err) {
-      console.error('Error fetching price history:', err);
-      setHistoryError('Failed to load historical data. Please try again later.');
-      setHistoryData({ priceHistory: [] });
+      // Create empty history data structure for a better UX
+      setHistoryData({
+        symbol: symbol,
+        history: []
+      });
     } finally {
       setHistoryLoading(false);
     }
-  }, [selectedSymbol, timeframe, cleanSymbol]);
+  };
 
-  // Fetch data when component mounts or when selectedSymbol changes
-  useEffect(() => {
+  const handleRefresh = () => {
     if (selectedSymbol) {
-      fetchMarketAnalysis();
-      fetchPriceHistory();
-    }
-  }, [selectedSymbol, timeframe, fetchMarketAnalysis, fetchPriceHistory]);
-
-  // Handle refresh button click
-  const handleRefresh = async () => {
-    if (!selectedSymbol) return;
-    
-    setLoading(true);
-    setError(null);
-    
-    try {
-      // Clean the symbol before API call
-      const cleanedSymbol = cleanSymbol(selectedSymbol);
-      console.log(`Refreshing analysis for: ${cleanedSymbol} (original: ${selectedSymbol})`);
+      setLoading(true);
+      setError(null);
       
-      // Refresh market analysis data
-      await API.market.refresh(cleanedSymbol);
+      // Symbol cleaning is now handled in axiosConfig.js
+      console.log('Refreshing data for symbol:', selectedSymbol);
       
-      // Fetch updated data
-      await fetchMarketAnalysis();
-      await fetchPriceHistory();
-    } catch (err) {
-      console.error('Error during refresh:', err);
-      setError('Failed to refresh data. Please try again later.');
-    } finally {
-      setLoading(false);
+      API.market.refresh(selectedSymbol)
+        .then(response => {
+          console.log('Market refresh response:', response.status);
+          setAnalysisData(response.data);
+          // Refresh history data too
+          fetchPriceHistory(selectedSymbol);
+        })
+        .catch(err => {
+          console.error('Error refreshing market analysis:', err);
+          
+          // Handle specific error cases
+          if (err.response?.status === 500) {
+            setError('The server encountered an error. This could be due to temporary issues, please try again later.');
+          } else {
+            setError(err.response?.data?.error || 'Failed to refresh market analysis data');
+          }
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     }
   };
 
@@ -257,8 +230,8 @@ const MarketAnalysis = ({ selectedSymbol, darkMode = false }) => {
         {
           label: 'Predicted Price',
           data: numericPredictions,
-          borderColor: colors.positiveColor,
-          backgroundColor: 'rgba(76, 175, 80, 0.1)',
+          borderColor: colors.buyGreen,
+          backgroundColor: 'rgba(0, 230, 118, 0.1)',
           fill: true,
           tension: 0.4,
           borderWidth: 2,
@@ -279,10 +252,10 @@ const MarketAnalysis = ({ selectedSymbol, darkMode = false }) => {
         tooltip: {
           mode: 'index',
           intersect: false,
-          backgroundColor: colors.background,
+          backgroundColor: colors.panelBg,
           titleColor: colors.primaryText,
           bodyColor: colors.primaryText,
-          borderColor: colors.chartLine,
+          borderColor: colors.borderColor,
           borderWidth: 1
         }
       },
@@ -290,7 +263,7 @@ const MarketAnalysis = ({ selectedSymbol, darkMode = false }) => {
         x: {
           grid: {
             display: false,
-            color: colors.chartLine
+            color: colors.borderColor
           },
           ticks: {
             color: colors.secondaryText
@@ -298,7 +271,7 @@ const MarketAnalysis = ({ selectedSymbol, darkMode = false }) => {
         },
         y: {
           grid: {
-            color: colors.chartLine
+            color: colors.borderColor
           },
           ticks: {
             color: colors.secondaryText
@@ -315,36 +288,35 @@ const MarketAnalysis = ({ selectedSymbol, darkMode = false }) => {
   };
 
   const renderPriceHistoryChart = () => {
-    if (historyLoading) {
+    if (!historyData || !historyData.history || historyData.history.length === 0) {
       return (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 4, height: '300px' }}>
-          <CircularProgress size={40} thickness={4} sx={{ color: colors.chartLine }} />
-        </Box>
-      );
-    }
-    
-    if (historyError) {
-      return (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 4, height: '300px' }}>
-          <Typography variant="body1" color="text.secondary">
-            {historyError}
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          py: 4 
+        }}>
+          <Typography sx={{ color: colors.secondaryText, mb: 2 }}>
+            No historical price data available for this symbol
           </Typography>
-        </Box>
-      );
-    }
-
-    if (!historyData || !historyData.priceHistory || historyData.priceHistory.length === 0) {
-      return (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 4, height: '300px' }}>
-          <Typography variant="body1" color="text.secondary">
-            No historical data available for this currency pair
-          </Typography>
+          <Button 
+            variant="outlined" 
+            startIcon={<RefreshIcon />}
+            onClick={() => fetchPriceHistory(selectedSymbol)}
+            sx={{ 
+              color: colors.accentBlue,
+              borderColor: colors.accentBlue
+            }}
+          >
+            Try Again
+          </Button>
         </Box>
       );
     }
 
     // Sort history data by date in ascending order
-    const sortedHistory = [...historyData.priceHistory].sort((a, b) => 
+    const sortedHistory = [...historyData.history].sort((a, b) => 
       new Date(a.date) - new Date(b.date)
     );
 
@@ -354,7 +326,7 @@ const MarketAnalysis = ({ selectedSymbol, darkMode = false }) => {
         {
           label: 'Close Price',
           data: sortedHistory.map(item => item.close),
-          borderColor: colors.chartLine,
+          borderColor: colors.accentBlue,
           backgroundColor: 'rgba(33, 150, 243, 0.1)',
           fill: true,
           tension: 0.4,
@@ -365,8 +337,8 @@ const MarketAnalysis = ({ selectedSymbol, darkMode = false }) => {
         {
           label: 'High Price',
           data: sortedHistory.map(item => item.high),
-          borderColor: colors.positiveColor,
-          backgroundColor: 'rgba(76, 175, 80, 0.1)',
+          borderColor: colors.buyGreen,
+          backgroundColor: 'rgba(0, 230, 118, 0.1)',
           fill: false,
           tension: 0.4,
           borderWidth: 1,
@@ -377,7 +349,7 @@ const MarketAnalysis = ({ selectedSymbol, darkMode = false }) => {
         {
           label: 'Low Price',
           data: sortedHistory.map(item => item.low),
-          borderColor: colors.negativeColor,
+          borderColor: colors.sellRed,
           backgroundColor: 'rgba(255, 61, 87, 0.1)',
           fill: false,
           tension: 0.4,
@@ -389,7 +361,7 @@ const MarketAnalysis = ({ selectedSymbol, darkMode = false }) => {
         {
           label: 'Open Price',
           data: sortedHistory.map(item => item.open),
-          borderColor: colors.neutralColor,
+          borderColor: colors.warningOrange,
           backgroundColor: 'rgba(255, 167, 38, 0.1)',
           fill: false,
           tension: 0.4,
@@ -416,10 +388,10 @@ const MarketAnalysis = ({ selectedSymbol, darkMode = false }) => {
         tooltip: {
           mode: 'index',
           intersect: false,
-          backgroundColor: colors.background,
+          backgroundColor: colors.panelBg,
           titleColor: colors.primaryText,
           bodyColor: colors.primaryText,
-          borderColor: colors.chartLine,
+          borderColor: colors.borderColor,
           borderWidth: 1,
           callbacks: {
             label: function(context) {
@@ -439,7 +411,7 @@ const MarketAnalysis = ({ selectedSymbol, darkMode = false }) => {
         x: {
           grid: {
             display: false,
-            color: colors.chartLine
+            color: colors.borderColor
           },
           ticks: {
             color: colors.secondaryText,
@@ -449,7 +421,7 @@ const MarketAnalysis = ({ selectedSymbol, darkMode = false }) => {
         },
         y: {
           grid: {
-            color: colors.chartLine
+            color: colors.borderColor
           },
           ticks: {
             color: colors.secondaryText,
@@ -509,8 +481,8 @@ const MarketAnalysis = ({ selectedSymbol, darkMode = false }) => {
           <Paper 
             sx={{ 
               p: 1.5,
-              backgroundColor: colors.background,
-              border: `1px solid ${colors.chartLine}`,
+              backgroundColor: colors.cardBg,
+              border: `1px solid ${colors.borderColor}`,
               borderRadius: '6px',
               height: '100%'
             }}
@@ -526,8 +498,8 @@ const MarketAnalysis = ({ selectedSymbol, darkMode = false }) => {
               </Tooltip>
             </Box>
             <Typography variant="h6" sx={{ 
-              color: rsi > 70 ? colors.negativeColor : 
-                     rsi < 30 ? colors.positiveColor : 
+              color: rsi > 70 ? colors.sellRed : 
+                     rsi < 30 ? colors.buyGreen : 
                      colors.primaryText 
             }}>
               {rsi.toFixed(2)}
@@ -549,8 +521,8 @@ const MarketAnalysis = ({ selectedSymbol, darkMode = false }) => {
           <Paper 
             sx={{ 
               p: 1.5,
-              backgroundColor: colors.background,
-              border: `1px solid ${colors.chartLine}`,
+              backgroundColor: colors.cardBg,
+              border: `1px solid ${colors.borderColor}`,
               borderRadius: '6px',
               height: '100%'
             }}
@@ -566,7 +538,7 @@ const MarketAnalysis = ({ selectedSymbol, darkMode = false }) => {
               </Tooltip>
             </Box>
             <Typography variant="h6" sx={{ 
-              color: macd > 0 ? colors.positiveColor : colors.negativeColor 
+              color: macd > 0 ? colors.buyGreen : colors.sellRed 
             }}>
               {macd.toFixed(4)}
             </Typography>
@@ -585,8 +557,8 @@ const MarketAnalysis = ({ selectedSymbol, darkMode = false }) => {
           <Paper 
             sx={{ 
               p: 1.5,
-              backgroundColor: colors.background,
-              border: `1px solid ${colors.chartLine}`,
+              backgroundColor: colors.cardBg,
+              border: `1px solid ${colors.borderColor}`,
               borderRadius: '6px',
               height: '100%'
             }}
@@ -602,7 +574,7 @@ const MarketAnalysis = ({ selectedSymbol, darkMode = false }) => {
               </Tooltip>
             </Box>
             <Typography variant="h6" sx={{ 
-              color: macdHist > 0 ? colors.positiveColor : colors.negativeColor 
+              color: macdHist > 0 ? colors.buyGreen : colors.sellRed 
             }}>
               {macdHist.toFixed(4)}
             </Typography>
@@ -621,8 +593,8 @@ const MarketAnalysis = ({ selectedSymbol, darkMode = false }) => {
           <Paper 
             sx={{ 
               p: 1.5,
-              backgroundColor: colors.background,
-              border: `1px solid ${colors.chartLine}`,
+              backgroundColor: colors.cardBg,
+              border: `1px solid ${colors.borderColor}`,
               borderRadius: '6px',
               height: '100%'
             }}
@@ -655,8 +627,8 @@ const MarketAnalysis = ({ selectedSymbol, darkMode = false }) => {
           <Paper 
             sx={{ 
               p: 1.5,
-              backgroundColor: colors.background,
-              border: `1px solid ${colors.chartLine}`,
+              backgroundColor: colors.cardBg,
+              border: `1px solid ${colors.borderColor}`,
               borderRadius: '6px',
               height: '100%'
             }}
@@ -689,8 +661,8 @@ const MarketAnalysis = ({ selectedSymbol, darkMode = false }) => {
           <Paper 
             sx={{ 
               p: 1.5,
-              backgroundColor: colors.background,
-              border: `1px solid ${colors.chartLine}`,
+              backgroundColor: colors.cardBg,
+              border: `1px solid ${colors.borderColor}`,
               borderRadius: '6px',
               height: '100%'
             }}
@@ -722,10 +694,10 @@ const MarketAnalysis = ({ selectedSymbol, darkMode = false }) => {
       <Paper 
         sx={{ 
           p: 3,
-          backgroundColor: colors.background,
-          border: `1px solid ${colors.chartLine}`,
+          backgroundColor: colors.cardBg,
+          border: `1px solid ${colors.borderColor}`,
           borderRadius: '12px',
-          boxShadow: `0 4px 12px ${colors.chartLine}`,
+          boxShadow: `0 4px 12px ${colors.shadowColor}`,
           height: '100%',
           display: 'flex',
           justifyContent: 'center',
@@ -744,10 +716,10 @@ const MarketAnalysis = ({ selectedSymbol, darkMode = false }) => {
       <Paper 
         sx={{ 
           p: 3,
-          backgroundColor: colors.background,
-          border: `1px solid ${colors.chartLine}`,
+          backgroundColor: colors.cardBg,
+          border: `1px solid ${colors.borderColor}`,
           borderRadius: '12px',
-          boxShadow: `0 4px 12px ${colors.chartLine}`,
+          boxShadow: `0 4px 12px ${colors.shadowColor}`,
           height: '100%',
           display: 'flex',
           justifyContent: 'center',
@@ -764,10 +736,10 @@ const MarketAnalysis = ({ selectedSymbol, darkMode = false }) => {
       <Paper 
         sx={{ 
           p: 3,
-          backgroundColor: colors.background,
-          border: `1px solid ${colors.chartLine}`,
+          backgroundColor: colors.cardBg,
+          border: `1px solid ${colors.borderColor}`,
           borderRadius: '12px',
-          boxShadow: `0 4px 12px ${colors.chartLine}`,
+          boxShadow: `0 4px 12px ${colors.shadowColor}`,
           height: '100%'
         }}
       >
@@ -779,8 +751,8 @@ const MarketAnalysis = ({ selectedSymbol, darkMode = false }) => {
           startIcon={<RefreshIcon />}
           onClick={handleRefresh}
           sx={{ 
-            backgroundColor: colors.chartLine,
-            '&:hover': { backgroundColor: colors.chartLine }
+            backgroundColor: colors.accentBlue,
+            '&:hover': { backgroundColor: colors.accentBlue }
           }}
         >
           Try Again
@@ -797,10 +769,10 @@ const MarketAnalysis = ({ selectedSymbol, darkMode = false }) => {
     <Paper 
       sx={{ 
         p: 3,
-        backgroundColor: colors.background,
-        border: `1px solid ${colors.chartLine}`,
+        backgroundColor: colors.cardBg,
+        border: `1px solid ${colors.borderColor}`,
         borderRadius: '12px',
-        boxShadow: `0 4px 12px ${colors.chartLine}`
+        boxShadow: `0 4px 12px ${colors.shadowColor}`
       }}
     >
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -813,11 +785,11 @@ const MarketAnalysis = ({ selectedSymbol, darkMode = false }) => {
           onClick={handleRefresh}
           disabled={loading}
           sx={{ 
-            color: colors.chartLine,
-            borderColor: colors.chartLine,
+            color: colors.accentBlue,
+            borderColor: colors.accentBlue,
             '&:hover': {
-              backgroundColor: `${colors.chartLine}22`,
-              borderColor: colors.chartLine
+              backgroundColor: `${colors.accentBlue}22`,
+              borderColor: colors.accentBlue
             }
           }}
         >
@@ -825,37 +797,37 @@ const MarketAnalysis = ({ selectedSymbol, darkMode = false }) => {
         </Button>
       </Box>
       
-      {historyError && (
+      {error && (
         <Alert 
           severity="error" 
           action={
-            <Button color="inherit" size="small" onClick={() => fetchPriceHistory(selectedSymbol)}>
+            <Button color="inherit" size="small" onClick={() => fetchMarketAnalysis(selectedSymbol)}>
               Retry
             </Button>
           }
           sx={{ 
             mb: 2,
-            backgroundColor: `${colors.negativeColor}10`,
-            borderColor: colors.negativeColor,
-            color: colors.negativeColor
+            backgroundColor: `${colors.lossRed}10`,
+            borderColor: colors.sellRed,
+            color: colors.sellRed
           }}
         >
-          {historyError}
+          {error}
         </Alert>
       )}
       
-      {historyLoading ? (
+      {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-          <CircularProgress size={40} sx={{ color: colors.chartLine }} />
+          <CircularProgress size={60} sx={{ color: colors.accentBlue }} />
         </Box>
-      ) : historyData ? (
+      ) : analysisData ? (
         <>
           {/* Price Prediction */}
           <Paper sx={{ 
             p: 2, 
             mb: 3, 
-            backgroundColor: colors.background,
-            border: `1px solid ${colors.chartLine}`,
+            backgroundColor: colors.panelBg,
+            border: `1px solid ${colors.borderColor}`,
             borderRadius: '8px'
           }}>
             <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText }}>
@@ -868,15 +840,38 @@ const MarketAnalysis = ({ selectedSymbol, darkMode = false }) => {
           <Paper sx={{ 
             p: 2, 
             mb: 3, 
-            backgroundColor: colors.background,
-            border: `1px solid ${colors.chartLine}`,
+            backgroundColor: colors.panelBg,
+            border: `1px solid ${colors.borderColor}`,
             borderRadius: '8px'
           }}>
             <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText }}>
               Price History (30 Days)
             </Typography>
             
-            {renderPriceHistoryChart()}
+            {historyError && (
+              <Alert 
+                severity="warning" 
+                action={
+                  <Button color="inherit" size="small" onClick={() => fetchPriceHistory(selectedSymbol)}>
+                    Retry
+                  </Button>
+                }
+                sx={{ 
+                  mb: 2,
+                  backgroundColor: `${colors.warningOrange}10`,
+                  borderColor: colors.warningOrange,
+                  color: colors.warningOrange
+                }}
+              >
+                {historyError}
+              </Alert>
+            )}
+            
+            {historyLoading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                <CircularProgress size={40} sx={{ color: colors.accentBlue }} />
+              </Box>
+            ) : renderPriceHistoryChart()}
           </Paper>
           
           {/* Rest of your component remains unchanged */}

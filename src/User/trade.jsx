@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Box, Typography, Button, Paper, TextField, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import { createChart } from 'lightweight-charts';
 import Sidebar from './Sidebar';
-import { API } from '../axiosConfig';
 
 // Forex Trading Color Palette
 const colors = {
@@ -43,32 +42,8 @@ const Trade = () => {
   const [currentPrice, setCurrentPrice] = useState(null);
   const [isBuying, setIsBuying] = useState(true);
   const [trades, setTrades] = useState([]);
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
 
   const totalBalance = availableBalance + lockedMargin;
-
-  // Fetch user data
-  useEffect(() => {
-    const fetchUser = async () => {
-      setLoading(true);
-      try {
-        const response = await API.auth.me();
-        setUser(response.data);
-        if (response.data.balance) {
-          setAvailableBalance(response.data.balance);
-        }
-      } catch (err) {
-        console.error("Error fetching user:", err);
-        setError(err.message || "Failed to fetch user data");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUser();
-  }, []);
 
   // Format time without date-fns
   const formatTime = (dateString) => {
@@ -228,7 +203,7 @@ const Trade = () => {
     return priceDiff * position.amount * position.leverage;
   };
 
-  const handleTrade = async () => {
+  const handleTrade = () => {
     if (!currentPrice) return;
     
     if (position) {
@@ -245,23 +220,6 @@ const Trade = () => {
       setAvailableBalance(prev => prev + position.marginUsed + pnl);
       setLockedMargin(0);
       setPosition(null);
-      
-      // Save trade to backend
-      try {
-        await API.market.saveTrade({
-          pair: closedTrade.pair,
-          type: closedTrade.type,
-          amount: closedTrade.amount,
-          leverage: closedTrade.leverage,
-          entryPrice: closedTrade.price,
-          exitPrice: closedTrade.exitPrice,
-          pnl: closedTrade.pnl,
-          openTime: closedTrade.time,
-          closeTime: closedTrade.exitTime
-        });
-      } catch (err) {
-        console.error("Error saving trade:", err);
-      }
     } else {
       // Open new position
       if (availableBalance < amount) {
@@ -283,24 +241,10 @@ const Trade = () => {
       setPosition(trade);
       setAvailableBalance(prev => prev - amount);
       setLockedMargin(amount);
-      
-      // Save position to backend
-      try {
-        await API.market.savePosition({
-          pair: trade.pair,
-          type: trade.type,
-          amount: trade.amount,
-          leverage: trade.leverage,
-          price: trade.price,
-          openTime: trade.time
-        });
-      } catch (err) {
-        console.error("Error saving position:", err);
-      }
     }
   };
 
-  const closePosition = async () => {
+  const closePosition = () => {
     if (!position || !currentPrice) return;
     
     const pnl = calculatePnl(position, currentPrice);
@@ -315,23 +259,6 @@ const Trade = () => {
     setAvailableBalance(prev => prev + position.marginUsed + pnl);
     setLockedMargin(0);
     setPosition(null);
-    
-    // Save trade to backend
-    try {
-      await API.market.saveTrade({
-        pair: closedTrade.pair,
-        type: closedTrade.type,
-        amount: closedTrade.amount,
-        leverage: closedTrade.leverage,
-        entryPrice: closedTrade.price,
-        exitPrice: closedTrade.exitPrice,
-        pnl: closedTrade.pnl,
-        openTime: closedTrade.time,
-        closeTime: closedTrade.exitTime
-      });
-    } catch (err) {
-      console.error("Error saving trade:", err);
-    }
   };
 
   return (

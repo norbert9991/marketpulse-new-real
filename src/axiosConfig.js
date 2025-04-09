@@ -8,13 +8,6 @@ const API_URL =
 
 console.log('Using API URL:', API_URL); // Debug log
 
-// List of common currency pairs for proper Yahoo Finance formatting
-const currencyPairsList = [
-  'EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 
-  'USDCAD', 'NZDUSD', 'USDCHF', 'GBPJPY', 
-  'EURGBP', 'EURJPY'
-];
-
 // Create a custom axios instance
 const axiosInstance = axios.create({
   baseURL: API_URL,
@@ -100,9 +93,6 @@ axiosInstance.interceptors.response.use(
 
 // Helper API functions
 export const API = {
-  // Export base URL for components that need it
-  baseURL: API_URL,
-  
   // Auth endpoints
   auth: {
     login: (data) => axiosInstance.post('/api/auth/login', data),
@@ -119,109 +109,91 @@ export const API = {
   
   // Market endpoints
   market: {
-    analyze: async ({ symbol }) => {
+    analyze: (data) => {
       try {
-        const response = await axiosInstance.post('/api/market-analysis', { symbol });
-        return response.data;
-      } catch (error) {
-        console.error('Market analysis API error:', error.response?.data || error.message);
-        throw error;
-      }
-    },
-    getHistory: async (symbol) => {
-      // Carefully clean the symbol by removing the "-X" suffix if present
-      const originalSymbol = symbol;
-      let cleanSymbol = symbol;
-      
-      if (typeof symbol === 'string') {
-        // First method: Split at -X and take first part
-        if (symbol.includes('-X')) {
-          cleanSymbol = symbol.split('-X')[0];
-        }
+        // Get the original symbol
+        const originalSymbol = data.symbol;
+        let formattedSymbol = data.symbol;
         
-        // Safety check: Make sure we don't send an empty string
-        if (!cleanSymbol) {
-          cleanSymbol = originalSymbol;
-        }
-      }
-      
-      // Extensive debug logging
-      console.log('[API] getHistory - Original Symbol:', originalSymbol);
-      console.log('[API] getHistory - Cleaned Symbol:', cleanSymbol);
-      console.log('[API] getHistory - Full URL:', `${API_URL}/api/market-analysis/${cleanSymbol}/history`);
-      
-      try {
-        // First try with the cleaned symbol
-        const response = await axiosInstance.get(`/api/market-analysis/${cleanSymbol}/history`);
-        return response;
-      } catch (error) {
-        console.error('[API] Error in getHistory with cleaned symbol:', error);
-        
-        // If it failed and we modified the symbol, try with the original
-        if (cleanSymbol !== originalSymbol) {
-          try {
-            console.log('[API] Trying fallback with original symbol:', originalSymbol);
-            const fallbackResponse = await axiosInstance.get(`/api/market-analysis/${originalSymbol}/history`);
-            return fallbackResponse;
-          } catch (fallbackError) {
-            console.error('[API] Error in getHistory with original symbol:', fallbackError);
-            // Both attempts failed, reject with the original error
-            return Promise.reject(error);
+        if (typeof data.symbol === 'string') {
+          // Format for Yahoo Finance - change "-X" to "=X"
+          if (data.symbol.includes('-X')) {
+            formattedSymbol = data.symbol.replace('-X', '=X');
+          }
+          
+          // Safety check: Make sure we don't send an empty string
+          if (!formattedSymbol) {
+            formattedSymbol = originalSymbol;
           }
         }
         
-        // If we didn't modify the symbol or both attempts failed
+        // Extensive debug logging
+        console.log('[API] analyze - Original Symbol:', originalSymbol);
+        console.log('[API] analyze - Formatted Symbol:', formattedSymbol);
+        console.log('[API] analyze - Full URL:', `${API_URL}/api/market-analysis/${formattedSymbol}`);
+        
+        return axiosInstance.get(`/api/market-analysis/${formattedSymbol}`);
+      } catch (error) {
+        console.error('[API] Error in analyze:', error);
         return Promise.reject(error);
       }
     },
-    refresh: async (symbol) => {
+    getHistory: (symbol) => {
       try {
-        const response = await axiosInstance.post('/api/market-analysis/refresh', { symbol });
-        return response.data;
-      } catch (error) {
-        console.error('Market refresh API error:', error.response?.data || error.message);
-        throw error;
-      }
-    },
-    getPriceHistory: async (symbol, timeframe = '1mo') => {
-      try {
-        // Clean symbol for API endpoint format
-        const cleanedSymbol = symbol.replace(/[/]/g, '-').toUpperCase();
+        // Carefully clean the symbol by removing the "-X" suffix if present
         const originalSymbol = symbol;
+        let cleanSymbol = symbol;
         
-        console.log(`Attempting to fetch price history for symbol: ${symbol}`);
-        console.log(`Cleaned symbol for API request: ${cleanedSymbol}`);
-        
-        try {
-          // First try with the cleaned symbol
-          const url = `/api/market-analysis/${cleanedSymbol}/history?timeframe=${timeframe}`;
-          console.log(`Making API request to: ${url}`);
-          
-          const response = await axiosInstance.get(url);
-          console.log('Price history response:', response.data);
-          return response.data;
-        } catch (err) {
-          // If failed with cleaned symbol, try with original symbol as fallback
-          if (err.response && err.response.status === 404) {
-            console.log(`404 error with cleaned symbol. Trying original symbol: ${originalSymbol}`);
-            
-            const fallbackUrl = `/api/market-analysis/${originalSymbol}/history?timeframe=${timeframe}`;
-            console.log(`Making fallback API request to: ${fallbackUrl}`);
-            
-            const fallbackResponse = await axiosInstance.get(fallbackUrl);
-            console.log('Fallback price history response:', fallbackResponse.data);
-            return fallbackResponse.data;
+        if (typeof symbol === 'string') {
+          // First method: Split at -X and take first part
+          if (symbol.includes('-X')) {
+            cleanSymbol = symbol.split('-X')[0];
           }
           
-          // If it's not a 404 or the fallback failed, rethrow the error
-          throw err;
+          // Safety check: Make sure we don't send an empty string
+          if (!cleanSymbol) {
+            cleanSymbol = originalSymbol;
+          }
         }
-      } catch (error) {
-        console.error('Price history API error:', error.response?.data || error.message);
-        console.error('Error details:', error);
         
-        // Return empty array to prevent app crashes, UI can handle empty state
-        return [];
+        // Extensive debug logging
+        console.log('[API] getHistory - Original Symbol:', originalSymbol);
+        console.log('[API] getHistory - Cleaned Symbol:', cleanSymbol);
+        console.log('[API] getHistory - Full URL:', `${API_URL}/api/market-analysis/${cleanSymbol}/history`);
+        
+        return axiosInstance.get(`/api/market-analysis/${cleanSymbol}/history`);
+      } catch (error) {
+        console.error('[API] Error in getHistory:', error);
+        return Promise.reject(error);
+      }
+    },
+    refresh: (symbol) => {
+      try {
+        // Carefully clean the symbol by removing the "-X" suffix if present
+        const originalSymbol = symbol;
+        let cleanSymbol = symbol;
+        
+        if (typeof symbol === 'string') {
+          // First method: Split at -X and take first part
+          if (symbol.includes('-X')) {
+            cleanSymbol = symbol.split('-X')[0];
+          }
+          
+          // Safety check: Make sure we don't send an empty string
+          if (!cleanSymbol) {
+            cleanSymbol = originalSymbol;
+          }
+        }
+        
+        // Extensive debug logging
+        console.log('[API] refresh - Original Symbol:', originalSymbol);
+        console.log('[API] refresh - Cleaned Symbol:', cleanSymbol);
+        console.log('[API] refresh - Full URL:', `${API_URL}/api/market-analysis/refresh/${cleanSymbol}`);
+        
+        return axiosInstance.post(`/api/market-analysis/refresh/${cleanSymbol}`, {});
+      } catch (error) {
+        console.error('[API] Error in refresh:', error);
+        return Promise.reject(error);
       }
     },
   },
