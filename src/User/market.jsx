@@ -160,18 +160,36 @@ const Market = () => {
       console.log(`Attempting to analyze symbol: ${selectedPair}`);
       const response = await API.market.analyze({ symbol: selectedPair });
       
-      // Check if response data has the expected structure
-      if (!response.data.historical_data || !response.data.historical_data.prices || !response.data.historical_data.dates) {
-        console.warn('API response missing expected data structure:', response.data);
-        
-        // Add mock historical data to prevent UI errors
-        response.data.historical_data = {
+      // Create a comprehensive response for UI rendering
+      const completeResponse = {
+        ...response.data,
+        // Ensure these objects exist
+        technical_indicators: response.data.technical_indicators || {},
+        support_resistance: response.data.support_resistance || { support: [], resistance: [] },
+        sentiment: response.data.sentiment || {}
+      };
+      
+      // Add missing historical data if needed
+      if (!completeResponse.historical_data || !completeResponse.historical_data.prices || !completeResponse.historical_data.dates) {
+        console.warn('API response missing historical data structure:', response.data);
+        completeResponse.historical_data = {
           prices: [1.0, 1.01, 1.02, 1.03, 1.04, 1.05],
           dates: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6']
         };
       }
       
-      setAnalysisData(response.data);
+      // Make sure support_resistance has proper arrays
+      if (!completeResponse.support_resistance.support) {
+        completeResponse.support_resistance.support = [];
+      }
+      if (!completeResponse.support_resistance.resistance) {
+        completeResponse.support_resistance.resistance = [];
+      }
+      
+      // Log the complete data for debugging
+      console.log('Processed market analysis data:', completeResponse);
+      
+      setAnalysisData(completeResponse);
       setError(null);
     } catch (error) {
       console.error('Error fetching market data:', error);
@@ -189,39 +207,41 @@ const Market = () => {
         setError('Failed to load market data. Please try again or select a different currency pair.');
       }
       
-      // Provide empty mock data structure to prevent UI errors
+      // Provide comprehensive mock data structure to prevent UI errors
       setAnalysisData({
         symbol: selectedPair,
         current_price: 0,
         trend: 'Neutral',
-        predictions: [],
-        prediction_dates: [],
+        slope: 0,
+        predictions: [0.1, 0.2, 0.3, 0.4, 0.5],
+        prediction_dates: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5'],
         historical_data: {
           prices: [1.0, 1.01, 1.02, 1.03, 1.04, 1.05],
           dates: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6']
         },
         support_resistance: {
-          support: [],
-          resistance: []
+          support: [0.95, 0.96, 0.97],
+          resistance: [1.10, 1.11, 1.12]
         },
         technical_indicators: {
-          rsi: 0,
+          rsi: 50,
           macd: 0,
           macd_signal: 0,
           macd_hist: 0,
-          sma20: 0,
-          sma50: 0,
-          sma200: 0
+          sma20: 1.00,
+          sma50: 1.01,
+          sma200: 1.02
         },
         sentiment: {
-          overall: 'neutral',
-          confidence: 0,
-          news_sentiment: 0.5,
-          social_sentiment: 0.5,
-          market_mood: 'neutral',
+          overall: 'Neutral',
+          confidence: 50,
+          news_sentiment: 0,
+          social_sentiment: 0,
+          market_mood: 'Neutral',
           news_count: 0,
           social_count: 0
-        }
+        },
+        last_updated: new Date().toISOString()
       });
     } finally {
       setLoading(false);
