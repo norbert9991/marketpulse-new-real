@@ -109,7 +109,35 @@ export const API = {
   
   // Market endpoints
   market: {
-    analyze: (data) => axiosInstance.get(`/api/market-analysis/${data.symbol}`),
+    analyze: (data) => {
+      try {
+        // Clean the symbol by removing the "-X" suffix if present
+        const originalSymbol = data.symbol;
+        let cleanSymbol = data.symbol;
+        
+        if (typeof data.symbol === 'string') {
+          // First method: Split at -X and take first part
+          if (data.symbol.includes('-X')) {
+            cleanSymbol = data.symbol.split('-X')[0];
+          }
+          
+          // Safety check: Make sure we don't send an empty string
+          if (!cleanSymbol) {
+            cleanSymbol = originalSymbol;
+          }
+        }
+        
+        // Extensive debug logging
+        console.log('[API] analyze - Original Symbol:', originalSymbol);
+        console.log('[API] analyze - Cleaned Symbol:', cleanSymbol);
+        console.log('[API] analyze - Full URL:', `${API_URL}/api/market-analysis/${cleanSymbol}`);
+        
+        return axiosInstance.get(`/api/market-analysis/${cleanSymbol}`);
+      } catch (error) {
+        console.error('[API] Error in analyze:', error);
+        return Promise.reject(error);
+      }
+    },
     getHistory: (symbol) => {
       try {
         // Carefully clean the symbol by removing the "-X" suffix if present
