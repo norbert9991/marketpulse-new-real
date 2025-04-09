@@ -405,22 +405,22 @@ const UserDashboard = () => {
               }}
             >
               <Grid container>
-                {/* Left Section - Market Analysis (90%) */}
-                <Grid item xs={12} md={11.5} lg={11}>
-                  <Box sx={{ 
-                    height: '100%',
-                    borderRight: `1px solid ${colors.borderColor}`,
-                  }}>
-                    <MarketAnalysis selectedSymbol={selectedSymbol} />
-                  </Box>
-                </Grid>
-                
-                {/* Right Section - Market Overview (10%) */}
-                <Grid item xs={12} md={0.5} lg={1} sx={{ 
-                  borderLeft: `1px solid ${colors.borderColor}`,
-                  margin: '-1px 0 0 -1px', // Fix double border
-                  backgroundColor: `${colors.cardBg}05`
-                }}>
+  {/* Left Section - Market Analysis (75%) */}
+  <Grid item xs={12} md={9} lg={9}>
+    <Box sx={{ 
+      height: '100%',
+      borderRight: `1px solid ${colors.borderColor}`,
+    }}>
+      <MarketAnalysis selectedSymbol={selectedSymbol} />
+    </Box>
+  </Grid>
+  
+  {/* Right Section - Market Overview (25%) */}
+  <Grid item xs={12} md={3} lg={3} sx={{ 
+    borderLeft: `1px solid ${colors.borderColor}`,
+    margin: '-1px 0 0 -1px', // Fix double border
+    backgroundColor: `${colors.cardBg}05`
+  }}>
                   {marketData && (
                     <Box sx={{ 
                       p: 2,
