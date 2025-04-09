@@ -147,21 +147,39 @@ const Market = () => {
     }
   }, [selectedPair, user]);
 
+  // Initial data fetch when component mounts
+  useEffect(() => {
+    if (user && selectedPair) {
+      console.log('Initial load - fetching market analysis for:', selectedPair);
+      fetchMarketAnalysis();
+    }
+  }, [user]); // Only run when user changes
+
   const handleTabChange = (event, newValue) => {
     setSelectedTab(newValue);
   };
 
   const handlePairChange = (event) => {
-    setSelectedPair(event.target.value);
+    const newPair = event.target.value;
+    setSelectedPair(newPair);
+    
+    // Reset data when changing pairs
+    setAnalysisData(null);
+    setError(null);
+    
+    // Automatically fetch analysis data for the new pair
+    setTimeout(() => {
+      fetchMarketAnalysis(newPair);
+    }, 100);
   };
 
-  const fetchMarketAnalysis = async () => {
+  const fetchMarketAnalysis = async (symbolToFetch = selectedPair) => {
     try {
       setLoading(true);
       
       // Try to fetch market analysis
-      console.log(`Attempting to analyze symbol: ${selectedPair}`);
-      const response = await API.market.analyze({ symbol: selectedPair });
+      console.log(`Attempting to analyze symbol: ${symbolToFetch}`);
+      const response = await API.market.analyze({ symbol: symbolToFetch });
       
       // Create a comprehensive response for UI rendering
       const completeResponse = {
@@ -200,9 +218,9 @@ const Market = () => {
       // Create a helpful error message based on the error response
       if (error.response?.status === 404) {
         if (error.response?.data?.error?.includes('No data available for this symbol')) {
-          setError(`No data available for ${selectedPair}. This currency pair may be temporarily unavailable or delisted.`);
+          setError(`No data available for ${symbolToFetch}. This currency pair may be temporarily unavailable or delisted.`);
         } else {
-          setError(`Unable to analyze ${selectedPair}. Please try another currency pair.`);
+          setError(`Unable to analyze ${symbolToFetch}. Please try another currency pair.`);
         }
       } else if (error.response?.status === 500) {
         setError('The server encountered an error. Please try again later.');
@@ -212,7 +230,7 @@ const Market = () => {
       
       // Provide comprehensive mock data structure to prevent UI errors
       setAnalysisData({
-        symbol: selectedPair,
+        symbol: symbolToFetch,
         current_price: 0,
         trend: 'Neutral',
         slope: 0,
