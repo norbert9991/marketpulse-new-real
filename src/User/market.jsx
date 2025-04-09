@@ -544,95 +544,113 @@ const Market = () => {
               <Typography variant="h6" sx={{ color: colors.primaryText, mb: 2 }}>
                 Technical Indicators
               </Typography>
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                {/* Left Column */}
-                <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <Box>
-                    <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
-                      RSI (14)
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Box>
+                  <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
+                    RSI (14)
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="h5" sx={{ color: colors.primaryText }}>
+                      {typeof analysisData?.technical_indicators?.rsi === 'number' 
+                        ? analysisData.technical_indicators.rsi.toFixed(1) 
+                        : '50.0'}
                     </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Typography variant="h5" sx={{ color: colors.primaryText }}>
-                        {typeof analysisData?.technical_indicators?.rsi === 'number' 
-                          ? analysisData.technical_indicators.rsi.toFixed(2) 
-                          : mockData.technicalIndicators.rsi}
-                      </Typography>
-                      <Chip 
-                        label={analysisData?.technical_indicators?.rsi > 70 ? 'Overbought' : analysisData?.technical_indicators?.rsi < 30 ? 'Oversold' : 'Neutral'} 
-                        color={analysisData?.technical_indicators?.rsi > 70 ? 'error' : analysisData?.technical_indicators?.rsi < 30 ? 'success' : 'default'}
-                        size="small"
-                      />
-                    </Box>
-                  </Box>
-                  <Box>
-                    <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
-                      Moving Averages
-                    </Typography>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>SMA 20</Typography>
-                        <Typography variant="body2" sx={{ color: colors.primaryText }}>
-                          {typeof analysisData?.technical_indicators?.sma20 === 'number' 
-                            ? analysisData.technical_indicators.sma20.toFixed(5) 
-                            : mockData.technicalIndicators.sma20}
-                        </Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>SMA 50</Typography>
-                        <Typography variant="body2" sx={{ color: colors.primaryText }}>
-                          {typeof analysisData?.technical_indicators?.sma50 === 'number' 
-                            ? analysisData.technical_indicators.sma50.toFixed(5) 
-                            : mockData.technicalIndicators.sma50}
-                        </Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>SMA 200</Typography>
-                        <Typography variant="body2" sx={{ color: colors.primaryText }}>
-                          {typeof analysisData?.technical_indicators?.sma200 === 'number' 
-                            ? analysisData.technical_indicators.sma200.toFixed(5) 
-                            : mockData.technicalIndicators.sma200}
-                        </Typography>
-                      </Box>
-                    </Box>
+                    <Chip 
+                      label={analysisData?.technical_indicators?.rsi > 70 
+                        ? 'Overbought' 
+                        : analysisData?.technical_indicators?.rsi < 30 
+                          ? 'Oversold' 
+                          : 'Neutral'} 
+                      color={analysisData?.technical_indicators?.rsi > 70 
+                        ? 'error' 
+                        : analysisData?.technical_indicators?.rsi < 30 
+                          ? 'success' 
+                          : 'default'}
+                      size="small"
+                      sx={{
+                        backgroundColor: analysisData?.technical_indicators?.rsi > 70 
+                          ? `${colors.lossRed}40` 
+                          : analysisData?.technical_indicators?.rsi < 30 
+                            ? `${colors.profitGreen}40` 
+                            : colors.panelBg,
+                        color: colors.primaryText
+                      }}
+                    />
                   </Box>
                 </Box>
-
-                {/* Vertical Divider */}
-                <Divider orientation="vertical" flexItem sx={{ backgroundColor: colors.borderColor }} />
-
-                {/* Right Column */}
-                <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <Box>
-                    <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
-                      MACD
-                    </Typography>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Box>
+                  <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
+                    MACD
+                  </Typography>
+                  <Grid container spacing={1}>
+                    <Grid item xs={4}>
+                      <Box sx={{ textAlign: 'center', p: 1, border: `1px solid ${colors.borderColor}`, borderRadius: '8px' }}>
                         <Typography variant="body2" sx={{ color: colors.secondaryText }}>MACD</Typography>
-                        <Typography variant="body2" sx={{ color: colors.primaryText }}>
+                        <Typography variant="body1" sx={{ color: colors.primaryText }}>
                           {typeof analysisData?.technical_indicators?.macd === 'number' 
-                            ? analysisData.technical_indicators.macd.toFixed(5) 
-                            : mockData.technicalIndicators.macd}
+                            ? analysisData.technical_indicators.macd.toFixed(4) 
+                            : '0.0000'}
                         </Typography>
                       </Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    </Grid>
+                    <Grid item xs={4}>
+                      <Box sx={{ textAlign: 'center', p: 1, border: `1px solid ${colors.borderColor}`, borderRadius: '8px' }}>
                         <Typography variant="body2" sx={{ color: colors.secondaryText }}>Signal</Typography>
-                        <Typography variant="body2" sx={{ color: colors.primaryText }}>
+                        <Typography variant="body1" sx={{ color: colors.primaryText }}>
                           {typeof analysisData?.technical_indicators?.macd_signal === 'number' 
-                            ? analysisData.technical_indicators.macd_signal.toFixed(5) 
-                            : mockData.technicalIndicators.macdSignal}
+                            ? analysisData.technical_indicators.macd_signal.toFixed(4) 
+                            : '0.0000'}
                         </Typography>
                       </Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    </Grid>
+                    <Grid item xs={4}>
+                      <Box sx={{ textAlign: 'center', p: 1, border: `1px solid ${colors.borderColor}`, borderRadius: '8px' }}>
                         <Typography variant="body2" sx={{ color: colors.secondaryText }}>Histogram</Typography>
-                        <Typography variant="body2" sx={{ color: colors.primaryText }}>
+                        <Typography variant="body1" sx={{ color: colors.primaryText }}>
                           {typeof analysisData?.technical_indicators?.macd_hist === 'number' 
-                            ? analysisData.technical_indicators.macd_hist.toFixed(5) 
-                            : mockData.technicalIndicators.macdHist}
+                            ? analysisData.technical_indicators.macd_hist.toFixed(4) 
+                            : '0.0000'}
                         </Typography>
                       </Box>
-                    </Box>
-                  </Box>
+                    </Grid>
+                  </Grid>
+                </Box>
+                <Box>
+                  <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
+                    Moving Averages
+                  </Typography>
+                  <Grid container spacing={1}>
+                    <Grid item xs={4}>
+                      <Box sx={{ textAlign: 'center', p: 1, border: `1px solid ${colors.borderColor}`, borderRadius: '8px' }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>SMA 20</Typography>
+                        <Typography variant="body1" sx={{ color: colors.primaryText }}>
+                          {typeof analysisData?.technical_indicators?.sma20 === 'number' 
+                            ? analysisData.technical_indicators.sma20.toFixed(4) 
+                            : '0.0000'}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={4}>
+                      <Box sx={{ textAlign: 'center', p: 1, border: `1px solid ${colors.borderColor}`, borderRadius: '8px' }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>SMA 50</Typography>
+                        <Typography variant="body1" sx={{ color: colors.primaryText }}>
+                          {typeof analysisData?.technical_indicators?.sma50 === 'number' 
+                            ? analysisData.technical_indicators.sma50.toFixed(4) 
+                            : '0.0000'}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={4}>
+                      <Box sx={{ textAlign: 'center', p: 1, border: `1px solid ${colors.borderColor}`, borderRadius: '8px' }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>SMA 200</Typography>
+                        <Typography variant="body1" sx={{ color: colors.primaryText }}>
+                          {typeof analysisData?.technical_indicators?.sma200 === 'number' 
+                            ? analysisData.technical_indicators.sma200.toFixed(4) 
+                            : '0.0000'}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  </Grid>
                 </Box>
               </Box>
             </Paper>
@@ -640,8 +658,7 @@ const Market = () => {
             {/* Support & Resistance */}
             <Paper 
               sx={{ 
-                p: 2, 
-                flex: 1,
+                p: 2,
                 backgroundColor: colors.cardBg,
                 border: `1px solid ${colors.borderColor}`,
                 borderRadius: '12px',
@@ -651,86 +668,64 @@ const Market = () => {
               }}
             >
               <Typography variant="h6" sx={{ color: colors.primaryText, mb: 2 }}>
-                Support & Resistance
+                Support & Resistance Levels
               </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <Box>
-                  <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <Typography variant="subtitle1" sx={{ color: colors.secondaryText, mb: 1 }}>
                     Support Levels
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                    {analysisData?.support_resistance?.support?.map((level, index) => (
+                    {(analysisData?.support_resistance?.support || []).map((level, index) => (
                       <Chip 
                         key={index}
-                        label={typeof level === 'number' ? level.toFixed(5) : '0.00000'}
+                        label={typeof level === 'number' ? level.toFixed(4) : '0.0000'}
                         color="success"
-                        size="small"
-                        variant="outlined"
+                        size="medium"
                         sx={{ 
-                          borderColor: colors.buyGreen,
+                          my: 0.5,
+                          backgroundColor: `${colors.buyGreen}22`,
                           color: colors.buyGreen,
-                          '&:hover': {
-                            backgroundColor: `${colors.buyGreen}20`
-                          }
-                        }}
-                      />
-                    )) || mockData.supportResistance.support.map((level, index) => (
-                      <Chip 
-                        key={index}
-                        label={level.toFixed(5)}
-                        color="success"
-                        size="small"
-                        variant="outlined"
-                        sx={{ 
-                          borderColor: colors.buyGreen,
-                          color: colors.buyGreen,
-                          '&:hover': {
-                            backgroundColor: `${colors.buyGreen}20`
-                          }
+                          border: `1px solid ${colors.buyGreen}`,
+                          fontWeight: 'bold'
                         }}
                       />
                     ))}
+                    {(!analysisData?.support_resistance?.support || analysisData.support_resistance.support.length === 0) && (
+                      <Typography variant="body2" sx={{ color: colors.secondaryText, fontStyle: 'italic' }}>
+                        No support levels available
+                      </Typography>
+                    )}
                   </Box>
-                </Box>
-                <Box>
-                  <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="subtitle1" sx={{ color: colors.secondaryText, mb: 1 }}>
                     Resistance Levels
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                    {analysisData?.support_resistance?.resistance?.map((level, index) => (
+                    {(analysisData?.support_resistance?.resistance || []).map((level, index) => (
                       <Chip 
                         key={index}
-                        label={typeof level === 'number' ? level.toFixed(5) : '0.00000'}
+                        label={typeof level === 'number' ? level.toFixed(4) : '0.0000'}
                         color="error"
-                        size="small"
-                        variant="outlined"
+                        size="medium"
                         sx={{ 
-                          borderColor: colors.sellRed,
+                          my: 0.5,
+                          backgroundColor: `${colors.sellRed}22`,
                           color: colors.sellRed,
-                          '&:hover': {
-                            backgroundColor: `${colors.sellRed}20`
-                          }
-                        }}
-                      />
-                    )) || mockData.supportResistance.resistance.map((level, index) => (
-                      <Chip 
-                        key={index}
-                        label={level.toFixed(5)}
-                        color="error"
-                        size="small"
-                        variant="outlined"
-                        sx={{ 
-                          borderColor: colors.sellRed,
-                          color: colors.sellRed,
-                          '&:hover': {
-                            backgroundColor: `${colors.sellRed}20`
-                          }
+                          border: `1px solid ${colors.sellRed}`,
+                          fontWeight: 'bold'
                         }}
                       />
                     ))}
+                    {(!analysisData?.support_resistance?.resistance || analysisData.support_resistance.resistance.length === 0) && (
+                      <Typography variant="body2" sx={{ color: colors.secondaryText, fontStyle: 'italic' }}>
+                        No resistance levels available
+                      </Typography>
+                    )}
                   </Box>
-                </Box>
-              </Box>
+                </Grid>
+              </Grid>
             </Paper>
           </Box>
 
@@ -765,12 +760,16 @@ const Market = () => {
                     </Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Typography variant="h5" sx={{ color: colors.primaryText }}>
-                        {analysisData.trend}
+                        {analysisData.trend || 'Neutral'}
                       </Typography>
                       <Chip 
-                        label={`Slope: ${typeof analysisData.slope === 'number' ? analysisData.slope.toFixed(4) : '0.0000'}`}
-                        color={analysisData.slope > 0 ? 'success' : 'error'}
+                        label={`Slope: ${typeof analysisData.slope === 'number' ? analysisData.slope.toFixed(4) : (analysisData.change_percentage || 0).toFixed(4)}`}
+                        color={(analysisData.slope > 0 || analysisData.change_percentage > 0) ? 'success' : 'error'}
                         size="small"
+                        sx={{
+                          backgroundColor: (analysisData.slope > 0 || analysisData.change_percentage > 0) ? `${colors.profitGreen}40` : `${colors.lossRed}40`,
+                          color: colors.primaryText
+                        }}
                       />
                     </Box>
                   </Box>
@@ -779,10 +778,12 @@ const Market = () => {
                       Price Predictions (Next 5 Days)
                     </Typography>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                      {analysisData.predictions.map((prediction, index) => (
+                      {(analysisData.predictions || []).map((prediction, index) => (
                         <Box key={index} sx={{ display: 'flex', justifyContent: 'space-between' }}>
                           <Typography variant="body2" sx={{ color: colors.secondaryText }}>
-                            Day {index + 1}
+                            {analysisData.prediction_dates && analysisData.prediction_dates[index] 
+                              ? analysisData.prediction_dates[index].replace('2025-', '') 
+                              : `Day ${index + 1}`}
                           </Typography>
                           <Typography variant="body2" sx={{ color: colors.primaryText }}>
                             {typeof prediction === 'number' ? prediction.toFixed(4) : '0.0000'}
