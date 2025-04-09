@@ -490,7 +490,9 @@ const Market = () => {
                     </Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Typography variant="h5" sx={{ color: colors.primaryText }}>
-                        {analysisData?.technical_indicators?.rsi?.toFixed(2) || mockData.technicalIndicators.rsi}
+                        {typeof analysisData?.technical_indicators?.rsi === 'number' 
+                          ? analysisData.technical_indicators.rsi.toFixed(2) 
+                          : mockData.technicalIndicators.rsi}
                       </Typography>
                       <Chip 
                         label={analysisData?.technical_indicators?.rsi > 70 ? 'Overbought' : analysisData?.technical_indicators?.rsi < 30 ? 'Oversold' : 'Neutral'} 
@@ -507,19 +509,25 @@ const Market = () => {
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                         <Typography variant="body2" sx={{ color: colors.secondaryText }}>SMA 20</Typography>
                         <Typography variant="body2" sx={{ color: colors.primaryText }}>
-                          {analysisData?.technical_indicators?.sma20?.toFixed(5) || mockData.technicalIndicators.sma20}
+                          {typeof analysisData?.technical_indicators?.sma20 === 'number' 
+                            ? analysisData.technical_indicators.sma20.toFixed(5) 
+                            : mockData.technicalIndicators.sma20}
                         </Typography>
                       </Box>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                         <Typography variant="body2" sx={{ color: colors.secondaryText }}>SMA 50</Typography>
                         <Typography variant="body2" sx={{ color: colors.primaryText }}>
-                          {analysisData?.technical_indicators?.sma50?.toFixed(5) || mockData.technicalIndicators.sma50}
+                          {typeof analysisData?.technical_indicators?.sma50 === 'number' 
+                            ? analysisData.technical_indicators.sma50.toFixed(5) 
+                            : mockData.technicalIndicators.sma50}
                         </Typography>
                       </Box>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                         <Typography variant="body2" sx={{ color: colors.secondaryText }}>SMA 200</Typography>
                         <Typography variant="body2" sx={{ color: colors.primaryText }}>
-                          {analysisData?.technical_indicators?.sma200?.toFixed(5) || mockData.technicalIndicators.sma200}
+                          {typeof analysisData?.technical_indicators?.sma200 === 'number' 
+                            ? analysisData.technical_indicators.sma200.toFixed(5) 
+                            : mockData.technicalIndicators.sma200}
                         </Typography>
                       </Box>
                     </Box>
@@ -539,19 +547,25 @@ const Market = () => {
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                         <Typography variant="body2" sx={{ color: colors.secondaryText }}>MACD</Typography>
                         <Typography variant="body2" sx={{ color: colors.primaryText }}>
-                          {analysisData?.technical_indicators?.macd?.toFixed(5) || mockData.technicalIndicators.macd}
+                          {typeof analysisData?.technical_indicators?.macd === 'number' 
+                            ? analysisData.technical_indicators.macd.toFixed(5) 
+                            : mockData.technicalIndicators.macd}
                         </Typography>
                       </Box>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                         <Typography variant="body2" sx={{ color: colors.secondaryText }}>Signal</Typography>
                         <Typography variant="body2" sx={{ color: colors.primaryText }}>
-                          {analysisData?.technical_indicators?.macd_signal?.toFixed(5) || mockData.technicalIndicators.macdSignal}
+                          {typeof analysisData?.technical_indicators?.macd_signal === 'number' 
+                            ? analysisData.technical_indicators.macd_signal.toFixed(5) 
+                            : mockData.technicalIndicators.macdSignal}
                         </Typography>
                       </Box>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                         <Typography variant="body2" sx={{ color: colors.secondaryText }}>Histogram</Typography>
                         <Typography variant="body2" sx={{ color: colors.primaryText }}>
-                          {analysisData?.technical_indicators?.macd_hist?.toFixed(5) || mockData.technicalIndicators.macdHist}
+                          {typeof analysisData?.technical_indicators?.macd_hist === 'number' 
+                            ? analysisData.technical_indicators.macd_hist.toFixed(5) 
+                            : mockData.technicalIndicators.macdHist}
                         </Typography>
                       </Box>
                     </Box>
@@ -585,7 +599,7 @@ const Market = () => {
                     {analysisData?.support_resistance?.support?.map((level, index) => (
                       <Chip 
                         key={index}
-                        label={level.toFixed(5)}
+                        label={typeof level === 'number' ? level.toFixed(5) : '0.00000'}
                         color="success"
                         size="small"
                         variant="outlined"
@@ -623,7 +637,7 @@ const Market = () => {
                     {analysisData?.support_resistance?.resistance?.map((level, index) => (
                       <Chip 
                         key={index}
-                        label={level.toFixed(5)}
+                        label={typeof level === 'number' ? level.toFixed(5) : '0.00000'}
                         color="error"
                         size="small"
                         variant="outlined"
@@ -691,7 +705,7 @@ const Market = () => {
                         {analysisData.trend}
                       </Typography>
                       <Chip 
-                        label={`Slope: ${analysisData.slope.toFixed(4)}`}
+                        label={`Slope: ${typeof analysisData.slope === 'number' ? analysisData.slope.toFixed(4) : '0.0000'}`}
                         color={analysisData.slope > 0 ? 'success' : 'error'}
                         size="small"
                       />
@@ -708,7 +722,7 @@ const Market = () => {
                             Day {index + 1}
                           </Typography>
                           <Typography variant="body2" sx={{ color: colors.primaryText }}>
-                            {prediction.toFixed(4)}
+                            {typeof prediction === 'number' ? prediction.toFixed(4) : '0.0000'}
                           </Typography>
                         </Box>
                       ))}
