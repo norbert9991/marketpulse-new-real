@@ -405,19 +405,40 @@ const UserDashboard = () => {
               }}
             >
               <Grid container>
-                {/* Left Section - Market Analysis (75%) */}
-                <Grid item xs={12} md={9}>
-                  <Box sx={{ height: '100%' }}>
+                {/* Left Section - Market Analysis (80%) */}
+                <Grid item xs={12} md={10} lg={9.5}>
+                  <Box sx={{ 
+                    height: '100%',
+                    borderRight: `1px solid ${colors.borderColor}`,
+                  }}>
                     <MarketAnalysis selectedSymbol={selectedSymbol} />
                   </Box>
                 </Grid>
                 
-                {/* Right Section - Market Overview (25%) */}
-                <Grid item xs={12} md={3} sx={{ borderLeft: `1px solid ${colors.borderColor}` }}>
+                {/* Right Section - Market Overview (20%) */}
+                <Grid item xs={12} md={2} lg={2.5} sx={{ 
+                  borderLeft: `1px solid ${colors.borderColor}`,
+                  margin: '-1px 0 0 -1px', // Fix double border
+                  backgroundColor: `${colors.cardBg}05`
+                }}>
                   {marketData && (
-                    <Box sx={{ p: 2, height: '100%' }}>
-                      <Typography variant="h6" sx={{ color: colors.primaryText, mb: 3 }}>
-                        Market Overview: {selectedSymbol}
+                    <Box sx={{ 
+                      p: 2,
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 2,
+                      maxWidth: '100%',
+                      overflow: 'auto'
+                    }}>
+                      <Typography variant="h6" sx={{ 
+                        color: colors.primaryText, 
+                        mb: 1,
+                        textAlign: 'center',
+                        borderBottom: `1px solid ${colors.borderColor}`,
+                        pb: 1
+                      }}>
+                        Market Overview
                       </Typography>
 
                       {marketLoading ? (
@@ -425,24 +446,50 @@ const UserDashboard = () => {
                           <CircularProgress />
                         </Box>
                       ) : (
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                           {/* Current Price Panel */}
-                          <Box sx={{ p: 2, backgroundColor: colors.panelBg, borderRadius: '10px' }}>
-                            <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
+                          <Box sx={{ 
+                            p: 1.5, 
+                            backgroundColor: colors.panelBg, 
+                            borderRadius: '10px',
+                            border: `1px solid ${colors.borderColor}`
+                          }}>
+                            <Typography variant="subtitle2" sx={{ 
+                              color: colors.secondaryText, 
+                              mb: 1,
+                              fontSize: '0.8rem',
+                              textTransform: 'uppercase',
+                              textAlign: 'center'
+                            }}>
                               Current Price
                             </Typography>
-                            <Box sx={{ mb: 2 }}>
-                              <Typography variant="h4" sx={{ color: colors.primaryText, mb: 1 }}>
+                            <Box sx={{ textAlign: 'center' }}>
+                              <Typography variant="h4" sx={{ 
+                                color: colors.primaryText, 
+                                mb: 1,
+                                fontSize: { xs: '1.5rem', sm: '1.8rem', md: '1.5rem', lg: '2rem' },
+                                fontWeight: 'bold'
+                              }}>
                                 {marketData.current_price?.toFixed(5)}
                               </Typography>
-                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <Box sx={{ 
+                                display: 'flex', 
+                                justifyContent: 'center', 
+                                alignItems: 'center',
+                                gap: 1,
+                                flexDirection: 'column'
+                              }}>
                                 <Chip 
                                   icon={marketData.trend === 'Bullish' ? <TrendingUpIcon /> : <TrendingDownIcon />}
                                   label={marketData.trend}
                                   color={marketData.trend === 'Bullish' ? 'success' : 'error'}
                                   size="small"
+                                  sx={{ minWidth: '80px' }}
                                 />
-                                <Typography variant="caption" sx={{ color: colors.secondaryText }}>
+                                <Typography variant="caption" sx={{ 
+                                  color: colors.secondaryText,
+                                  fontSize: '0.65rem'
+                                }}>
                                   Last updated: {new Date(marketData.last_updated || Date.now()).toLocaleString()}
                                 </Typography>
                               </Box>
@@ -450,27 +497,68 @@ const UserDashboard = () => {
                           </Box>
 
                           {/* Support & Resistance Panel */}
-                          <Box sx={{ p: 2, backgroundColor: colors.panelBg, borderRadius: '10px' }}>
-                            <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 2 }}>
-                              Support & Resistance Levels
+                          <Box sx={{ 
+                            p: 1.5, 
+                            backgroundColor: colors.panelBg, 
+                            borderRadius: '10px',
+                            border: `1px solid ${colors.borderColor}`
+                          }}>
+                            <Typography variant="subtitle2" sx={{ 
+                              color: colors.secondaryText, 
+                              mb: 1.5,
+                              fontSize: '0.8rem',
+                              textTransform: 'uppercase',
+                              textAlign: 'center'
+                            }}>
+                              Support & Resistance
                             </Typography>
-                            <Grid container spacing={2}>
+                            <Grid container spacing={1}>
                               <Grid item xs={6}>
-                                <Typography variant="body2" sx={{ color: colors.secondaryText, fontWeight: 'bold', mb: 1 }}>
+                                <Typography variant="body2" sx={{ 
+                                  color: colors.secondaryText, 
+                                  fontWeight: 'bold', 
+                                  mb: 1,
+                                  textAlign: 'center',
+                                  fontSize: '0.75rem'
+                                }}>
                                   Support
                                 </Typography>
                                 {marketData.support_resistance?.support?.slice(0, 3).map((level, index) => (
-                                  <Typography key={index} variant="body1" sx={{ color: colors.buyGreen, mb: 0.5 }}>
+                                  <Typography 
+                                    key={index} 
+                                    variant="body1" 
+                                    sx={{ 
+                                      color: colors.buyGreen, 
+                                      mb: 0.5,
+                                      textAlign: 'center',
+                                      fontSize: '0.85rem'
+                                    }}
+                                  >
                                     {level?.toFixed(5)}
                                   </Typography>
                                 ))}
                               </Grid>
                               <Grid item xs={6}>
-                                <Typography variant="body2" sx={{ color: colors.secondaryText, fontWeight: 'bold', mb: 1 }}>
+                                <Typography variant="body2" sx={{ 
+                                  color: colors.secondaryText, 
+                                  fontWeight: 'bold', 
+                                  mb: 1,
+                                  textAlign: 'center',
+                                  fontSize: '0.75rem'
+                                }}>
                                   Resistance
                                 </Typography>
                                 {marketData.support_resistance?.resistance?.slice(0, 3).map((level, index) => (
-                                  <Typography key={index} variant="body1" sx={{ color: colors.sellRed, mb: 0.5 }}>
+                                  <Typography 
+                                    key={index} 
+                                    variant="body1" 
+                                    sx={{ 
+                                      color: colors.sellRed, 
+                                      mb: 0.5,
+                                      textAlign: 'center',
+                                      fontSize: '0.85rem'
+                                    }}
+                                  >
                                     {level?.toFixed(5)}
                                   </Typography>
                                 ))}
@@ -479,75 +567,143 @@ const UserDashboard = () => {
                           </Box>
 
                           {/* Technical Indicators Panel */}
-                          <Box sx={{ p: 2, backgroundColor: colors.panelBg, borderRadius: '10px' }}>
-                            <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 2 }}>
+                          <Box sx={{ 
+                            p: 1.5, 
+                            backgroundColor: colors.panelBg, 
+                            borderRadius: '10px',
+                            border: `1px solid ${colors.borderColor}`
+                          }}>
+                            <Typography variant="subtitle2" sx={{ 
+                              color: colors.secondaryText, 
+                              mb: 1.5,
+                              fontSize: '0.8rem',
+                              textTransform: 'uppercase',
+                              textAlign: 'center'
+                            }}>
                               Technical Indicators
                             </Typography>
                             
                             {/* RSI */}
                             <Box sx={{ mb: 2 }}>
-                              <Grid container>
-                                <Grid item xs={4}>
-                                  <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 0.5 }}>
-                                    RSI (14)
-                                  </Typography>
-                                  <Typography variant="h6" sx={{ color: colors.primaryText }}>
-                                    {marketData.technical_indicators?.rsi?.toFixed(2)}
-                                  </Typography>
-                                  {/* RSI Interpretation */}
-                                  <Typography variant="caption" sx={{ 
-                                    color: getRsiColor(marketData.technical_indicators?.rsi)
+                              <Grid container spacing={1}>
+                                <Grid item xs={12}>
+                                  <Box sx={{
+                                    textAlign: 'center',
+                                    p: 1,
+                                    borderRadius: '8px',
+                                    backgroundColor: colors.darkBg,
+                                    mb: 1.5
                                   }}>
-                                    {getRsiInterpretation(marketData.technical_indicators?.rsi)}
-                                  </Typography>
+                                    <Typography variant="body2" sx={{ 
+                                      color: colors.secondaryText, 
+                                      mb: 0.5,
+                                      fontSize: '0.75rem'
+                                    }}>
+                                      RSI (14)
+                                    </Typography>
+                                    <Typography variant="h6" sx={{ 
+                                      color: colors.primaryText,
+                                      fontSize: '1.1rem',
+                                      mb: 0.5
+                                    }}>
+                                      {marketData.technical_indicators?.rsi?.toFixed(2)}
+                                    </Typography>
+                                    <Typography variant="caption" sx={{ 
+                                      color: getRsiColor(marketData.technical_indicators?.rsi),
+                                      fontSize: '0.7rem'
+                                    }}>
+                                      {getRsiInterpretation(marketData.technical_indicators?.rsi)}
+                                    </Typography>
+                                  </Box>
                                 </Grid>
-                                
+                              </Grid>
+                              
+                              <Grid container spacing={1}>
                                 {/* MACD */}
-                                <Grid item xs={4}>
-                                  <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 0.5 }}>
-                                    MACD
-                                  </Typography>
-                                  <Typography variant="h6" sx={{ 
-                                    color: getMacdColor(
-                                      marketData.technical_indicators?.macd,
-                                      marketData.technical_indicators?.macd_signal
-                                    )
+                                <Grid item xs={6}>
+                                  <Box sx={{
+                                    textAlign: 'center',
+                                    p: 1,
+                                    borderRadius: '8px',
+                                    backgroundColor: colors.darkBg,
+                                    height: '100%'
                                   }}>
-                                    {marketData.technical_indicators?.macd?.toFixed(4)}
-                                  </Typography>
-                                  <Typography variant="caption" sx={{ color: colors.secondaryText }}>
-                                    Signal: {marketData.technical_indicators?.macd_signal?.toFixed(4)}
-                                  </Typography>
+                                    <Typography variant="body2" sx={{ 
+                                      color: colors.secondaryText, 
+                                      mb: 0.5,
+                                      fontSize: '0.75rem'
+                                    }}>
+                                      MACD
+                                    </Typography>
+                                    <Typography variant="body1" sx={{ 
+                                      color: getMacdColor(
+                                        marketData.technical_indicators?.macd,
+                                        marketData.technical_indicators?.macd_signal
+                                      ),
+                                      fontSize: '0.85rem',
+                                      mb: 0.5
+                                    }}>
+                                      {marketData.technical_indicators?.macd?.toFixed(4)}
+                                    </Typography>
+                                    <Typography variant="caption" sx={{ 
+                                      color: colors.secondaryText,
+                                      fontSize: '0.65rem',
+                                      display: 'block'
+                                    }}>
+                                      Signal: {marketData.technical_indicators?.macd_signal?.toFixed(4)}
+                                    </Typography>
+                                  </Box>
                                 </Grid>
                                 
                                 {/* MACD Histogram */}
-                                <Grid item xs={4}>
-                                  <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 0.5 }}>
-                                    Histogram
-                                  </Typography>
-                                  <Typography variant="h6" sx={{ 
-                                    color: getHistColor(marketData.technical_indicators?.macd_hist)
+                                <Grid item xs={6}>
+                                  <Box sx={{
+                                    textAlign: 'center',
+                                    p: 1,
+                                    borderRadius: '8px',
+                                    backgroundColor: colors.darkBg,
+                                    height: '100%'
                                   }}>
-                                    {marketData.technical_indicators?.macd_hist?.toFixed(4)}
-                                  </Typography>
-                                  <Typography variant="caption" sx={{ 
-                                    color: getMacdColor(
-                                      marketData.technical_indicators?.macd,
-                                      marketData.technical_indicators?.macd_signal
-                                    )
-                                  }}>
-                                    {getMacdInterpretation(
-                                      marketData.technical_indicators?.macd,
-                                      marketData.technical_indicators?.macd_signal
-                                    )}
-                                  </Typography>
+                                    <Typography variant="body2" sx={{ 
+                                      color: colors.secondaryText, 
+                                      mb: 0.5,
+                                      fontSize: '0.75rem'
+                                    }}>
+                                      Histogram
+                                    </Typography>
+                                    <Typography variant="body1" sx={{ 
+                                      color: getHistColor(marketData.technical_indicators?.macd_hist),
+                                      fontSize: '0.85rem',
+                                      mb: 0.5
+                                    }}>
+                                      {marketData.technical_indicators?.macd_hist?.toFixed(4)}
+                                    </Typography>
+                                    <Typography variant="caption" sx={{ 
+                                      color: getMacdColor(
+                                        marketData.technical_indicators?.macd,
+                                        marketData.technical_indicators?.macd_signal
+                                      ),
+                                      fontSize: '0.65rem',
+                                      display: 'block'
+                                    }}>
+                                      {getMacdInterpretation(
+                                        marketData.technical_indicators?.macd,
+                                        marketData.technical_indicators?.macd_signal
+                                      )}
+                                    </Typography>
+                                  </Box>
                                 </Grid>
                               </Grid>
                             </Box>
                             
                             {/* Moving Averages */}
                             <Box>
-                              <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 1 }}>
+                              <Typography variant="body2" sx={{ 
+                                color: colors.secondaryText, 
+                                mb: 1,
+                                fontSize: '0.75rem',
+                                textAlign: 'center'
+                              }}>
                                 Moving Averages
                               </Typography>
                               <Grid container spacing={1}>
@@ -558,14 +714,24 @@ const UserDashboard = () => {
                                     borderRadius: '8px', 
                                     backgroundColor: colors.darkBg
                                   }}>
-                                    <Typography variant="caption" sx={{ color: colors.secondaryText }}>
+                                    <Typography variant="caption" sx={{ 
+                                      color: colors.secondaryText,
+                                      fontSize: '0.65rem'
+                                    }}>
                                       SMA (20)
                                     </Typography>
-                                    <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                                    <Typography variant="body2" sx={{ 
+                                      color: colors.primaryText, 
+                                      fontWeight: 'bold',
+                                      fontSize: '0.75rem'
+                                    }}>
                                       {marketData.technical_indicators?.sma20?.toFixed(5)}
                                     </Typography>
-                                    <Typography variant="caption" sx={{ color: colors.secondaryText }}>
-                                      Short-term trend
+                                    <Typography variant="caption" sx={{ 
+                                      color: colors.secondaryText,
+                                      fontSize: '0.6rem'
+                                    }}>
+                                      Short-term
                                     </Typography>
                                   </Box>
                                 </Grid>
@@ -576,14 +742,24 @@ const UserDashboard = () => {
                                     borderRadius: '8px', 
                                     backgroundColor: colors.darkBg
                                   }}>
-                                    <Typography variant="caption" sx={{ color: colors.secondaryText }}>
+                                    <Typography variant="caption" sx={{ 
+                                      color: colors.secondaryText,
+                                      fontSize: '0.65rem'
+                                    }}>
                                       SMA (50)
                                     </Typography>
-                                    <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                                    <Typography variant="body2" sx={{ 
+                                      color: colors.primaryText, 
+                                      fontWeight: 'bold',
+                                      fontSize: '0.75rem'
+                                    }}>
                                       {marketData.technical_indicators?.sma50?.toFixed(5) || '0.00000'}
                                     </Typography>
-                                    <Typography variant="caption" sx={{ color: colors.secondaryText }}>
-                                      Medium-term trend
+                                    <Typography variant="caption" sx={{ 
+                                      color: colors.secondaryText,
+                                      fontSize: '0.6rem'
+                                    }}>
+                                      Medium-term
                                     </Typography>
                                   </Box>
                                 </Grid>
@@ -594,14 +770,24 @@ const UserDashboard = () => {
                                     borderRadius: '8px', 
                                     backgroundColor: colors.darkBg
                                   }}>
-                                    <Typography variant="caption" sx={{ color: colors.secondaryText }}>
+                                    <Typography variant="caption" sx={{ 
+                                      color: colors.secondaryText,
+                                      fontSize: '0.65rem'
+                                    }}>
                                       SMA (200)
                                     </Typography>
-                                    <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                                    <Typography variant="body2" sx={{ 
+                                      color: colors.primaryText, 
+                                      fontWeight: 'bold',
+                                      fontSize: '0.75rem'
+                                    }}>
                                       {marketData.technical_indicators?.sma200?.toFixed(5) || '0.00000'}
                                     </Typography>
-                                    <Typography variant="caption" sx={{ color: colors.secondaryText }}>
-                                      Long-term trend
+                                    <Typography variant="caption" sx={{ 
+                                      color: colors.secondaryText,
+                                      fontSize: '0.6rem'
+                                    }}>
+                                      Long-term
                                     </Typography>
                                   </Box>
                                 </Grid>
