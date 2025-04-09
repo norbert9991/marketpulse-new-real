@@ -437,10 +437,12 @@ const Market = () => {
   // Ensure technical indicators are properly formatted
   const getTechnicalIndicators = () => {
     if (!analysisData || !analysisData.technical_indicators) {
+      console.log('No technical indicators found in analysis data, using mock data');
       return mockData.technicalIndicators;
     }
 
     const indicators = analysisData.technical_indicators;
+    console.log('Technical indicators from database:', indicators);
     
     return {
       rsi: ensureNumber(indicators.rsi),
@@ -449,8 +451,7 @@ const Market = () => {
       macdHist: ensureNumber(indicators.macd_hist),
       sma20: ensureNumber(indicators.sma20),
       sma50: ensureNumber(indicators.sma50),
-      sma200: ensureNumber(indicators.sma200),
-      adx: ensureNumber(indicators.adx)
+      sma200: ensureNumber(indicators.sma200)
     };
   };
 
@@ -650,81 +651,191 @@ const Market = () => {
           {/* Middle Row: Technical Indicators and Support/Resistance */}
           <Box sx={{ display: 'flex', gap: 2 }}>
             {/* Technical Indicators */}
-            <Grid item xs={12} sm={6} md={4}>
-              <Paper sx={{ p: 2, height: '100%' }}>
-                <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText }}>
-                  Technical Indicators
+            <Paper 
+              sx={{ 
+                p: 2,
+                flex: 1,
+                backgroundColor: colors.cardBg,
+                border: `1px solid ${colors.borderColor}`,
+                borderRadius: '12px',
+                boxShadow: `0 4px 12px ${colors.shadowColor}`,
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
+              <Typography variant="h6" sx={{ color: colors.primaryText, mb: 2 }}>
+                Technical Indicators
+              </Typography>
+              
+              {/* RSI Indicator */}
+              <Box sx={{ mb: 3 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                  <Typography variant="subtitle1" sx={{ color: colors.secondaryText }}>
+                    RSI (14)
+                  </Typography>
+                  <Typography variant="h5" sx={{ 
+                    color: getTechnicalIndicators().rsi > 70 
+                      ? colors.sellRed 
+                      : getTechnicalIndicators().rsi < 30 
+                        ? colors.buyGreen 
+                        : colors.primaryText,
+                    fontWeight: 'bold'
+                  }}>
+                    {getTechnicalIndicators().rsi.toFixed(1)}
+                  </Typography>
+                </Box>
+                <Box sx={{ 
+                  width: '100%', 
+                  height: 8, 
+                  backgroundColor: colors.borderColor,
+                  borderRadius: 4,
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}>
+                  <Box sx={{ 
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                    height: '100%',
+                    width: `${Math.min(100, Math.max(0, getTechnicalIndicators().rsi))}%`,
+                    background: `linear-gradient(90deg, ${colors.buyGreen} 0%, ${colors.accentBlue} 50%, ${colors.sellRed} 100%)`,
+                    borderRadius: 4
+                  }} />
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
+                  <Typography variant="caption" sx={{ color: colors.buyGreen }}>Oversold (30)</Typography>
+                  <Typography variant="caption" sx={{ color: colors.primaryText }}>Neutral</Typography>
+                  <Typography variant="caption" sx={{ color: colors.sellRed }}>Overbought (70)</Typography>
+                </Box>
+              </Box>
+              
+              {/* MACD Indicators */}
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="subtitle1" sx={{ color: colors.secondaryText, mb: 2 }}>
+                  MACD Indicator
                 </Typography>
                 <Grid container spacing={2}>
-                  {/* RSI */}
-                  <Grid item xs={6}>
-                    <Typography variant="subtitle2" sx={{ color: colors.secondaryText }}>
-                      RSI (14)
-                    </Typography>
-                    <Typography 
-                      variant="h6" 
-                      sx={{ 
-                        fontWeight: 'bold',
-                        color: getRsiColor(getTechnicalIndicators().rsi)
-                      }}
-                    >
-                      {getTechnicalIndicators().rsi.toFixed(2)}
-                    </Typography>
+                  <Grid item xs={4}>
+                    <Box sx={{ 
+                      textAlign: 'center', 
+                      p: 1.5, 
+                      borderRadius: '10px', 
+                      backgroundColor: colors.panelBg 
+                    }}>
+                      <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
+                        MACD Line
+                      </Typography>
+                      <Typography variant="h6" sx={{ 
+                        color: getTechnicalIndicators().macd > 0 ? colors.buyGreen : colors.sellRed,
+                        fontWeight: 'bold'
+                      }}>
+                        {getTechnicalIndicators().macd.toFixed(4)}
+                      </Typography>
+                    </Box>
                   </Grid>
-                  
-                  {/* MACD */}
-                  <Grid item xs={6}>
-                    <Typography variant="subtitle2" sx={{ color: colors.secondaryText }}>
-                      MACD
-                    </Typography>
-                    <Typography 
-                      variant="h6" 
-                      sx={{ 
-                        fontWeight: 'bold',
-                        color: getMacdColor(
-                          getTechnicalIndicators().macd,
-                          getTechnicalIndicators().macdSignal
-                        )
-                      }}
-                    >
-                      {getTechnicalIndicators().macd.toFixed(4)}
-                    </Typography>
+                  <Grid item xs={4}>
+                    <Box sx={{ 
+                      textAlign: 'center', 
+                      p: 1.5, 
+                      borderRadius: '10px', 
+                      backgroundColor: colors.panelBg 
+                    }}>
+                      <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
+                        Signal Line
+                      </Typography>
+                      <Typography variant="h6" sx={{ 
+                        color: colors.primaryText,
+                        fontWeight: 'bold'
+                      }}>
+                        {getTechnicalIndicators().macdSignal.toFixed(4)}
+                      </Typography>
+                    </Box>
                   </Grid>
-                  
-                  {/* ADX */}
-                  <Grid item xs={6}>
-                    <Typography variant="subtitle2" sx={{ color: colors.secondaryText }}>
-                      ADX
-                    </Typography>
-                    <Typography 
-                      variant="h6" 
-                      sx={{ 
-                        fontWeight: 'bold',
-                        color: getAdxColor(getTechnicalIndicators().adx)
-                      }}
-                    >
-                      {getTechnicalIndicators().adx ? getTechnicalIndicators().adx.toFixed(2) : 'N/A'}
-                    </Typography>
-                  </Grid>
-                  
-                  {/* ATR */}
-                  <Grid item xs={6}>
-                    <Typography variant="subtitle2" sx={{ color: colors.secondaryText }}>
-                      ATR
-                    </Typography>
-                    <Typography 
-                      variant="h6" 
-                      sx={{ 
-                        fontWeight: 'bold',
-                        color: colors.primaryText
-                      }}
-                    >
-                      N/A
-                    </Typography>
+                  <Grid item xs={4}>
+                    <Box sx={{ 
+                      textAlign: 'center', 
+                      p: 1.5, 
+                      borderRadius: '10px', 
+                      backgroundColor: colors.panelBg 
+                    }}>
+                      <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
+                        Histogram
+                      </Typography>
+                      <Typography variant="h6" sx={{ 
+                        color: getTechnicalIndicators().macdHist > 0 ? colors.buyGreen : colors.sellRed,
+                        fontWeight: 'bold'
+                      }}>
+                        {getTechnicalIndicators().macdHist.toFixed(4)}
+                      </Typography>
+                    </Box>
                   </Grid>
                 </Grid>
-              </Paper>
-            </Grid>
+                <Box sx={{ mt: 2, p: 1, borderRadius: '8px', backgroundColor: `${colors.accentBlue}15` }}>
+                  <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                    Signal: {getTechnicalIndicators().macd > getTechnicalIndicators().macdSignal 
+                      ? <span style={{ color: colors.buyGreen, fontWeight: 'bold' }}>Bullish</span> 
+                      : <span style={{ color: colors.sellRed, fontWeight: 'bold' }}>Bearish</span>}
+                  </Typography>
+                </Box>
+              </Box>
+              
+              {/* Moving Averages */}
+              <Box>
+                <Typography variant="subtitle1" sx={{ color: colors.secondaryText, mb: 2 }}>
+                  Moving Averages
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={4}>
+                    <Box sx={{ 
+                      textAlign: 'center', 
+                      p: 1.5, 
+                      borderRadius: '10px', 
+                      backgroundColor: colors.panelBg,
+                      height: '100%' 
+                    }}>
+                      <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
+                        SMA 20
+                      </Typography>
+                      <Typography variant="h6" sx={{ fontWeight: 'bold', color: colors.primaryText }}>
+                        {getTechnicalIndicators().sma20.toFixed(4)}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={4}>
+                    <Box sx={{ 
+                      textAlign: 'center', 
+                      p: 1.5, 
+                      borderRadius: '10px', 
+                      backgroundColor: colors.panelBg,
+                      height: '100%'  
+                    }}>
+                      <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
+                        SMA 50
+                      </Typography>
+                      <Typography variant="h6" sx={{ fontWeight: 'bold', color: colors.primaryText }}>
+                        {getTechnicalIndicators().sma50.toFixed(4)}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={4}>
+                    <Box sx={{ 
+                      textAlign: 'center', 
+                      p: 1.5, 
+                      borderRadius: '10px', 
+                      backgroundColor: colors.panelBg,
+                      height: '100%'  
+                    }}>
+                      <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
+                        SMA 200
+                      </Typography>
+                      <Typography variant="h6" sx={{ fontWeight: 'bold', color: colors.primaryText }}>
+                        {getTechnicalIndicators().sma200.toFixed(4)}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                </Grid>
+              </Box>
+            </Paper>
 
             {/* Support & Resistance */}
             <Paper 
