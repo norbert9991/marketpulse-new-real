@@ -1,8 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
+import { Box, Typography, CircularProgress } from '@mui/material';
 
 const ProtectedRoute = ({ element: Component, requiredRole, children }) => {
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true);
   
   // Try to get the user from localStorage
   let user;
@@ -22,39 +24,54 @@ const ProtectedRoute = ({ element: Component, requiredRole, children }) => {
       console.log("ProtectedRoute - User role:", user.role);
     }
     
-    // Handle redirection with useEffect for problematic cases
-    if (!user) {
-      console.log("ProtectedRoute - No user, redirecting to home");
-      navigate('/', { replace: true });
-    } else if (requiredRole && user.role !== requiredRole) {
-      console.log(`ProtectedRoute - User role ${user.role} doesn't match required role ${requiredRole}`);
-      if (user.role === 'admin') {
-        navigate('/admin-dashboard', { replace: true });
-      } else {
-        navigate('/user-dashboard', { replace: true });
+    // Set a small delay to let transitions happen more naturally
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+      
+      // Handle redirection with useEffect
+      if (!user) {
+        console.log("ProtectedRoute - No user, redirecting to home");
+        navigate('/', { replace: true });
+      } else if (requiredRole && user.role !== requiredRole) {
+        console.log(`ProtectedRoute - User role ${user.role} doesn't match required role ${requiredRole}`);
+        if (user.role === 'admin') {
+          navigate('/admin-dashboard', { replace: true });
+        } else {
+          navigate('/user-dashboard', { replace: true });
+        }
       }
-    }
+    }, 200);
+    
+    return () => clearTimeout(timer);
   }, [user, requiredRole, navigate]);
   
+  // Show loading indicator while checking auth
+  if (isLoading) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: 'column',
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        height: '100vh',
+        backgroundColor: '#121212'
+      }}>
+        <CircularProgress />
+        <Typography sx={{ mt: 2, color: '#fff' }}>
+          Verifying access...
+        </Typography>
+      </Box>
+    );
+  }
+
   if (!user) {
-    console.log("ProtectedRoute - Rendering Navigate to /");
-    // Fallback to direct location change if router navigate fails
-    if (window.location.pathname !== '/') {
-      window.location.href = window.location.origin + '/#/';
-    }
+    console.log("ProtectedRoute - Redirecting to /");
     return <Navigate to="/" replace />;
   }
 
   if (requiredRole && user.role !== requiredRole) {
-    console.log(`ProtectedRoute - Rendering Navigate to ${user.role === 'admin' ? '/admin-dashboard' : '/user-dashboard'}`);
-    // Redirect to appropriate dashboard based on role
+    console.log(`ProtectedRoute - Redirecting to appropriate dashboard`);
     const redirectPath = user.role === 'admin' ? '/admin-dashboard' : '/user-dashboard';
-    
-    // Fallback to direct location change if router navigate fails
-    if (window.location.pathname !== redirectPath) {
-      window.location.href = window.location.origin + '/#' + redirectPath;
-    }
-    
     return <Navigate to={redirectPath} replace />;
   }
 

@@ -168,32 +168,58 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       setLoading(true);
+      setError(null);
       try {
         // Get current admin user info
+        console.log('Fetching admin user info...');
         const userResponse = await API.auth.me();
         setUser(userResponse.data.user);
         
-        // Get all users
-        const usersResponse = await API.admin.getUsers();
-        setUsers(usersResponse.data.users);
-        setUserCount(usersResponse.data.users.length);
+        // Get all users with error handling
+        console.log('Fetching all users...');
+        try {
+          const usersResponse = await API.admin.getUsers();
+          setUsers(usersResponse.data.users);
+          setUserCount(usersResponse.data.users.length);
+        } catch (err) {
+          console.error('Error fetching users:', err);
+          // Continue with other requests
+        }
         
-        // Get user growth stats
-        const growthResponse = await API.admin.getUserGrowth();
-        setUserGrowthData(growthResponse.data);
+        // Get user growth stats with error handling
+        console.log('Fetching user growth stats...');
+        try {
+          const growthResponse = await API.admin.getUserGrowth();
+          setUserGrowthData(growthResponse.data);
+        } catch (err) {
+          console.error('Error fetching user growth:', err);
+          // Continue with other requests
+        }
         
-        // Get popular symbols/pairs
-        const symbolsResponse = await API.admin.getFavoriteSymbols();
-        setFavoriteSymbolsData(symbolsResponse.data.symbols);
+        // Get popular symbols/pairs with error handling
+        console.log('Fetching favorite symbols...');
+        try {
+          const symbolsResponse = await API.admin.getFavoriteSymbols();
+          setFavoriteSymbolsData(symbolsResponse.data.symbols);
+        } catch (err) {
+          console.error('Error fetching favorite symbols:', err);
+          // Continue with other requests
+        }
         
-        // Get current market trends
-        const trendsResponse = await API.admin.getMarketTrends();
-        setMarketTrendsData(trendsResponse.data.trends);
+        // Get current market trends with error handling
+        console.log('Fetching market trends...');
+        try {
+          const trendsResponse = await API.admin.getMarketTrends();
+          setMarketTrendsData(trendsResponse.data.trends);
+        } catch (err) {
+          console.error('Error fetching market trends:', err);
+          // Continue with other requests
+        }
         
-        setLoading(false);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
-        setError('Failed to load dashboard data');
+        setError('Failed to load some dashboard data. Please refresh to try again.');
+      } finally {
         setLoading(false);
       }
     };
