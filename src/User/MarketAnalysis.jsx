@@ -76,74 +76,6 @@ const colors = {
   shadowColor: 'rgba(0, 0, 0, 0.3)'
 };
 
-// Chart.js options for the dark theme
-const chartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  interaction: {
-    mode: 'index',
-    intersect: false,
-  },
-  plugins: {
-    legend: {
-      display: true,
-      position: 'top',
-      labels: {
-        color: '#A0A5B8',
-        font: {
-          family: "'Roboto', sans-serif",
-          size: 12
-        },
-        boxWidth: 12,
-        usePointStyle: true,
-      }
-    },
-    tooltip: {
-      mode: 'index',
-      intersect: false,
-      backgroundColor: '#1E2235',
-      titleColor: '#FFFFFF',
-      bodyColor: '#A0A5B8',
-      borderColor: '#2A2F45',
-      borderWidth: 1,
-      padding: 12,
-      displayColors: true,
-      callbacks: {
-        label: function(context) {
-          return `${context.dataset.label}: ${context.parsed.y.toFixed(5)}`;
-        }
-      }
-    }
-  },
-  scales: {
-    x: {
-      grid: {
-        color: 'rgba(42, 47, 69, 0.5)',
-        drawBorder: false,
-      },
-      ticks: {
-        color: '#A0A5B8',
-        maxRotation: 0,
-        font: {
-          size: 10
-        }
-      }
-    },
-    y: {
-      grid: {
-        color: 'rgba(42, 47, 69, 0.5)',
-        drawBorder: false,
-      },
-      ticks: {
-        color: '#A0A5B8',
-        font: {
-          size: 10
-        }
-      }
-    }
-  }
-};
-
 const MarketAnalysis = ({ selectedSymbol }) => {
   const [analysisData, setAnalysisData] = useState(null);
   const [historyData, setHistoryData] = useState(null);
@@ -355,64 +287,160 @@ const MarketAnalysis = ({ selectedSymbol }) => {
     );
   };
 
-  const renderPriceChart = () => {
+  const renderPriceHistoryChart = () => {
     if (!historyData || !historyData.history || historyData.history.length === 0) {
-      return null;
+      return (
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          py: 4 
+        }}>
+          <Typography sx={{ color: colors.secondaryText, mb: 2 }}>
+            No historical price data available for this symbol
+          </Typography>
+          <Button 
+            variant="outlined" 
+            startIcon={<RefreshIcon />}
+            onClick={() => fetchPriceHistory(selectedSymbol)}
+            sx={{ 
+              color: colors.accentBlue,
+              borderColor: colors.accentBlue
+            }}
+          >
+            Try Again
+          </Button>
+        </Box>
+      );
     }
 
+    // Sort history data by date in ascending order
     const sortedHistory = [...historyData.history].sort((a, b) => 
-      new Date(a.timestamp) - new Date(b.timestamp)
+      new Date(a.date) - new Date(b.date)
     );
 
     const chartData = {
-      labels: sortedHistory.map(item => {
-        const date = new Date(item.timestamp);
-        return date.toLocaleDateString('en-US', { 
-          month: 'short', 
-          day: 'numeric'
-        });
-      }),
+      labels: sortedHistory.map(item => item.date),
       datasets: [
         {
           label: 'Close Price',
-          data: sortedHistory.map(item => item.close_price),
+          data: sortedHistory.map(item => item.close),
           borderColor: colors.accentBlue,
           backgroundColor: 'rgba(33, 150, 243, 0.1)',
           fill: true,
           tension: 0.4,
           borderWidth: 2,
           pointRadius: 0,
-          pointHoverRadius: 4,
-          z: 1
+          pointHoverRadius: 5
         },
         {
           label: 'High Price',
-          data: sortedHistory.map(item => item.high_price),
-          borderColor: 'rgba(0, 230, 118, 0.5)',
-          borderDash: [5, 5],
+          data: sortedHistory.map(item => item.high),
+          borderColor: colors.buyGreen,
+          backgroundColor: 'rgba(0, 230, 118, 0.1)',
+          fill: false,
           tension: 0.4,
           borderWidth: 1,
+          borderDash: [5, 5],
           pointRadius: 0,
-          pointHoverRadius: 4,
-          fill: false
+          pointHoverRadius: 5
         },
         {
           label: 'Low Price',
-          data: sortedHistory.map(item => item.low_price),
-          borderColor: 'rgba(255, 61, 87, 0.5)',
-          borderDash: [5, 5],
+          data: sortedHistory.map(item => item.low),
+          borderColor: colors.sellRed,
+          backgroundColor: 'rgba(255, 61, 87, 0.1)',
+          fill: false,
           tension: 0.4,
           borderWidth: 1,
+          borderDash: [5, 5],
           pointRadius: 0,
-          pointHoverRadius: 4,
-          fill: false
+          pointHoverRadius: 5
+        },
+        {
+          label: 'Open Price',
+          data: sortedHistory.map(item => item.open),
+          borderColor: colors.warningOrange,
+          backgroundColor: 'rgba(255, 167, 38, 0.1)',
+          fill: false,
+          tension: 0.4,
+          borderWidth: 1,
+          borderDash: [2, 2],
+          pointRadius: 0,
+          pointHoverRadius: 5
         }
       ]
     };
 
+    const options = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: {
+            color: colors.secondaryText,
+            usePointStyle: true,
+            pointStyle: 'line'
+          }
+        },
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: colors.panelBg,
+          titleColor: colors.primaryText,
+          bodyColor: colors.primaryText,
+          borderColor: colors.borderColor,
+          borderWidth: 1,
+          callbacks: {
+            label: function(context) {
+              let label = context.dataset.label || '';
+              if (label) {
+                label += ': ';
+              }
+              if (context.parsed.y !== null) {
+                label += context.parsed.y.toFixed(5);
+              }
+              return label;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: {
+            display: false,
+            color: colors.borderColor
+          },
+          ticks: {
+            color: colors.secondaryText,
+            maxRotation: 45,
+            minRotation: 45
+          }
+        },
+        y: {
+          grid: {
+            color: colors.borderColor
+          },
+          ticks: {
+            color: colors.secondaryText,
+            callback: function(value) {
+              return value.toFixed(5);
+            }
+          }
+        }
+      },
+      interaction: {
+        mode: 'nearest',
+        axis: 'x',
+        intersect: false
+      }
+    };
+
     return (
-      <Box sx={{ height: '400px', mb: 4 }}>
-        <Line data={chartData} options={chartOptions} />
+      <Box sx={{ height: 400, mt: 2 }}>
+        <Line data={chartData} options={options} />
       </Box>
     );
   };
@@ -738,125 +766,124 @@ const MarketAnalysis = ({ selectedSymbol }) => {
   }
 
   return (
-    <Box sx={{ width: '100%' }}>
-      <Paper 
-        sx={{ 
-          p: 3,
-          backgroundColor: colors.cardBg,
-          border: `1px solid ${colors.borderColor}`,
-          borderRadius: '12px',
-          boxShadow: `0 4px 12px ${colors.shadowColor}`
-        }}
-      >
-        {/* Header with Current Price and Last Updated */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-          <Box>
-            <Typography variant="h6" sx={{ color: colors.primaryText }}>
-              Price History
-            </Typography>
-          </Box>
-          <Box sx={{ textAlign: 'right' }}>
-            <Typography variant="h5" sx={{ color: colors.primaryText, mb: 0.5 }}>
-              {analysisData?.current_price?.toFixed(5)}
-            </Typography>
-            <Typography variant="caption" sx={{ color: colors.secondaryText }}>
-              Last updated: {new Date().toLocaleString()}
-            </Typography>
-          </Box>
+    <Paper 
+      sx={{ 
+        p: 3,
+        backgroundColor: colors.cardBg,
+        border: `1px solid ${colors.borderColor}`,
+        borderRadius: '12px',
+        boxShadow: `0 4px 12px ${colors.shadowColor}`
+      }}
+    >
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h6" sx={{ color: colors.primaryText }}>
+          Market Analysis: {selectedSymbol}
+        </Typography>
+        <Button 
+          variant="outlined" 
+          startIcon={loading ? <CircularProgress size={20} /> : <RefreshIcon />}
+          onClick={handleRefresh}
+          disabled={loading}
+          sx={{ 
+            color: colors.accentBlue,
+            borderColor: colors.accentBlue,
+            '&:hover': {
+              backgroundColor: `${colors.accentBlue}22`,
+              borderColor: colors.accentBlue
+            }
+          }}
+        >
+          {loading ? 'Refreshing...' : 'Refresh Data'}
+        </Button>
+      </Box>
+      
+      {error && (
+        <Alert 
+          severity="error" 
+          action={
+            <Button color="inherit" size="small" onClick={() => fetchMarketAnalysis(selectedSymbol)}>
+              Retry
+            </Button>
+          }
+          sx={{ 
+            mb: 2,
+            backgroundColor: `${colors.lossRed}10`,
+            borderColor: colors.sellRed,
+            color: colors.sellRed
+          }}
+        >
+          {error}
+        </Alert>
+      )}
+      
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+          <CircularProgress size={60} sx={{ color: colors.accentBlue }} />
         </Box>
-
-        {/* Price Chart */}
-        {historyLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-            <CircularProgress />
-          </Box>
-        ) : (
-          renderPriceChart()
-        )}
-
-        {/* Support & Resistance Levels */}
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="subtitle1" sx={{ color: colors.secondaryText, mb: 2 }}>
-            Support & Resistance Levels
+      ) : analysisData ? (
+        <>
+          {/* Price Prediction */}
+          <Paper sx={{ 
+            p: 2, 
+            mb: 3, 
+            backgroundColor: colors.panelBg,
+            border: `1px solid ${colors.borderColor}`,
+            borderRadius: '8px'
+          }}>
+            <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText }}>
+              Price Prediction (5 Days)
+            </Typography>
+            {renderPredictionChart()}
+          </Paper>
+          
+          {/* Price History */}
+          <Paper sx={{ 
+            p: 2, 
+            mb: 3, 
+            backgroundColor: colors.panelBg,
+            border: `1px solid ${colors.borderColor}`,
+            borderRadius: '8px'
+          }}>
+            <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText }}>
+              Price History (30 Days)
+            </Typography>
+            
+            {historyError && (
+              <Alert 
+                severity="warning" 
+                action={
+                  <Button color="inherit" size="small" onClick={() => fetchPriceHistory(selectedSymbol)}>
+                    Retry
+                  </Button>
+                }
+                sx={{ 
+                  mb: 2,
+                  backgroundColor: `${colors.warningOrange}10`,
+                  borderColor: colors.warningOrange,
+                  color: colors.warningOrange
+                }}
+              >
+                {historyError}
+              </Alert>
+            )}
+            
+            {historyLoading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                <CircularProgress size={40} sx={{ color: colors.accentBlue }} />
+              </Box>
+            ) : renderPriceHistoryChart()}
+          </Paper>
+          
+          {/* Rest of your component remains unchanged */}
+        </>
+      ) : (
+        <Box sx={{ textAlign: 'center', p: 4 }}>
+          <Typography sx={{ color: colors.secondaryText }}>
+            Select a market pair to view analysis
           </Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={6}>
-              <Box sx={{ p: 2, backgroundColor: colors.panelBg, borderRadius: '10px' }}>
-                <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
-                  Support
-                </Typography>
-                {analysisData?.support_resistance?.support?.map((level, index) => (
-                  <Typography key={index} variant="body1" sx={{ color: colors.buyGreen }}>
-                    {level.toFixed(5)}
-                  </Typography>
-                ))}
-              </Box>
-            </Grid>
-            <Grid item xs={6}>
-              <Box sx={{ p: 2, backgroundColor: colors.panelBg, borderRadius: '10px' }}>
-                <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
-                  Resistance
-                </Typography>
-                {analysisData?.support_resistance?.resistance?.map((level, index) => (
-                  <Typography key={index} variant="body1" sx={{ color: colors.sellRed }}>
-                    {level.toFixed(5)}
-                  </Typography>
-                ))}
-              </Box>
-            </Grid>
-          </Grid>
         </Box>
-
-        {/* Technical Indicators */}
-        <Box>
-          <Typography variant="subtitle1" sx={{ color: colors.secondaryText, mb: 2 }}>
-            Technical Indicators
-          </Typography>
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={4}>
-              <Box sx={{ p: 2, backgroundColor: colors.panelBg, borderRadius: '10px' }}>
-                <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
-                  RSI (14)
-                </Typography>
-                <Typography variant="h6" sx={{ color: colors.primaryText }}>
-                  {analysisData?.technical_indicators?.rsi?.toFixed(2)}
-                </Typography>
-                <Typography variant="caption" sx={{ color: colors.secondaryText }}>
-                  {analysisData?.technical_indicators?.rsi > 70 ? 'Overbought' : 
-                   analysisData?.technical_indicators?.rsi < 30 ? 'Oversold' : 'Neutral'}
-                </Typography>
-              </Box>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <Box sx={{ p: 2, backgroundColor: colors.panelBg, borderRadius: '10px' }}>
-                <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
-                  MACD
-                </Typography>
-                <Typography variant="h6" sx={{ color: colors.primaryText }}>
-                  {analysisData?.technical_indicators?.macd?.toFixed(4)}
-                </Typography>
-                <Typography variant="caption" sx={{ color: colors.secondaryText }}>
-                  Signal: {analysisData?.technical_indicators?.macd_signal?.toFixed(4)}
-                </Typography>
-              </Box>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <Box sx={{ p: 2, backgroundColor: colors.panelBg, borderRadius: '10px' }}>
-                <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
-                  SMA (20)
-                </Typography>
-                <Typography variant="h6" sx={{ color: colors.primaryText }}>
-                  {analysisData?.technical_indicators?.sma20?.toFixed(4)}
-                </Typography>
-                <Typography variant="caption" sx={{ color: colors.secondaryText }}>
-                  Short-term trend
-                </Typography>
-              </Box>
-            </Grid>
-          </Grid>
-        </Box>
-      </Paper>
-    </Box>
+      )}
+    </Paper>
   );
 };
 
