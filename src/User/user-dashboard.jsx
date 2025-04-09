@@ -56,6 +56,8 @@ const UserDashboard = () => {
   const [favoriteMarkets, setFavoriteMarkets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedSymbol, setSelectedSymbol] = useState(null);
+  const [marketData, setMarketData] = useState(null);
+  const [marketLoading, setMarketLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
@@ -172,6 +174,24 @@ const UserDashboard = () => {
       fetchDashboardData();
     }
   }, [user]);
+
+  useEffect(() => {
+    const fetchMarketData = async () => {
+      if (!selectedSymbol) return;
+      
+      setMarketLoading(true);
+      try {
+        const response = await API.market.analyze({ symbol: selectedSymbol });
+        setMarketData(response.data);
+      } catch (err) {
+        console.error('Error fetching market data:', err);
+      } finally {
+        setMarketLoading(false);
+      }
+    };
+
+    fetchMarketData();
+  }, [selectedSymbol]);
 
   const handleLogout = () => {
     console.log('UserDashboard - Logging out');
@@ -340,6 +360,101 @@ const UserDashboard = () => {
               )}
             </Box>
           </Paper>
+
+          {/* Market Overview Section */}
+          {selectedSymbol && marketData && (
+            <Paper 
+              sx={{ 
+                p: 3,
+                backgroundColor: colors.cardBg,
+                border: `1px solid ${colors.borderColor}`,
+                borderRadius: '12px',
+                boxShadow: `0 4px 12px ${colors.shadowColor}`
+              }}
+            >
+              <Typography variant="h6" sx={{ color: colors.primaryText, mb: 3 }}>
+                Market Overview: {selectedSymbol}
+              </Typography>
+
+              {marketLoading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                  <CircularProgress />
+                </Box>
+              ) : (
+                <Grid container spacing={3}>
+                  {/* Current Price and Trend */}
+                  <Grid item xs={12} md={4}>
+                    <Box sx={{ p: 2, backgroundColor: colors.panelBg, borderRadius: '10px' }}>
+                      <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
+                        Current Price
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Typography variant="h4" sx={{ color: colors.primaryText }}>
+                          {marketData.current_price?.toFixed(4)}
+                        </Typography>
+                        <Chip 
+                          icon={marketData.trend === 'Bullish' ? <TrendingUpIcon /> : <TrendingDownIcon />}
+                          label={marketData.trend}
+                          color={marketData.trend === 'Bullish' ? 'success' : 'error'}
+                          size="small"
+                        />
+                      </Box>
+                    </Box>
+                  </Grid>
+
+                  {/* Technical Indicators */}
+                  <Grid item xs={12} md={4}>
+                    <Box sx={{ p: 2, backgroundColor: colors.panelBg, borderRadius: '10px' }}>
+                      <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 2 }}>
+                        Technical Indicators
+                      </Typography>
+                      <Grid container spacing={2}>
+                        <Grid item xs={6}>
+                          <Typography variant="body2" sx={{ color: colors.secondaryText }}>RSI</Typography>
+                          <Typography variant="h6" sx={{ color: colors.primaryText }}>
+                            {marketData.technical_indicators?.rsi?.toFixed(2)}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Typography variant="body2" sx={{ color: colors.secondaryText }}>MACD</Typography>
+                          <Typography variant="h6" sx={{ color: colors.primaryText }}>
+                            {marketData.technical_indicators?.macd?.toFixed(4)}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+                    </Box>
+                  </Grid>
+
+                  {/* Support & Resistance */}
+                  <Grid item xs={12} md={4}>
+                    <Box sx={{ p: 2, backgroundColor: colors.panelBg, borderRadius: '10px' }}>
+                      <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 2 }}>
+                        Support & Resistance
+                      </Typography>
+                      <Grid container spacing={2}>
+                        <Grid item xs={6}>
+                          <Typography variant="body2" sx={{ color: colors.secondaryText }}>Support</Typography>
+                          {marketData.support_resistance?.support?.slice(0, 2).map((level, index) => (
+                            <Typography key={index} variant="body1" sx={{ color: colors.buyGreen }}>
+                              {level?.toFixed(4)}
+                            </Typography>
+                          ))}
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Typography variant="body2" sx={{ color: colors.secondaryText }}>Resistance</Typography>
+                          {marketData.support_resistance?.resistance?.slice(0, 2).map((level, index) => (
+                            <Typography key={index} variant="body1" sx={{ color: colors.sellRed }}>
+                              {level?.toFixed(4)}
+                            </Typography>
+                          ))}
+                        </Grid>
+                      </Grid>
+                    </Box>
+                  </Grid>
+                </Grid>
+              )}
+            </Paper>
+          )}
 
           {/* Market Analysis Section */}
           {selectedSymbol && (
