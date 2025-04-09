@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { 
@@ -100,6 +100,9 @@ const Market = () => {
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteMessage, setFavoriteMessage] = useState('');
   const [showFavoriteAlert, setShowFavoriteAlert] = useState(false);
+
+  // Add a ref to track if we've already logged sentiment messages
+  const sentimentLoggedRef = useRef(false);
 
   const currencyPairs = [
     { value: 'EURUSD=X', label: 'EUR/USD' },
@@ -285,7 +288,10 @@ const Market = () => {
   // Calculate sentiment based on analysis data
   const getSentimentAnalysis = () => {
     if (!analysisData || !analysisData.sentiment) {
-      console.log('Using mock sentiment data since actual data is missing');
+      if (!sentimentLoggedRef.current) {
+        console.log('Using mock sentiment data since actual data is missing');
+        sentimentLoggedRef.current = true;
+      }
       return mockData.sentimentAnalysis;
     }
 
@@ -295,9 +301,15 @@ const Market = () => {
     // Check that all required properties exist, if not use mock data
     if (typeof sentiment.news_sentiment === 'undefined' || 
         typeof sentiment.social_sentiment === 'undefined') {
-      console.log('Sentiment data is incomplete, using mock data');
+      if (!sentimentLoggedRef.current) {
+        console.log('Sentiment data is incomplete, using mock data');
+        sentimentLoggedRef.current = true;
+      }
       return mockData.sentimentAnalysis;
     }
+    
+    // Reset the logging flag when we get valid data
+    sentimentLoggedRef.current = false;
     
     // Convert values and provide defaults as needed
     return {
