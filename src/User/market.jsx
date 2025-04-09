@@ -110,6 +110,14 @@ const getAdxColor = (adx) => {
   return '#888'; // Weak trend - gray
 };
 
+// Helper function to ensure we have numerical values
+const ensureNumber = (value, defaultValue = 0) => {
+  if (value === null || value === undefined || isNaN(Number(value))) {
+    return defaultValue;
+  }
+  return Number(value);
+};
+
 const Market = () => {
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
@@ -426,6 +434,26 @@ const Market = () => {
     };
   };
 
+  // Ensure technical indicators are properly formatted
+  const getTechnicalIndicators = () => {
+    if (!analysisData || !analysisData.technical_indicators) {
+      return mockData.technicalIndicators;
+    }
+
+    const indicators = analysisData.technical_indicators;
+    
+    return {
+      rsi: ensureNumber(indicators.rsi),
+      macd: ensureNumber(indicators.macd),
+      macdSignal: ensureNumber(indicators.macd_signal),
+      macdHist: ensureNumber(indicators.macd_hist),
+      sma20: ensureNumber(indicators.sma20),
+      sma50: ensureNumber(indicators.sma50),
+      sma200: ensureNumber(indicators.sma200),
+      adx: ensureNumber(indicators.adx)
+    };
+  };
+
   if (!user) {
     return null;
   }
@@ -637,12 +665,10 @@ const Market = () => {
                       variant="h6" 
                       sx={{ 
                         fontWeight: 'bold',
-                        color: getRsiColor(analysisData?.technical_indicators?.rsi)
+                        color: getRsiColor(getTechnicalIndicators().rsi)
                       }}
                     >
-                      {!analysisData?.technical_indicators?.rsi 
-                        ? 'N/A' 
-                        : Number(analysisData.technical_indicators.rsi).toFixed(2)}
+                      {getTechnicalIndicators().rsi.toFixed(2)}
                     </Typography>
                   </Grid>
                   
@@ -656,14 +682,12 @@ const Market = () => {
                       sx={{ 
                         fontWeight: 'bold',
                         color: getMacdColor(
-                          analysisData?.technical_indicators?.macd,
-                          analysisData?.technical_indicators?.macd_signal
+                          getTechnicalIndicators().macd,
+                          getTechnicalIndicators().macdSignal
                         )
                       }}
                     >
-                      {!analysisData?.technical_indicators?.macd 
-                        ? 'N/A' 
-                        : Number(analysisData.technical_indicators.macd).toFixed(4)}
+                      {getTechnicalIndicators().macd.toFixed(4)}
                     </Typography>
                   </Grid>
                   
@@ -676,12 +700,10 @@ const Market = () => {
                       variant="h6" 
                       sx={{ 
                         fontWeight: 'bold',
-                        color: getAdxColor(analysisData?.technical_indicators?.adx)
+                        color: getAdxColor(getTechnicalIndicators().adx)
                       }}
                     >
-                      {!analysisData?.technical_indicators?.adx 
-                        ? 'N/A' 
-                        : Number(analysisData.technical_indicators.adx).toFixed(2)}
+                      {getTechnicalIndicators().adx ? getTechnicalIndicators().adx.toFixed(2) : 'N/A'}
                     </Typography>
                   </Grid>
                   
@@ -697,9 +719,7 @@ const Market = () => {
                         color: colors.primaryText
                       }}
                     >
-                      {!analysisData?.technical_indicators?.atr
-                        ? 'N/A'
-                        : Number(analysisData.technical_indicators.atr).toFixed(5)}
+                      N/A
                     </Typography>
                   </Grid>
                 </Grid>
@@ -727,29 +747,32 @@ const Market = () => {
                     Support Levels
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                    {(analysisData?.support_resistance?.support || []).map((level, index) => {
-                      // Make sure level is a valid number
-                      const numValue = typeof level === 'object' 
-                        ? parseFloat(level.level_value || 0) 
-                        : parseFloat(level || 0);
-                        
-                      return (
-                        <Chip 
-                          key={index}
-                          label={!isNaN(numValue) ? numValue.toFixed(4) : '0.0000'}
-                          color="success"
-                          size="medium"
-                          sx={{ 
-                            my: 0.5,
-                            backgroundColor: `${colors.buyGreen}22`,
-                            color: colors.buyGreen,
-                            border: `1px solid ${colors.buyGreen}`,
-                            fontWeight: 'bold'
-                          }}
-                        />
-                      );
-                    })}
-                    {(!analysisData?.support_resistance?.support || analysisData.support_resistance.support.length === 0) && (
+                    {analysisData && analysisData.support_resistance && 
+                     Array.isArray(analysisData.support_resistance.support) && 
+                     analysisData.support_resistance.support.length > 0 ? (
+                      analysisData.support_resistance.support.map((level, index) => {
+                        // Make sure level is a valid number
+                        const numValue = typeof level === 'object' 
+                          ? parseFloat(level.level_value || 0) 
+                          : parseFloat(level || 0);
+                          
+                        return (
+                          <Chip 
+                            key={index}
+                            label={!isNaN(numValue) ? numValue.toFixed(4) : '0.0000'}
+                            color="success"
+                            size="medium"
+                            sx={{ 
+                              my: 0.5,
+                              backgroundColor: `${colors.buyGreen}22`,
+                              color: colors.buyGreen,
+                              border: `1px solid ${colors.buyGreen}`,
+                              fontWeight: 'bold'
+                            }}
+                          />
+                        );
+                      })
+                    ) : (
                       <Typography variant="body2" sx={{ color: colors.secondaryText, fontStyle: 'italic' }}>
                         No support levels available
                       </Typography>
@@ -761,29 +784,32 @@ const Market = () => {
                     Resistance Levels
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                    {(analysisData?.support_resistance?.resistance || []).map((level, index) => {
-                      // Make sure level is a valid number
-                      const numValue = typeof level === 'object' 
-                        ? parseFloat(level.level_value || 0) 
-                        : parseFloat(level || 0);
-                        
-                      return (
-                        <Chip 
-                          key={index}
-                          label={!isNaN(numValue) ? numValue.toFixed(4) : '0.0000'}
-                          color="error"
-                          size="medium"
-                          sx={{ 
-                            my: 0.5,
-                            backgroundColor: `${colors.sellRed}22`,
-                            color: colors.sellRed,
-                            border: `1px solid ${colors.sellRed}`,
-                            fontWeight: 'bold'
-                          }}
-                        />
-                      );
-                    })}
-                    {(!analysisData?.support_resistance?.resistance || analysisData.support_resistance.resistance.length === 0) && (
+                    {analysisData && analysisData.support_resistance && 
+                     Array.isArray(analysisData.support_resistance.resistance) && 
+                     analysisData.support_resistance.resistance.length > 0 ? (
+                      analysisData.support_resistance.resistance.map((level, index) => {
+                        // Make sure level is a valid number
+                        const numValue = typeof level === 'object' 
+                          ? parseFloat(level.level_value || 0) 
+                          : parseFloat(level || 0);
+                          
+                        return (
+                          <Chip 
+                            key={index}
+                            label={!isNaN(numValue) ? numValue.toFixed(4) : '0.0000'}
+                            color="error"
+                            size="medium"
+                            sx={{ 
+                              my: 0.5,
+                              backgroundColor: `${colors.sellRed}22`,
+                              color: colors.sellRed,
+                              border: `1px solid ${colors.sellRed}`,
+                              fontWeight: 'bold'
+                            }}
+                          />
+                        );
+                      })
+                    ) : (
                       <Typography variant="body2" sx={{ color: colors.secondaryText, fontStyle: 'italic' }}>
                         No resistance levels available
                       </Typography>
