@@ -224,7 +224,7 @@ const Market = () => {
 
   const fetchMarketAnalysis = async (symbolToFetch = selectedPair) => {
     try {
-      setLoading(true);
+    setLoading(true);
       
       // Try to fetch market analysis
       console.log(`Attempting to analyze symbol: ${symbolToFetch}`);
@@ -292,7 +292,7 @@ const Market = () => {
       console.log('Processed market analysis data:', completeResponse);
       
       setAnalysisData(completeResponse);
-      setError(null);
+    setError(null);
     } catch (error) {
       console.error('Error fetching market data:', error);
       
@@ -459,7 +459,7 @@ const Market = () => {
       setLoading(false);
     }
   };
-  
+
   // Helper function to generate realistic synthetic prices based on currency pair
   const generateSyntheticPrice = (symbol) => {
     // Default ranges for common currency pairs
@@ -777,9 +777,9 @@ const Market = () => {
                 <AreaChart data={analysisData && analysisData.historical_data && analysisData.historical_data.prices && 
                   analysisData.historical_data.dates ? 
                   analysisData.historical_data.prices.map((price, index) => ({
-                    time: analysisData.historical_data.dates[index],
-                    price: price
-                  })) : mockData.priceHistory}>
+                  time: analysisData.historical_data.dates[index],
+                  price: price
+                })) : mockData.priceHistory}>
                   <defs>
                     <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor={colors.accentBlue} stopOpacity={0.3}/>
@@ -814,7 +814,7 @@ const Market = () => {
             {/* Technical Indicators */}
             <Paper 
               sx={{ 
-                p: 2,
+                p: 2, 
                 flex: 1,
                 backgroundColor: colors.cardBg,
                 border: `1px solid ${colors.borderColor}`,
@@ -832,8 +832,8 @@ const Market = () => {
               <Box sx={{ mb: 3 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                   <Typography variant="subtitle1" sx={{ color: colors.secondaryText }}>
-                    RSI (14)
-                  </Typography>
+                      RSI (14)
+                    </Typography>
                   <Typography variant="h5" sx={{ 
                     color: getTechnicalIndicators().rsi > 70 
                       ? colors.sellRed 
@@ -843,8 +843,8 @@ const Market = () => {
                     fontWeight: 'bold'
                   }}>
                     {getTechnicalIndicators().rsi.toFixed(1)}
-                  </Typography>
-                </Box>
+                      </Typography>
+                    </Box>
                 <Box sx={{ 
                   width: '100%', 
                   height: 8, 
@@ -862,7 +862,7 @@ const Market = () => {
                     background: `linear-gradient(90deg, ${colors.buyGreen} 0%, ${colors.accentBlue} 50%, ${colors.sellRed} 100%)`,
                     borderRadius: 4
                   }} />
-                </Box>
+                  </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
                   <Typography variant="caption" sx={{ color: colors.buyGreen }}>Oversold (30)</Typography>
                   <Typography variant="caption" sx={{ color: colors.primaryText }}>Neutral</Typography>
@@ -883,16 +883,16 @@ const Market = () => {
                       borderRadius: '10px', 
                       backgroundColor: colors.panelBg 
                     }}>
-                      <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
+                    <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
                         MACD Line
-                      </Typography>
+                    </Typography>
                       <Typography variant="h6" sx={{ 
                         color: getTechnicalIndicators().macd > 0 ? colors.buyGreen : colors.sellRed,
                         fontWeight: 'bold'
                       }}>
                         {getTechnicalIndicators().macd.toFixed(4)}
-                      </Typography>
-                    </Box>
+                        </Typography>
+                      </Box>
                   </Grid>
                   <Grid item xs={4}>
                     <Box sx={{ 
@@ -909,8 +909,8 @@ const Market = () => {
                         fontWeight: 'bold'
                       }}>
                         {getTechnicalIndicators().macdSignal.toFixed(4)}
-                      </Typography>
-                    </Box>
+                        </Typography>
+                      </Box>
                   </Grid>
                   <Grid item xs={4}>
                     <Box sx={{ 
@@ -927,19 +927,19 @@ const Market = () => {
                         fontWeight: 'bold'
                       }}>
                         {getTechnicalIndicators().macdHist.toFixed(4)}
-                      </Typography>
-                    </Box>
+                        </Typography>
+                      </Box>
                   </Grid>
                 </Grid>
                 <Box sx={{ mt: 2, p: 1, borderRadius: '8px', backgroundColor: `${colors.accentBlue}15` }}>
                   <Typography variant="body2" sx={{ color: colors.secondaryText }}>
                     Signal: {getTechnicalIndicators().macd > getTechnicalIndicators().macdSignal ? <span style={{ color: colors.buyGreen, fontWeight: 'bold' }}>Bullish</span> : <span style={{ color: colors.sellRed, fontWeight: 'bold' }}>Bearish</span>}
                   </Typography>
+                  </Box>
                 </Box>
-              </Box>
-              
+
               {/* Moving Averages */}
-              <Box>
+                  <Box>
                 <Typography variant="subtitle1" sx={{ color: colors.secondaryText, mb: 2 }}>
                   Moving Averages
                 </Typography>
@@ -952,13 +952,13 @@ const Market = () => {
                       backgroundColor: colors.panelBg,
                       height: '100%' 
                     }}>
-                      <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
+                    <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
                         SMA 20
-                      </Typography>
+                    </Typography>
                       <Typography variant="h6" sx={{ fontWeight: 'bold', color: colors.primaryText }}>
                         {getTechnicalIndicators().sma20.toFixed(4)}
-                      </Typography>
-                    </Box>
+                        </Typography>
+                      </Box>
                   </Grid>
                   <Grid item xs={4}>
                     <Box sx={{ 
@@ -973,8 +973,8 @@ const Market = () => {
                       </Typography>
                       <Typography variant="h6" sx={{ fontWeight: 'bold', color: colors.primaryText }}>
                         {getTechnicalIndicators().sma50.toFixed(4)}
-                      </Typography>
-                    </Box>
+                        </Typography>
+                      </Box>
                   </Grid>
                   <Grid item xs={4}>
                     <Box sx={{ 
@@ -989,8 +989,8 @@ const Market = () => {
                       </Typography>
                       <Typography variant="h6" sx={{ fontWeight: 'bold', color: colors.primaryText }}>
                         {getTechnicalIndicators().sma200.toFixed(4)}
-                      </Typography>
-                    </Box>
+                        </Typography>
+                      </Box>
                   </Grid>
                 </Grid>
               </Box>
@@ -999,7 +999,7 @@ const Market = () => {
             {/* Support & Resistance */}
             <Paper 
               sx={{ 
-                p: 2,
+                p: 2, 
                 backgroundColor: colors.cardBg,
                 border: `1px solid ${colors.borderColor}`,
                 borderRadius: '12px',
@@ -1027,15 +1027,15 @@ const Market = () => {
                           : parseFloat(level || 0);
                           
                         return (
-                          <Chip 
-                            key={index}
+                      <Chip 
+                        key={index}
                             label={!isNaN(numValue) ? numValue.toFixed(4) : '0.0000'}
-                            color="success"
+                        color="success"
                             size="medium"
-                            sx={{ 
+                        sx={{ 
                               my: 0.5,
                               backgroundColor: `${colors.buyGreen}22`,
-                              color: colors.buyGreen,
+                          color: colors.buyGreen,
                               border: `1px solid ${colors.buyGreen}`,
                               fontWeight: 'bold'
                             }}
@@ -1048,15 +1048,15 @@ const Market = () => {
                         const basePrice = analysisData.current_price;
                         const supportLevel = (basePrice * (0.99 - (index * 0.005))).toFixed(4);
                         return (
-                          <Chip 
-                            key={index}
+                      <Chip 
+                        key={index}
                             label={supportLevel}
-                            color="success"
+                        color="success"
                             size="medium"
-                            sx={{ 
+                        sx={{ 
                               my: 0.5,
                               backgroundColor: `${colors.buyGreen}22`,
-                              color: colors.buyGreen,
+                          color: colors.buyGreen,
                               border: `1px solid ${colors.buyGreen}`,
                               fontWeight: 'bold'
                             }}
@@ -1085,15 +1085,15 @@ const Market = () => {
                           : parseFloat(level || 0);
                           
                         return (
-                          <Chip 
-                            key={index}
+                      <Chip 
+                        key={index}
                             label={!isNaN(numValue) ? numValue.toFixed(4) : '0.0000'}
-                            color="error"
+                        color="error"
                             size="medium"
-                            sx={{ 
+                        sx={{ 
                               my: 0.5,
                               backgroundColor: `${colors.sellRed}22`,
-                              color: colors.sellRed,
+                          color: colors.sellRed,
                               border: `1px solid ${colors.sellRed}`,
                               fontWeight: 'bold'
                             }}
@@ -1106,15 +1106,15 @@ const Market = () => {
                         const basePrice = analysisData.current_price;
                         const resistanceLevel = (basePrice * (1.01 + (index * 0.005))).toFixed(4);
                         return (
-                          <Chip 
-                            key={index}
+                      <Chip 
+                        key={index}
                             label={resistanceLevel}
-                            color="error"
+                        color="error"
                             size="medium"
-                            sx={{ 
+                        sx={{ 
                               my: 0.5,
                               backgroundColor: `${colors.sellRed}22`,
-                              color: colors.sellRed,
+                          color: colors.sellRed,
                               border: `1px solid ${colors.sellRed}`,
                               fontWeight: 'bold'
                             }}

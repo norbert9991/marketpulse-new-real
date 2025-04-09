@@ -138,14 +138,19 @@ const LoginDialog = ({ open, onClose, isLogin, toggleForm }) => {
         // Close the dialog
         onClose();
         
-        // Use navigate instead of manually changing location
-        if (response.data.user.role === 'admin') {
-          console.log('Redirecting to admin dashboard');
-          navigate('/admin-dashboard');
-        } else {
-          console.log('Redirecting to user dashboard');
-          navigate('/user-dashboard');
-        }
+        // Use timeout to ensure the dialog is closed before navigating
+        setTimeout(() => {
+          const baseUrl = window.location.origin;
+          
+          if (response.data.user.role === 'admin') {
+            console.log('Redirecting to admin dashboard');
+            window.location.href = `${baseUrl}/#/admin-dashboard`;
+          } else {
+            console.log('Redirecting to user dashboard');
+            window.location.href = `${baseUrl}/#/user-dashboard`;
+          }
+        }, 100);
+        
       } else {
         throw new Error('Invalid response from server');
       }
