@@ -123,17 +123,24 @@ def store_price_data(symbol, historical_data):
 
 def analyze_stock(symbol):
     try:
+        # Add debug logging
+        print(f"Starting analysis for symbol: {symbol}")
+        
         # Get historical data for the last 30 days
         end_date = datetime.now()
         start_date = end_date - timedelta(days=30)
         
         # Fetch data from Yahoo Finance
+        print(f"Fetching data from Yahoo Finance for {symbol}")
         stock = yf.Ticker(symbol)
         hist = stock.history(start=start_date, end=end_date)
         
         if hist.empty:
-            return {"error": "No data available for this symbol"}
+            print(f"No data available from Yahoo Finance for symbol: {symbol}")
+            return {"error": f"No data available for this symbol: {symbol}"}
             
+        print(f"Successfully fetched data for {symbol}, {len(hist)} data points")
+        
         # Prepare data for linear regression
         X = np.array(range(len(hist))).reshape(-1, 1)
         y = hist['Close'].values
@@ -187,6 +194,10 @@ def analyze_stock(symbol):
         def safe_list(values):
             return [safe_float(v) for v in values]
         
+        # Generate prediction dates
+        prediction_dates = [(end_date + timedelta(days=i+1)).strftime('%Y-%m-%d') for i in range(len(predictions))]
+        print(f"Generated prediction dates: {prediction_dates}")
+        
         # Prepare response with safe value handling
         response = {
             "symbol": symbol,
@@ -194,6 +205,7 @@ def analyze_stock(symbol):
             "trend": trend,
             "slope": safe_float(slope),
             "predictions": safe_list(predictions),
+            "prediction_dates": prediction_dates,  # Explicitly add prediction_dates
             "historical_data": {
                 "dates": hist.index.strftime('%Y-%m-%d').tolist(),
                 "prices": safe_list(hist['Close'].tolist()),
@@ -219,7 +231,10 @@ def analyze_stock(symbol):
         }
         
         # Store data in MySQL database
-        store_price_data(symbol, response)
+        print(f"Storing data for {symbol} in database")
+        store_success = store_price_data(symbol, response)
+        if not store_success:
+            print(f"Warning: Failed to store price data for {symbol}")
         
         # Store or update analysis results in the market_data table
         conn = db_manager.get_connection()
