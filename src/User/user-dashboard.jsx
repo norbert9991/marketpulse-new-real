@@ -405,8 +405,8 @@ const UserDashboard = () => {
               }}
             >
               <Grid container>
-                {/* Left Section - Market Analysis (85%) */}
-                <Grid item xs={12} md={11} lg={10.5}>
+                {/* Left Section - Market Analysis (90%) */}
+                <Grid item xs={12} md={11.5} lg={11}>
                   <Box sx={{ 
                     height: '100%',
                     borderRight: `1px solid ${colors.borderColor}`,
@@ -415,8 +415,8 @@ const UserDashboard = () => {
                   </Box>
                 </Grid>
                 
-                {/* Right Section - Market Overview (15%) */}
-                <Grid item xs={12} md={1} lg={1.5} sx={{ 
+                {/* Right Section - Market Overview (10%) */}
+                <Grid item xs={12} md={0.5} lg={1} sx={{ 
                   borderLeft: `1px solid ${colors.borderColor}`,
                   margin: '-1px 0 0 -1px', // Fix double border
                   backgroundColor: `${colors.cardBg}05`
