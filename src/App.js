@@ -1,5 +1,5 @@
 import React from 'react';
-import { HashRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './frontend/LandingPage/Home';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import AdminDashboard from './Admin/admin-dashboard';
@@ -45,76 +45,41 @@ function App() {
       <CssBaseline /> {/* Normalize CSS and apply baseline styles */}
       <Router>
         <Routes>
-          <Route path="/" element={<Home />} />
+        <Route path="/" element={<Home />} />
           <Route path="/home" element={<Home />} />
-          
-          {/* Admin Routes */}
+          <Route 
+            path="/user-dashboard" 
+            element={<ProtectedRoute element={UserDashboard} />} 
+          />
           <Route 
             path="/admin-dashboard" 
-            element={
-              <ProtectedRoute requiredRole="admin">
-                <AdminDashboard />
-              </ProtectedRoute>
-            } 
+            element={<ProtectedRoute element={AdminDashboard} requiredRole="admin" />} 
           />
           <Route 
             path="/UserManagement" 
-            element={
-              <ProtectedRoute requiredRole="admin">
-                <UserManagement />
-              </ProtectedRoute>
-            } 
+            element={<ProtectedRoute element={UserManagement} requiredRole="admin" />} 
           />
           <Route 
             path="/TransactionPage" 
-            element={
-              <ProtectedRoute requiredRole="admin">
-                <TransactionPage />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/adminsettings" 
-            element={
-              <ProtectedRoute requiredRole="admin">
-                <AdminSettings />
-              </ProtectedRoute>
-            }
-          />
-          
-          {/* User Routes */}
-          <Route 
-            path="/user-dashboard" 
-            element={
-              <ProtectedRoute>
-                <UserDashboard />
-              </ProtectedRoute>
-            } 
+            element={<ProtectedRoute element={TransactionPage} requiredRole="admin" />} 
           />
           <Route 
             path="/trade" 
-            element={
-              <ProtectedRoute>
-                <Trade />
-              </ProtectedRoute>
-            } 
+            element={<ProtectedRoute element={Trade} />} 
           />
           <Route 
             path="/market" 
-            element={
-              <ProtectedRoute>
-                <Market />
-              </ProtectedRoute>
-            } 
+            element={<ProtectedRoute element={Market} />} 
           />
           <Route 
             path="/settings" 
-            element={
-              <ProtectedRoute>
-                <Settings />
-              </ProtectedRoute>
-            } 
+            element={<ProtectedRoute element={Settings} />} 
           />
+          <Route
+            path="/adminsettings"
+            element={<ProtectedRoute element={AdminSettings} requiredRole="admin" />}
+          />
+          {/* Add more routes as needed */}
         </Routes>
       </Router>
     </ThemeProvider>

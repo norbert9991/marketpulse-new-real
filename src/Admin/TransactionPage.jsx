@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Chip, TextField, Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress, Alert, Avatar } from '@mui/material';
 import { styled } from '@mui/system';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import api from '../utils/api'; // Import the API utility
 import Sidebar from './Sidebar';
 import { 
   Search as SearchIcon,
@@ -9,7 +10,6 @@ import {
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon
 } from '@mui/icons-material';
-import { API } from '../axiosConfig';
 
 // Define theme colors to match the user components
 const colors = {
@@ -50,9 +50,6 @@ const TransactionPage = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [feedback, setFeedback] = useState('');
   const [refreshing, setRefreshing] = useState(false);
-  const [performanceHistory, setPerformanceHistory] = useState([]);
-  const [historyLoading, setHistoryLoading] = useState(true);
-  const [historyError, setHistoryError] = useState(null);
 
   useEffect(() => {
     fetchRequests();
@@ -61,47 +58,47 @@ const TransactionPage = () => {
   const fetchRequests = async () => {
     try {
       setLoading(true);
-      const response = await API.balance.getRequests();
-      setRequests(response.data.requests || []);
+      setRefreshing(true);
+      // Use API utility instead of fetch with hardcoded URL
+      const response = await api.get('/balance-requests');
+      setRequests(response.data);
       setLoading(false);
-    } catch (error) {
-      console.error('Error fetching balance requests:', error);
-      setError('Failed to load balance requests');
+      setRefreshing(false);
+    } catch (err) {
+      setError('Failed to fetch requests');
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  const fetchPerformanceHistory = async (accountId) => {
+  const fetchPerformanceData = async (accountId) => {
     try {
-      setHistoryLoading(true);
-      const response = await API.balance.getHistory(accountId);
-      setPerformanceHistory(response.data.history || []);
-      setHistoryLoading(false);
-    } catch (error) {
-      console.error('Error fetching performance history:', error);
-      setHistoryError('Failed to load performance history');
-      setHistoryLoading(false);
+      // Use API utility instead of fetch with hardcoded URL
+      const response = await api.get(`/performance-history/${accountId}`);
+      setPerformanceData(response.data);
+    } catch (err) {
+      setError('Failed to fetch performance data');
     }
   };
 
   const handleReview = (request) => {
     setSelectedRequest(request);
-    fetchPerformanceHistory(request.account_id);
+    fetchPerformanceData(request.account_id);
     setDialogOpen(true);
   };
 
   const handleApprove = async () => {
     try {
       setActionLoading(true);
-      await API.balance.approve({
+      // Use API utility instead of fetch with hardcoded URL
+      await api.post('/balance-requests/approve', {
         request_id: selectedRequest.request_id,
         feedback: feedback,
       });
       setDialogOpen(false);
       fetchRequests();
       setFeedback('');
-    } catch (error) {
-      console.error('Error approving request:', error);
+    } catch (err) {
       setError('Failed to approve request');
     } finally {
       setActionLoading(false);
@@ -111,15 +108,15 @@ const TransactionPage = () => {
   const handleReject = async () => {
     try {
       setActionLoading(true);
-      await API.balance.reject({
+      // Use API utility instead of fetch with hardcoded URL
+      await api.post('/balance-requests/reject', {
         request_id: selectedRequest.request_id,
         feedback: feedback,
       });
       setDialogOpen(false);
       fetchRequests();
       setFeedback('');
-    } catch (error) {
-      console.error('Error rejecting request:', error);
+    } catch (err) {
       setError('Failed to reject request');
     } finally {
       setActionLoading(false);
@@ -383,11 +380,11 @@ const TransactionPage = () => {
                   <Typography variant="h6" gutterBottom sx={{ color: colors.primaryText }}>
                     Performance History
                   </Typography>
-                  {performanceHistory.length > 0 ? (
+                  {performanceData.length > 0 ? (
                     <Box sx={{ height: 300, width: '100%' }}>
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart
-                          data={performanceHistory}
+                          data={performanceData}
                           margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                         >
                           <CartesianGrid strokeDasharray="3 3" stroke={colors.borderColor} />

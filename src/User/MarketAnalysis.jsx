@@ -18,6 +18,8 @@ import {
   Tooltip,
   IconButton
 } from '@mui/material';
+import axios from 'axios';
+import api from '../utils/api'; // Import the API utility
 import { 
   TrendingUp as TrendingUpIcon,
   TrendingDown as TrendingDownIcon,
@@ -36,13 +38,6 @@ import {
   Legend,
   Filler
 } from 'chart.js';
-import { API } from '../axiosConfig';
-
-// Get the base API URL for logging
-const API_URL = 
-  process.env.NODE_ENV === 'production' 
-    ? 'https://marketpulse-new-real.onrender.com'
-    : (process.env.REACT_APP_API_URL || 'http://localhost:5000');
 
 // Register ChartJS components
 ChartJS.register(
@@ -80,10 +75,7 @@ const MarketAnalysis = ({ selectedSymbol }) => {
   const [analysisData, setAnalysisData] = useState(null);
   const [historyData, setHistoryData] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [historyLoading, setHistoryLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [historyError, setHistoryError] = useState(null);
-  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     if (selectedSymbol) {
@@ -96,92 +88,24 @@ const MarketAnalysis = ({ selectedSymbol }) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await API.market.analyze({ symbol });
-      console.log('Market analysis response:', response.status);
+      // Use API utility instead of axios with hardcoded URL
+      const response = await api.get(`/market-analysis/${symbol}`);
       setAnalysisData(response.data);
-      // Reset retry count on successful fetch
-      setRetryCount(0);
     } catch (err) {
       console.error('Error fetching market analysis:', err);
-      
-      // Handle specific error cases
-      if (err.response?.status === 500) {
-        console.log('Server error encountered when fetching market analysis');
-        if (retryCount < 2) {
-          // Try again after a delay for server errors
-          console.log(`Retrying market analysis fetch (attempt ${retryCount + 1})`);
-          setTimeout(() => {
-            setRetryCount(prev => prev + 1);
-            fetchMarketAnalysis(symbol);
-          }, 2000);
-        } else {
-          setError('The server encountered an error processing this request. Please try again later.');
-        }
-      } else {
-        setError(err.response?.data?.error || 'Failed to fetch market analysis data');
-      }
+      setError(err.response?.data?.error || 'Failed to fetch market analysis data');
     } finally {
       setLoading(false);
     }
   };
 
   const fetchPriceHistory = async (symbol) => {
-    setHistoryLoading(true);
-    setHistoryError(null);
     try {
-      // Try to strip the -X suffix for troubleshooting
-      // Even though this is now also handled in axiosConfig.js
-      const plainSymbol = symbol.includes('-X') ? symbol.split('-X')[0] : symbol;
-      
-      console.log('Fetching price history for symbol:', symbol);
-      console.log('Plain symbol (without -X):', plainSymbol);
-      
-      // First try with the original symbol
-      try {
-        const response = await API.market.getHistory(symbol);
-        console.log('Price history response:', response.status);
-        setHistoryData(response.data);
-        return; // Exit the function if successful
-      } catch (firstErr) {
-        console.error('Error with original symbol, trying plain symbol:', firstErr);
-        
-        // If that fails, try with the plain symbol without -X as a fallback
-        if (symbol !== plainSymbol) {
-          try {
-            const plainResponse = await API.market.getHistory(plainSymbol);
-            console.log('Price history response with plain symbol:', plainResponse.status);
-            setHistoryData(plainResponse.data);
-            return; // Exit the function if successful
-          } catch (secondErr) {
-            console.error('Error with plain symbol too:', secondErr);
-            // Continue to the final catch block
-            throw secondErr;
-          }
-        } else {
-          // If symbols are identical, just throw the original error
-          throw firstErr;
-        }
-      }
+      // Use API utility instead of axios with hardcoded URL
+      const response = await api.get(`/market-analysis/${symbol}/history`);
+      setHistoryData(response.data);
     } catch (err) {
-      console.error('Error fetching price history (all attempts failed):', err);
-      
-      // Create a helpful error message
-      let errorMessage = 'No historical data is available for this symbol';
-      if (err.response?.status === 404) {
-        errorMessage = `No historical data available for ${symbol}. The data may not exist in our database.`;
-      } else if (err.response?.status === 500) {
-        errorMessage = 'Server error while retrieving historical data. Please try again later.';
-      }
-      
-      setHistoryError(errorMessage);
-      
-      // Create empty history data structure for a better UX
-      setHistoryData({
-        symbol: symbol,
-        history: []
-      });
-    } finally {
-      setHistoryLoading(false);
+      console.error('Error fetching price history:', err);
     }
   };
 
@@ -189,26 +113,14 @@ const MarketAnalysis = ({ selectedSymbol }) => {
     if (selectedSymbol) {
       setLoading(true);
       setError(null);
-      
-      // Symbol cleaning is now handled in axiosConfig.js
-      console.log('Refreshing data for symbol:', selectedSymbol);
-      
-      API.market.refresh(selectedSymbol)
+      // Use API utility instead of axios with hardcoded URL
+      api.post(`/market-analysis/refresh/${selectedSymbol}`)
         .then(response => {
-          console.log('Market refresh response:', response.status);
           setAnalysisData(response.data);
-          // Refresh history data too
-          fetchPriceHistory(selectedSymbol);
         })
         .catch(err => {
           console.error('Error refreshing market analysis:', err);
-          
-          // Handle specific error cases
-          if (err.response?.status === 500) {
-            setError('The server encountered an error. This could be due to temporary issues, please try again later.');
-          } else {
-            setError(err.response?.data?.error || 'Failed to refresh market analysis data');
-          }
+          setError(err.response?.data?.error || 'Failed to refresh market analysis data');
         })
         .finally(() => {
           setLoading(false);
@@ -288,32 +200,7 @@ const MarketAnalysis = ({ selectedSymbol }) => {
   };
 
   const renderPriceHistoryChart = () => {
-    if (!historyData || !historyData.history || historyData.history.length === 0) {
-      return (
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: 'column',
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          py: 4 
-        }}>
-          <Typography sx={{ color: colors.secondaryText, mb: 2 }}>
-            No historical price data available for this symbol
-          </Typography>
-          <Button 
-            variant="outlined" 
-            startIcon={<RefreshIcon />}
-            onClick={() => fetchPriceHistory(selectedSymbol)}
-            sx={{ 
-              color: colors.accentBlue,
-              borderColor: colors.accentBlue
-            }}
-          >
-            Try Again
-          </Button>
-        </Box>
-      );
-    }
+    if (!historyData || !historyData.history) return null;
 
     // Sort history data by date in ascending order
     const sortedHistory = [...historyData.history].sort((a, b) => 
@@ -772,7 +659,8 @@ const MarketAnalysis = ({ selectedSymbol }) => {
         backgroundColor: colors.cardBg,
         border: `1px solid ${colors.borderColor}`,
         borderRadius: '12px',
-        boxShadow: `0 4px 12px ${colors.shadowColor}`
+        boxShadow: `0 4px 12px ${colors.shadowColor}`,
+        height: '100%'
       }}
     >
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -781,107 +669,185 @@ const MarketAnalysis = ({ selectedSymbol }) => {
         </Typography>
         <Button 
           variant="outlined" 
-          startIcon={loading ? <CircularProgress size={20} /> : <RefreshIcon />}
+          startIcon={<RefreshIcon />}
           onClick={handleRefresh}
-          disabled={loading}
           sx={{ 
             color: colors.accentBlue,
             borderColor: colors.accentBlue,
-            '&:hover': {
-              backgroundColor: `${colors.accentBlue}22`,
-              borderColor: colors.accentBlue
+            '&:hover': { 
+              borderColor: colors.accentBlue,
+              backgroundColor: 'rgba(33, 150, 243, 0.1)'
             }
           }}
         >
-          {loading ? 'Refreshing...' : 'Refresh Data'}
+          Refresh
         </Button>
       </Box>
       
-      {error && (
-        <Alert 
-          severity="error" 
-          action={
-            <Button color="inherit" size="small" onClick={() => fetchMarketAnalysis(selectedSymbol)}>
-              Retry
-            </Button>
-          }
-          sx={{ 
-            mb: 2,
-            backgroundColor: `${colors.lossRed}10`,
-            borderColor: colors.sellRed,
-            color: colors.sellRed
-          }}
-        >
-          {error}
-        </Alert>
-      )}
+      <Divider sx={{ backgroundColor: colors.borderColor, mb: 3 }} />
       
-      {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-          <CircularProgress size={60} sx={{ color: colors.accentBlue }} />
-        </Box>
-      ) : analysisData ? (
-        <>
-          {/* Price Prediction */}
-          <Paper sx={{ 
-            p: 2, 
-            mb: 3, 
-            backgroundColor: colors.panelBg,
-            border: `1px solid ${colors.borderColor}`,
-            borderRadius: '8px'
-          }}>
-            <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText }}>
-              Price Prediction (5 Days)
+      {/* Main content area with flexbox layout */}
+      <Box sx={{ display: 'flex', gap: 3, flexDirection: { xs: 'column', lg: 'row' } }}>
+        {/* Left side - Charts */}
+        <Box sx={{ flex: 2, display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {/* Price History Chart */}
+          <Paper 
+            sx={{ 
+              p: 2,
+              backgroundColor: colors.panelBg,
+              border: `1px solid ${colors.borderColor}`,
+              borderRadius: '8px',
+              flex: 1
+            }}
+          >
+            <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 2 }}>
+              Price History
+            </Typography>
+            {renderPriceHistoryChart()}
+          </Paper>
+          
+          {/* Price Predictions */}
+          <Paper 
+            sx={{ 
+              p: 2,
+              backgroundColor: colors.panelBg,
+              border: `1px solid ${colors.borderColor}`,
+              borderRadius: '8px',
+              flex: 1
+            }}
+          >
+            <Typography variant="subtitle2" sx={{ color: colors.secondaryText }}>
+              Price Predictions
             </Typography>
             {renderPredictionChart()}
           </Paper>
-          
-          {/* Price History */}
-          <Paper sx={{ 
-            p: 2, 
-            mb: 3, 
-            backgroundColor: colors.panelBg,
-            border: `1px solid ${colors.borderColor}`,
-            borderRadius: '8px'
-          }}>
-            <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText }}>
-              Price History (30 Days)
+        </Box>
+        
+        {/* Right side - Current Price, Support/Resistance, and Technical Indicators */}
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {/* Current Price */}
+          <Paper 
+            sx={{ 
+              p: 2,
+              backgroundColor: colors.panelBg,
+              border: `1px solid ${colors.borderColor}`,
+              borderRadius: '8px'
+            }}
+          >
+            <Typography variant="subtitle2" sx={{ color: colors.secondaryText }}>
+              Current Price
             </Typography>
-            
-            {historyError && (
-              <Alert 
-                severity="warning" 
-                action={
-                  <Button color="inherit" size="small" onClick={() => fetchPriceHistory(selectedSymbol)}>
-                    Retry
-                  </Button>
-                }
-                sx={{ 
-                  mb: 2,
-                  backgroundColor: `${colors.warningOrange}10`,
-                  borderColor: colors.warningOrange,
-                  color: colors.warningOrange
-                }}
-              >
-                {historyError}
-              </Alert>
-            )}
-            
-            {historyLoading ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-                <CircularProgress size={40} sx={{ color: colors.accentBlue }} />
-              </Box>
-            ) : renderPriceHistoryChart()}
+            <Typography variant="h4" sx={{ color: colors.primaryText, mb: 1 }}>
+              {typeof analysisData.current_price === 'number' 
+                ? analysisData.current_price.toFixed(5) 
+                : parseFloat(analysisData.current_price).toFixed(5)}
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Chip 
+                icon={analysisData.trend === 'Bullish' ? <TrendingUpIcon /> : <TrendingDownIcon />}
+                label={analysisData.trend}
+                color={analysisData.trend === 'Bullish' ? 'success' : 'error'}
+                size="small"
+                sx={{ mr: 1 }}
+              />
+              <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                Last updated: {analysisData.last_updated}
+              </Typography>
+            </Box>
           </Paper>
           
-          {/* Rest of your component remains unchanged */}
-        </>
-      ) : (
-        <Box sx={{ textAlign: 'center', p: 4 }}>
-          <Typography sx={{ color: colors.secondaryText }}>
-            Select a market pair to view analysis
-          </Typography>
+          {/* Support and Resistance */}
+          <Paper 
+            sx={{ 
+              p: 2,
+              backgroundColor: colors.panelBg,
+              border: `1px solid ${colors.borderColor}`,
+              borderRadius: '8px'
+            }}
+          >
+            <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
+              Support & Resistance Levels
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box>
+                <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                  Support:
+                </Typography>
+                {analysisData.support_resistance.support.map((level, index) => (
+                  <Typography key={index} variant="body1" sx={{ color: colors.buyGreen }}>
+                    {typeof level === 'number' ? level.toFixed(5) : parseFloat(level).toFixed(5)}
+                  </Typography>
+                ))}
+              </Box>
+              <Box>
+                <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                  Resistance:
+                </Typography>
+                {analysisData.support_resistance.resistance.map((level, index) => (
+                  <Typography key={index} variant="body1" sx={{ color: colors.sellRed }}>
+                    {typeof level === 'number' ? level.toFixed(5) : parseFloat(level).toFixed(5)}
+                  </Typography>
+                ))}
+              </Box>
+            </Box>
+          </Paper>
+          
+          {/* Technical Indicators */}
+          <Paper 
+            sx={{ 
+              p: 2,
+              backgroundColor: colors.panelBg,
+              border: `1px solid ${colors.borderColor}`,
+              borderRadius: '8px'
+            }}
+          >
+            <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 2 }}>
+              Technical Indicators
+            </Typography>
+            {renderTechnicalIndicators()}
+          </Paper>
         </Box>
+      </Box>
+      
+      {/* Sentiment Analysis */}
+      {analysisData.sentiment && Object.keys(analysisData.sentiment).length > 0 && (
+        <Paper 
+          sx={{ 
+            p: 2,
+            backgroundColor: colors.panelBg,
+            border: `1px solid ${colors.borderColor}`,
+            borderRadius: '8px',
+            mt: 3
+          }}
+        >
+          <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
+            Sentiment Analysis
+          </Typography>
+          <Grid container spacing={2}>
+            {Object.entries(analysisData.sentiment).map(([source, data]) => (
+              <Grid item xs={12} sm={6} md={4} key={source}>
+                <Paper 
+                  sx={{ 
+                    p: 1.5,
+                    backgroundColor: colors.cardBg,
+                    border: `1px solid ${colors.borderColor}`,
+                    borderRadius: '6px'
+                  }}
+                >
+                  <Typography variant="body2" sx={{ color: colors.secondaryText, textTransform: 'capitalize' }}>
+                    {source}
+                  </Typography>
+                  <Typography variant="h6" sx={{ color: data.sentiment === 'positive' ? colors.buyGreen : data.sentiment === 'negative' ? colors.sellRed : colors.warningOrange }}>
+                    {data.sentiment.charAt(0).toUpperCase() + data.sentiment.slice(1)}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                    Score: {data.score.toFixed(2)}
+                  </Typography>
+                </Paper>
+              </Grid>
+            ))}
+          </Grid>
+        </Paper>
       )}
     </Paper>
   );

@@ -12,7 +12,8 @@ import {
   IconButton
 } from '@mui/material';
 import { styled } from '@mui/system';
-import { API } from '../../axiosConfig';
+import axios from 'axios';
+import api from '../../utils/api'; // Import the API utility
 import { useNavigate } from 'react-router-dom';
 import CloseIcon from '@mui/icons-material/Close';
 
@@ -109,54 +110,25 @@ const LoginDialog = ({ open, onClose, isLogin, toggleForm }) => {
     setLoading(true);
     setError('');
     try {
-      console.log('Attempting login with:', { email });
-      const response = await API.auth.login({ email, password });
-      console.log('Login response:', response.data ? 'Success' : 'Failed');
+      // Use the API utility instead of hardcoded URL
+      const response = await api.post('/auth/login', {
+        email,
+        password
+      });
       
-      if (response.data && response.data.token) {
-        // Get token from response
-        const token = response.data.token;
-        console.log('Received token (first 10 chars):', token.substring(0, 10) + '...');
-        
-        // Important: Clear any existing reload attempts when logging in fresh
-        sessionStorage.removeItem('reloadAttempts');
-        
-        // Clear previous token
-        localStorage.removeItem('token');
-        
-        // Store token with proper formatting - ensure Bearer prefix is present
-        const formattedToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
-        localStorage.setItem('token', formattedToken);
-        
-        // Store user data
-        localStorage.removeItem('user');
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        
-        console.log('User data stored, role:', response.data.user.role);
-        console.log('Token stored with format:', formattedToken.substring(0, 20) + '...');
-        
-        // Close the dialog
-        onClose();
-        
-        // Use timeout to ensure the dialog is closed before navigating
-        setTimeout(() => {
-          const baseUrl = window.location.origin;
-          
-          if (response.data.user.role === 'admin') {
-            console.log('Redirecting to admin dashboard');
-            window.location.href = `${baseUrl}/#/admin-dashboard`;
-          } else {
-            console.log('Redirecting to user dashboard');
-            window.location.href = `${baseUrl}/#/user-dashboard`;
-          }
-        }, 100);
-        
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+      
+      // Redirect based on role
+      if (response.data.user.role === 'admin') {
+        navigate('/admin-dashboard');
       } else {
-        throw new Error('Invalid response from server');
+        navigate('/user-dashboard');
       }
+      
+      onClose();
     } catch (err) {
-      console.error('Login error:', err);
-      setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
+      setError(err.response?.data?.message || 'Login failed');
     } finally {
       setLoading(false);
     }
@@ -171,7 +143,8 @@ const LoginDialog = ({ open, onClose, isLogin, toggleForm }) => {
     setLoading(true);
     setError('');
     try {
-      await API.auth.register({
+      // Use the API utility instead of hardcoded URL
+      await api.post('/auth/register', {
         username: fullName.split(' ')[0], // Simple username from first name
         email,
         password,
@@ -182,7 +155,6 @@ const LoginDialog = ({ open, onClose, isLogin, toggleForm }) => {
       toggleForm();
       setError('');
     } catch (err) {
-      console.error('Registration error:', err);
       setError(err.response?.data?.message || 'Registration failed');
     } finally {
       setLoading(false);

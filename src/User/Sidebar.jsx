@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Box, Typography, Button, Divider } from '@mui/material';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import {
   Dashboard as DashboardIcon,
   ShowChart as ShowChartIcon,
@@ -23,18 +23,6 @@ const colors = {
 };
 
 const Sidebar = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [activePath, setActivePath] = useState('');
-
-  useEffect(() => {
-    setActivePath(location.pathname);
-  }, [location.pathname]);
-
-  const handleNavigation = (path) => {
-    navigate(path);
-  };
-
   const menuItems = [
     { name: 'Dashboard', path: '/user-dashboard', icon: <DashboardIcon /> },
     { name: 'Markets', path: '/market', icon: <ShowChartIcon /> },
@@ -85,17 +73,17 @@ const Sidebar = () => {
         {menuItems.map((item) => (
           <Button 
             key={item.name} 
-            onClick={() => handleNavigation(item.path)}
+            component={NavLink} 
+            to={item.path} 
             fullWidth 
             startIcon={item.icon}
             sx={{
               justifyContent: 'flex-start',
-              color: location.pathname === item.path ? colors.primaryText : colors.secondaryText,
+              color: colors.secondaryText,
               mb: 1,
               borderRadius: '8px',
               px: 2,
               py: 1.5,
-              backgroundColor: location.pathname === item.path ? colors.hoverBg : 'transparent',
               '&:hover': {
                 backgroundColor: colors.hoverBg,
                 color: colors.primaryText,
@@ -103,21 +91,24 @@ const Sidebar = () => {
                   color: colors.accentBlue
                 }
               },
-              '& .MuiSvgIcon-root': {
-                color: location.pathname === item.path ? colors.accentBlue : 'inherit'
-              },
-              position: 'relative',
-              '&::before': location.pathname === item.path ? {
-                content: '""',
-                position: 'absolute',
-                left: 0,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                width: '4px',
-                height: '24px',
-                backgroundColor: colors.accentBlue,
-                borderRadius: '0 4px 4px 0'
-              } : {}
+              '&.active': {
+                backgroundColor: colors.hoverBg,
+                color: colors.primaryText,
+                '& .MuiSvgIcon-root': {
+                  color: colors.accentBlue
+                },
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  left: 0,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: '4px',
+                  height: '24px',
+                  backgroundColor: colors.accentBlue,
+                  borderRadius: '0 4px 4px 0'
+                }
+              }
             }}
           >
             {item.name}

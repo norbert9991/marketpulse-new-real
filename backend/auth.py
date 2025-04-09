@@ -5,6 +5,7 @@ import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from db_connection import db_manager
+from db_utils import dict_fetchall, dict_fetchone
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
@@ -21,10 +22,14 @@ def token_required(f):
             token = auth_header.split(' ')[1] if ' ' in auth_header else auth_header
             data = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
             conn = db_manager.get_connection()
-            cursor = conn.cursor(dictionary=True)
+            cursor = conn.cursor()
             cursor.execute("SELECT * FROM login WHERE user_id = %s", (data['user_id'],))
-            current_user = cursor.fetchone()
+            current_user = dict_fetchone(cursor)
             cursor.close()
+            
+            if not current_user:
+                return jsonify({'message': 'User not found!'}), 401
+                
         except Exception as e:
             print(f"Error: {e}")
             return jsonify({'message': 'Token is invalid!'}), 401
@@ -44,9 +49,9 @@ def login():
     
     try:
         conn = db_manager.get_connection()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
         cursor.execute("SELECT * FROM login WHERE email = %s", (email,))
-        user = cursor.fetchone()
+        user = dict_fetchone(cursor)
         
         if not user:
             cursor.close()
@@ -93,31 +98,45 @@ def register():
     username = data.get('username')
     email = data.get('email')
     password = data.get('password')
-    role = data.get('role', 'user')
     
     if not username or not email or not password:
         return jsonify({'message': 'All fields are required'}), 400
     
     try:
         conn = db_manager.get_connection()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
+        
+        # Check if email already exists
         cursor.execute("SELECT * FROM login WHERE email = %s", (email,))
-        existing_user = cursor.fetchone()
-        
-        if existing_user:
+        if dict_fetchone(cursor):
             cursor.close()
-            return jsonify({'message': 'User already exists'}), 400
-        
+            return jsonify({'message': 'Email already registered'}), 400
+            
+        # Check if username already exists
+        cursor.execute("SELECT * FROM login WHERE username = %s", (username,))
+        if dict_fetchone(cursor):
+            cursor.close()
+            return jsonify({'message': 'Username already taken'}), 400
+            
+        # Insert new user
         hashed_password = generate_password_hash(password)
         cursor.execute(
-            "INSERT INTO login (username, email, pass, role, account_status, created_at) VALUES (%s, %s, %s, %s, 'active', NOW())",
-            (username, email, hashed_password, role)
+            """
+            INSERT INTO login (username, email, pass, role, account_status, created_at)
+            VALUES (%s, %s, %s, 'user', 'active', NOW())
+            RETURNING user_id
+            """,
+            (username, email, hashed_password)
         )
         conn.commit()
-        user_id = cursor.lastrowid
+        user_id = cursor.fetchone()[0]
         cursor.close()
         
-        return jsonify({'message': 'User registered successfully'}), 201
+        return jsonify({
+            'message': 'User registered successfully',
+            'user_id': user_id
+        }), 201
+        
     except Exception as e:
         print(f"Database error: {e}")
         return jsonify({'message': 'Database error occurred'}), 500

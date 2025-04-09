@@ -14,9 +14,10 @@ import {
   IconButton,
   Tooltip,
   Chip,
-  CircularProgress,
-  Alert
+  CircularProgress
 } from '@mui/material';
+import axios from 'axios';
+import api from '../utils/api'; // Import the API utility
 import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import MarketAnalysis from './MarketAnalysis';
@@ -26,7 +27,6 @@ import PersonIcon from '@mui/icons-material/Person';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import StarIcon from '@mui/icons-material/Star';
-import { API } from '../axiosConfig';
 
 // Forex Trading Color Palette
 const colors = {
@@ -49,137 +49,58 @@ const colors = {
 };
 
 const UserDashboard = () => {
-  console.log('UserDashboard - Component rendering');
-  
   const [user, setUser] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const [favoriteMarkets, setFavoriteMarkets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedSymbol, setSelectedSymbol] = useState(null);
-  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  // Debug current location
   useEffect(() => {
-    console.log('UserDashboard - Current path:', window.location.pathname);
-    console.log('UserDashboard - Current hash:', window.location.hash);
-    console.log('UserDashboard - Is user set:', !!user);
-  }, [user]);
-
-  useEffect(() => {
-    console.log('UserDashboard - Fetching user data');
     const fetchUser = async () => {
       try {
         const token = localStorage.getItem('token');
-        console.log('UserDashboard - Token exists:', !!token);
-        
         if (!token) {
-          console.log('UserDashboard - No token, redirecting to home');
-          window.location.href = window.location.origin + '/#/';
+          navigate('/login');
           return;
         }
         
-        // Try to get user data from API
-        try {
-          console.log('UserDashboard - Calling API.auth.me()');
-          const response = await API.auth.me();
-          console.log('UserDashboard - Got user data:', response.data);
-          
-          // Store the latest user data in localStorage for offline access
-          localStorage.setItem('user', JSON.stringify(response.data.user));
-          
-          setUser(response.data.user);
-        } catch (apiError) {
-          console.error('UserDashboard - API.auth.me() failed:', apiError.response?.status, apiError.message);
-          
-          // If we have the user stored in localStorage, use that as a fallback
-          const storedUser = localStorage.getItem('user');
-          if (storedUser) {
-            try {
-              console.log('UserDashboard - Using cached user data from localStorage');
-              const parsedUser = JSON.parse(storedUser);
-              setUser(parsedUser);
-              
-              // If we're using cached data, don't try to load favorites from API
-              setFavoriteMarkets([]);
-              setLoading(false);
-            } catch (parseError) {
-              console.error('UserDashboard - Failed to parse stored user:', parseError);
-              throw new Error('Authentication failed - invalid user data');
-            }
-          } else {
-            // No stored user, redirect to login
-            localStorage.removeItem('token');
-            window.location.href = window.location.origin + '/#/';
-            return;
-          }
-        }
+        // Use API utility instead of axios with hardcoded URL
+        const response = await api.get('/auth/me');
+        setUser(response.data.user);
       } catch (err) {
-        console.error('Authentication error:', err);
-        setError('Authentication failed. Please login again.');
-        // Clear user data on authentication failure
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        // Redirect after a short delay to show the error
-        setTimeout(() => {
-          window.location.href = window.location.origin + '/#/';
-        }, 2000);
+        navigate('/login');
       }
     };
     
     fetchUser();
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
-      console.log('UserDashboard - Fetching dashboard data');
-      
-      // Skip API call if we're using cached user data (API is likely unavailable)
-      if (user && !navigator.onLine) {
-        console.log('UserDashboard - Browser is offline, skipping API calls');
-        setFavoriteMarkets([]);
-        setLoading(false);
-        return;
-      }
-      
       try {
-        // Fetch favorite markets
-        const favoritesResponse = await API.favorites.getAll();
-        console.log('UserDashboard - Got favorites:', favoritesResponse.data);
-        setFavoriteMarkets(favoritesResponse.data.favorites || []);
+        // Use API utility instead of axios with hardcoded URL
+        const favoritesResponse = await api.get('/favorites');
+        setFavoriteMarkets(favoritesResponse.data.favorites);
+
         setLoading(false);
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
-        
-        // Handle 500 Internal Server Error specifically
-        if (err.response && err.response.status === 500) {
-          console.log('Server error occurred. Continuing with empty favorites list.');
-          // Don't show error to user, just proceed with empty list
-        } else if (err.response && err.response.status) {
-          console.log(`API error status ${err.response.status}. Continuing with empty favorites list.`);
-        } else {
-          console.log('Network or other error. Continuing with empty favorites list.');
-        }
-        
-        // Still use the User object even if we can't fetch favorites
-        setFavoriteMarkets([]);
         setLoading(false);
       }
     };
 
     if (user) {
-      console.log('UserDashboard - User exists, fetching dashboard data');
       fetchDashboardData();
     }
   }, [user]);
 
   const handleLogout = () => {
-    console.log('UserDashboard - Logging out');
-    // Clear authentication data
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    // Use window location for more reliable redirect with hash router
-    window.location.href = window.location.origin + '/#/';
+    navigate('/home');
   };
 
   const handleMenuOpen = (event) => {
@@ -194,27 +115,8 @@ const UserDashboard = () => {
     setSelectedSymbol(symbol);
   };
 
-  const handleSettings = () => {
-    navigate('/settings');
-    handleMenuClose();
-  }
-
-  if (error) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: colors.darkBg }}>
-        <Alert severity="error" sx={{ width: '80%', maxWidth: '500px' }}>
-          {error}
-        </Alert>
-      </Box>
-    );
-  }
-
   if (!user) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: colors.darkBg }}>
-        <CircularProgress />
-      </Box>
-    );
+    return null;
   }
 
   return (
@@ -251,19 +153,19 @@ const UserDashboard = () => {
                 </IconButton>
               </Tooltip>
               <Tooltip title="Settings">
-                <IconButton sx={{ color: colors.secondaryText }} onClick={handleSettings}>
+                <IconButton sx={{ color: colors.secondaryText }}>
                   <SettingsIcon />
                 </IconButton>
               </Tooltip>
               <Button 
-                startIcon={<Avatar sx={{ width: 30, height: 30, backgroundColor: colors.accentBlue }}>{user.username ? user.username.charAt(0).toUpperCase() : 'U'}</Avatar>}
+                startIcon={<Avatar sx={{ width: 30, height: 30, backgroundColor: colors.accentBlue }}>{user.username.charAt(0).toUpperCase()}</Avatar>}
                 onClick={handleMenuOpen}
                 sx={{ 
                   color: colors.primaryText,
                   '&:hover': { backgroundColor: colors.hoverBg }
                 }}
               >
-                {user.username || 'User'}
+                {user.username}
               </Button>
               <Menu
                 anchorEl={anchorEl}
@@ -281,7 +183,7 @@ const UserDashboard = () => {
                 <MenuItem onClick={handleMenuClose} sx={{ color: colors.secondaryText }}>
                   <PersonIcon sx={{ mr: 1 }} /> Profile
                 </MenuItem>
-                <MenuItem onClick={handleSettings} sx={{ color: colors.secondaryText }}>
+                <MenuItem onClick={handleMenuClose} sx={{ color: colors.secondaryText }}>
                   <SettingsIcon sx={{ mr: 1 }} /> Settings
                 </MenuItem>
                 <Divider sx={{ backgroundColor: colors.borderColor }} />

@@ -19,7 +19,8 @@ import {
   Tooltip
 } from '@mui/material';
 import { styled } from '@mui/system';
-import { API } from '../axiosConfig';
+import axios from 'axios';
+import api from '../utils/api'; // Import the API utility
 import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { 
@@ -67,14 +68,24 @@ const UserManagement = () => {
 
   const fetchUsers = async () => {
     try {
-      setLoading(true);
-      const response = await API.admin.getUsers();
-      setUsers(response.data.users);
+      setRefreshing(true);
+      // Use API utility instead of axios with hardcoded URL
+      const response = await api.get('/admin/users');
+
+      if (response.data && response.data.users) {
+        setUsers(response.data.users);
+      } else {
+        setError('No users data received');
+      }
+    } catch (err) {
+      console.error('Error fetching users:', err);
+      setError(err.message || 'Failed to fetch users');
+      if (err.response?.status === 401) {
+        navigate('/login');
+      }
+    } finally {
       setLoading(false);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      setError('Failed to load users');
-      setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -82,18 +93,21 @@ const UserManagement = () => {
     fetchUsers();
   }, [navigate]);
 
-  const updateUserStatus = async (userId, newStatus) => {
+  const handleUserStatusChange = async (userId, currentStatus) => {
     try {
-      setRefreshing(true);
-      await API.admin.updateUserStatus(userId, newStatus);
-      
-      // Refresh the user list
-      fetchUsers();
-      setRefreshing(false);
-    } catch (error) {
-      console.error('Error updating user status:', error);
+      const newStatus = currentStatus === 'active' ? 'suspended' : 'active';
+
+      // Use API utility instead of axios with hardcoded URL
+      await api.put(`/admin/users/${userId}/status`, { status: newStatus });
+
+      setUsers(prevUsers => 
+        prevUsers.map(user =>
+          user.user_id === userId ? { ...user, account_status: newStatus } : user
+        )
+      );
+    } catch (err) {
+      console.error('Error updating user status:', err);
       setError('Failed to update user status');
-      setRefreshing(false);
     }
   };
 
@@ -232,7 +246,7 @@ const UserManagement = () => {
                         <Button 
                           variant="outlined" 
                           size="small" 
-                          onClick={() => updateUserStatus(user.user_id, user.account_status === 'active' ? 'suspended' : 'active')}
+                          onClick={() => handleUserStatusChange(user.user_id, user.account_status)}
                           startIcon={user.account_status === 'active' ? <CancelIcon /> : <CheckCircleIcon />}
                           sx={{ 
                             color: user.account_status === 'active' ? colors.sellRed : colors.buyGreen,

@@ -16,6 +16,7 @@ import {
 } from '@mui/material';
 import { styled } from '@mui/system';
 import axios from 'axios';
+import api from '../utils/api'; // Import the API utility
 import { useNavigate } from 'react-router-dom';
 import { LineChart, BarChart } from '@mui/x-charts';
 import Sidebar from './Sidebar';
@@ -29,7 +30,6 @@ import {
   Person as PersonIcon,
   Settings as SettingsIcon
 } from '@mui/icons-material';
-import { API } from '../axiosConfig';
 
 // Define theme colors to match the user components
 const colors = {
@@ -166,40 +166,70 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      setLoading(true);
+    const fetchData = async () => {
       try {
-        // Get current admin user info
-        const userResponse = await API.auth.me();
+        // Fetch user data using the API utility
+        // The utility automatically includes the token
+        const userResponse = await api.get('/auth/me');
+
+        if (!userResponse.data || !userResponse.data.user) {
+          throw new Error('Invalid user data received');
+        }
+
         setUser(userResponse.data.user);
-        
-        // Get all users
-        const usersResponse = await API.admin.getUsers();
-        setUsers(usersResponse.data.users);
-        setUserCount(usersResponse.data.users.length);
-        
-        // Get user growth stats
-        const growthResponse = await API.admin.getUserGrowth();
-        setUserGrowthData(growthResponse.data);
-        
-        // Get popular symbols/pairs
-        const symbolsResponse = await API.admin.getFavoriteSymbols();
-        setFavoriteSymbolsData(symbolsResponse.data.symbols);
-        
-        // Get current market trends
-        const trendsResponse = await API.admin.getMarketTrends();
-        setMarketTrendsData(trendsResponse.data.trends);
-        
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-        setError('Failed to load dashboard data');
+
+        // If admin, fetch all data
+        if (userResponse.data.user.role === 'admin') {
+          try {
+            // Fetch users using the API utility
+            const usersResponse = await api.get('/admin/users');
+            setUsers(usersResponse.data.users);
+            setUserCount(usersResponse.data.users.length);
+
+            // Fetch user growth data using the API utility
+            const growthResponse = await api.get('/admin/user-growth');
+            if (growthResponse.data.success) {
+              setUserGrowthData(growthResponse.data.data);
+            }
+
+            // Fetch favorite symbols data using the API utility
+            const symbolsResponse = await api.get('/admin/favorite-symbols');
+            if (symbolsResponse.data.status === 'success') {
+              setFavoriteSymbolsData(symbolsResponse.data.data);
+            }
+
+            // Fetch market trends data using the API utility
+            const trendsResponse = await api.get('/market-trends');
+            if (trendsResponse.data.status === 'success') {
+              setMarketTrendsData(trendsResponse.data.data);
+            }
+          } catch (err) {
+            console.error('Error fetching admin data:', err);
+            setError('Failed to load admin data');
+          } finally {
+            setLoadingChart(false);
+          }
+        } else {
+          // If not admin, redirect to appropriate dashboard
+          navigate(userResponse.data.user.role === 'user' ? '/user-dashboard' : '/');
+        }
+      } catch (err) {
+        console.error('Authentication error:', err);
+        if (err.response?.status === 401) {
+          // Only logout if it's an authentication error
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          navigate('/login');
+        } else {
+          setError(err.message || 'Failed to load dashboard');
+        }
+      } finally {
         setLoading(false);
       }
     };
 
-    fetchDashboardData();
-  }, []);
+    fetchData();
+  }, [navigate]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
