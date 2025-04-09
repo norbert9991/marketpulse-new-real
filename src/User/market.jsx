@@ -89,35 +89,6 @@ const mockData = {
   }
 };
 
-// Helper functions for technical indicator colors
-const getRsiColor = (rsi) => {
-  if (!rsi) return '#888';
-  const rsiValue = Number(rsi);
-  if (rsiValue > 70) return '#e74c3c'; // Overbought - red
-  if (rsiValue < 30) return '#2ecc71'; // Oversold - green
-  return '#888'; // Neutral - gray
-};
-
-const getMacdColor = (macd, signal) => {
-  if (!macd || !signal) return '#888';
-  return Number(macd) > Number(signal) ? '#2ecc71' : '#e74c3c';
-};
-
-const getAdxColor = (adx) => {
-  if (!adx) return '#888';
-  const adxValue = Number(adx);
-  if (adxValue > 25) return '#2ecc71'; // Strong trend - green
-  return '#888'; // Weak trend - gray
-};
-
-// Helper function to ensure we have numerical values
-const ensureNumber = (value, defaultValue = 0) => {
-  if (value === null || value === undefined || isNaN(Number(value))) {
-    return defaultValue;
-  }
-  return Number(value);
-};
-
 const Market = () => {
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
@@ -230,45 +201,42 @@ const Market = () => {
       console.log(`Attempting to analyze symbol: ${symbolToFetch}`);
       const response = await API.market.analyze({ symbol: symbolToFetch });
       
-      console.log('Raw API response:', response.data);
-      
       // Create a comprehensive response for UI rendering
       const completeResponse = {
         ...response.data,
         // Ensure these objects exist
         technical_indicators: response.data.technical_indicators || {},
+        support_resistance: response.data.support_resistance || { support: [], resistance: [] },
         sentiment: response.data.sentiment || {}
       };
       
-      // Process support and resistance levels - API response might have a different structure
+      // Format support_resistance data correctly
+      // This handles both formats: {support: [...], resistance: [...]} and {support_resistance: {support: [...], resistance: [...]}}
       if (response.data.support_resistance) {
-        // Process support_resistance data, which could be in different formats
-        const supportLevels = [];
-        const resistanceLevels = [];
+        console.log('Original support_resistance data:', response.data.support_resistance);
         
-        // Check if support_resistance has arrays named support and resistance
+        // Extract the values if they're in arrays of objects with level_value property
         if (Array.isArray(response.data.support_resistance.support)) {
-          supportLevels.push(...response.data.support_resistance.support.map(item => 
-            typeof item === 'object' ? parseFloat(item.level_value) : parseFloat(item)
-          ));
+          const supportValues = response.data.support_resistance.support.map(item => 
+            typeof item === 'object' && item.level_value ? parseFloat(item.level_value) : item
+          );
+          completeResponse.support_resistance.support = supportValues;
         }
         
         if (Array.isArray(response.data.support_resistance.resistance)) {
-          resistanceLevels.push(...response.data.support_resistance.resistance.map(item => 
-            typeof item === 'object' ? parseFloat(item.level_value) : parseFloat(item)
-          ));
+          const resistanceValues = response.data.support_resistance.resistance.map(item => 
+            typeof item === 'object' && item.level_value ? parseFloat(item.level_value) : item
+          );
+          completeResponse.support_resistance.resistance = resistanceValues;
         }
-        
-        completeResponse.support_resistance = {
-          support: supportLevels,
-          resistance: resistanceLevels
-        };
-        
-        console.log('Extracted support levels:', supportLevels);
-        console.log('Extracted resistance levels:', resistanceLevels);
-      } else {
-        // Create empty support_resistance structure if missing
-        completeResponse.support_resistance = { support: [], resistance: [] };
+      }
+      
+      // Make sure support_resistance has proper arrays
+      if (!completeResponse.support_resistance.support) {
+        completeResponse.support_resistance.support = [];
+      }
+      if (!completeResponse.support_resistance.resistance) {
+        completeResponse.support_resistance.resistance = [];
       }
       
       // Add missing historical data if needed
@@ -278,14 +246,6 @@ const Market = () => {
           prices: [1.0, 1.01, 1.02, 1.03, 1.04, 1.05],
           dates: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6']
         };
-      }
-      
-      // Make sure support_resistance has proper arrays
-      if (!completeResponse.support_resistance.support) {
-        completeResponse.support_resistance.support = [];
-      }
-      if (!completeResponse.support_resistance.resistance) {
-        completeResponse.support_resistance.resistance = [];
       }
       
       // Log the complete data for debugging
@@ -431,26 +391,6 @@ const Market = () => {
       marketMood: sentiment.market_mood || 'Neutral',
       newsCount: sentiment.news_count || 0,
       socialCount: sentiment.social_count || 0
-    };
-  };
-
-  // Ensure technical indicators are properly formatted
-  const getTechnicalIndicators = () => {
-    if (!analysisData || !analysisData.technical_indicators) {
-      return mockData.technicalIndicators;
-    }
-
-    const indicators = analysisData.technical_indicators;
-    
-    return {
-      rsi: ensureNumber(indicators.rsi),
-      macd: ensureNumber(indicators.macd),
-      macdSignal: ensureNumber(indicators.macd_signal),
-      macdHist: ensureNumber(indicators.macd_hist),
-      sma20: ensureNumber(indicators.sma20),
-      sma50: ensureNumber(indicators.sma50),
-      sma200: ensureNumber(indicators.sma200),
-      adx: ensureNumber(indicators.adx)
     };
   };
 
@@ -615,9 +555,9 @@ const Market = () => {
                 <AreaChart data={analysisData && analysisData.historical_data && analysisData.historical_data.prices && 
                   analysisData.historical_data.dates ? 
                   analysisData.historical_data.prices.map((price, index) => ({
-                    time: analysisData.historical_data.dates[index],
-                    price: price
-                  })) : mockData.priceHistory}>
+                  time: analysisData.historical_data.dates[index],
+                  price: price
+                })) : mockData.priceHistory}>
                   <defs>
                     <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor={colors.accentBlue} stopOpacity={0.3}/>
@@ -650,86 +590,136 @@ const Market = () => {
           {/* Middle Row: Technical Indicators and Support/Resistance */}
           <Box sx={{ display: 'flex', gap: 2 }}>
             {/* Technical Indicators */}
-            <Grid item xs={12} sm={6} md={4}>
-              <Paper sx={{ p: 2, height: '100%' }}>
-                <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText }}>
-                  Technical Indicators
-                </Typography>
-                <Grid container spacing={2}>
-                  {/* RSI */}
-                  <Grid item xs={6}>
-                    <Typography variant="subtitle2" sx={{ color: colors.secondaryText }}>
+            <Paper 
+              sx={{ 
+                p: 2, 
+                flex: 1,
+                backgroundColor: colors.cardBg,
+                border: `1px solid ${colors.borderColor}`,
+                borderRadius: '12px',
+                boxShadow: `0 4px 12px ${colors.shadowColor}`,
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
+              <Typography variant="h6" sx={{ color: colors.primaryText, mb: 2 }}>
+                Technical Indicators
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
                       RSI (14)
                     </Typography>
-                    <Typography 
-                      variant="h6" 
-                      sx={{ 
-                        fontWeight: 'bold',
-                        color: getRsiColor(getTechnicalIndicators().rsi)
-                      }}
-                    >
-                      {getTechnicalIndicators().rsi.toFixed(2)}
-                    </Typography>
-                  </Grid>
-                  
-                  {/* MACD */}
-                  <Grid item xs={6}>
-                    <Typography variant="subtitle2" sx={{ color: colors.secondaryText }}>
-                      MACD
-                    </Typography>
-                    <Typography 
-                      variant="h6" 
-                      sx={{ 
-                        fontWeight: 'bold',
-                        color: getMacdColor(
-                          getTechnicalIndicators().macd,
-                          getTechnicalIndicators().macdSignal
-                        )
-                      }}
-                    >
-                      {getTechnicalIndicators().macd.toFixed(4)}
-                    </Typography>
-                  </Grid>
-                  
-                  {/* ADX */}
-                  <Grid item xs={6}>
-                    <Typography variant="subtitle2" sx={{ color: colors.secondaryText }}>
-                      ADX
-                    </Typography>
-                    <Typography 
-                      variant="h6" 
-                      sx={{ 
-                        fontWeight: 'bold',
-                        color: getAdxColor(getTechnicalIndicators().adx)
-                      }}
-                    >
-                      {getTechnicalIndicators().adx ? getTechnicalIndicators().adx.toFixed(2) : 'N/A'}
-                    </Typography>
-                  </Grid>
-                  
-                  {/* ATR */}
-                  <Grid item xs={6}>
-                    <Typography variant="subtitle2" sx={{ color: colors.secondaryText }}>
-                      ATR
-                    </Typography>
-                    <Typography 
-                      variant="h6" 
-                      sx={{ 
-                        fontWeight: 'bold',
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography variant="h5" sx={{ color: colors.primaryText }}>
+                      {typeof analysisData?.technical_indicators?.rsi === 'number' 
+                        ? analysisData.technical_indicators.rsi.toFixed(1) 
+                        : '50.0'}
+                      </Typography>
+                      <Chip 
+                      label={analysisData?.technical_indicators?.rsi > 70 
+                        ? 'Overbought' 
+                        : analysisData?.technical_indicators?.rsi < 30 
+                          ? 'Oversold' 
+                          : 'Neutral'} 
+                      color={analysisData?.technical_indicators?.rsi > 70 
+                        ? 'error' 
+                        : analysisData?.technical_indicators?.rsi < 30 
+                          ? 'success' 
+                          : 'default'}
+                        size="small"
+                      sx={{
+                        backgroundColor: analysisData?.technical_indicators?.rsi > 70 
+                          ? `${colors.lossRed}40` 
+                          : analysisData?.technical_indicators?.rsi < 30 
+                            ? `${colors.profitGreen}40` 
+                            : colors.panelBg,
                         color: colors.primaryText
                       }}
-                    >
-                      N/A
+                      />
+                    </Box>
+                  </Box>
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
+                    MACD
                     </Typography>
+                  <Grid container spacing={1}>
+                    <Grid item xs={4}>
+                      <Box sx={{ textAlign: 'center', p: 1, border: `1px solid ${colors.borderColor}`, borderRadius: '8px' }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>MACD</Typography>
+                        <Typography variant="body1" sx={{ color: colors.primaryText }}>
+                          {typeof analysisData?.technical_indicators?.macd === 'number' 
+                            ? analysisData.technical_indicators.macd.toFixed(4) 
+                            : '0.0000'}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={4}>
+                      <Box sx={{ textAlign: 'center', p: 1, border: `1px solid ${colors.borderColor}`, borderRadius: '8px' }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>Signal</Typography>
+                        <Typography variant="body1" sx={{ color: colors.primaryText }}>
+                          {typeof analysisData?.technical_indicators?.macd_signal === 'number' 
+                            ? analysisData.technical_indicators.macd_signal.toFixed(4) 
+                            : '0.0000'}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={4}>
+                      <Box sx={{ textAlign: 'center', p: 1, border: `1px solid ${colors.borderColor}`, borderRadius: '8px' }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>Histogram</Typography>
+                        <Typography variant="body1" sx={{ color: colors.primaryText }}>
+                          {typeof analysisData?.technical_indicators?.macd_hist === 'number' 
+                            ? analysisData.technical_indicators.macd_hist.toFixed(4) 
+                            : '0.0000'}
+                        </Typography>
+                      </Box>
+                    </Grid>
                   </Grid>
-                </Grid>
-              </Paper>
-            </Grid>
+                </Box>
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
+                    Moving Averages
+                    </Typography>
+                  <Grid container spacing={1}>
+                    <Grid item xs={4}>
+                      <Box sx={{ textAlign: 'center', p: 1, border: `1px solid ${colors.borderColor}`, borderRadius: '8px' }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>SMA 20</Typography>
+                        <Typography variant="body1" sx={{ color: colors.primaryText }}>
+                          {typeof analysisData?.technical_indicators?.sma20 === 'number' 
+                            ? analysisData.technical_indicators.sma20.toFixed(4) 
+                            : '0.0000'}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={4}>
+                      <Box sx={{ textAlign: 'center', p: 1, border: `1px solid ${colors.borderColor}`, borderRadius: '8px' }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>SMA 50</Typography>
+                        <Typography variant="body1" sx={{ color: colors.primaryText }}>
+                          {typeof analysisData?.technical_indicators?.sma50 === 'number' 
+                            ? analysisData.technical_indicators.sma50.toFixed(4) 
+                            : '0.0000'}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={4}>
+                      <Box sx={{ textAlign: 'center', p: 1, border: `1px solid ${colors.borderColor}`, borderRadius: '8px' }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>SMA 200</Typography>
+                        <Typography variant="body1" sx={{ color: colors.primaryText }}>
+                          {typeof analysisData?.technical_indicators?.sma200 === 'number' 
+                            ? analysisData.technical_indicators.sma200.toFixed(4) 
+                            : '0.0000'}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </Box>
+              </Box>
+            </Paper>
 
             {/* Support & Resistance */}
             <Paper 
               sx={{ 
-                p: 2,
+                p: 2, 
                 backgroundColor: colors.cardBg,
                 border: `1px solid ${colors.borderColor}`,
                 borderRadius: '12px',
@@ -747,32 +737,22 @@ const Market = () => {
                     Support Levels
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                    {analysisData && analysisData.support_resistance && 
-                     Array.isArray(analysisData.support_resistance.support) && 
-                     analysisData.support_resistance.support.length > 0 ? (
-                      analysisData.support_resistance.support.map((level, index) => {
-                        // Make sure level is a valid number
-                        const numValue = typeof level === 'object' 
-                          ? parseFloat(level.level_value || 0) 
-                          : parseFloat(level || 0);
-                          
-                        return (
-                          <Chip 
-                            key={index}
-                            label={!isNaN(numValue) ? numValue.toFixed(4) : '0.0000'}
-                            color="success"
-                            size="medium"
-                            sx={{ 
-                              my: 0.5,
-                              backgroundColor: `${colors.buyGreen}22`,
-                              color: colors.buyGreen,
-                              border: `1px solid ${colors.buyGreen}`,
-                              fontWeight: 'bold'
-                            }}
-                          />
-                        );
-                      })
-                    ) : (
+                    {(analysisData?.support_resistance?.support || []).map((level, index) => (
+                      <Chip 
+                        key={index}
+                        label={typeof level === 'number' ? level.toFixed(4) : '0.0000'}
+                        color="success"
+                        size="medium"
+                        sx={{ 
+                          my: 0.5,
+                          backgroundColor: `${colors.buyGreen}22`,
+                          color: colors.buyGreen,
+                          border: `1px solid ${colors.buyGreen}`,
+                          fontWeight: 'bold'
+                        }}
+                      />
+                    ))}
+                    {(!analysisData?.support_resistance?.support || analysisData.support_resistance.support.length === 0) && (
                       <Typography variant="body2" sx={{ color: colors.secondaryText, fontStyle: 'italic' }}>
                         No support levels available
                       </Typography>
@@ -784,32 +764,22 @@ const Market = () => {
                     Resistance Levels
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                    {analysisData && analysisData.support_resistance && 
-                     Array.isArray(analysisData.support_resistance.resistance) && 
-                     analysisData.support_resistance.resistance.length > 0 ? (
-                      analysisData.support_resistance.resistance.map((level, index) => {
-                        // Make sure level is a valid number
-                        const numValue = typeof level === 'object' 
-                          ? parseFloat(level.level_value || 0) 
-                          : parseFloat(level || 0);
-                          
-                        return (
-                          <Chip 
-                            key={index}
-                            label={!isNaN(numValue) ? numValue.toFixed(4) : '0.0000'}
-                            color="error"
-                            size="medium"
-                            sx={{ 
-                              my: 0.5,
-                              backgroundColor: `${colors.sellRed}22`,
-                              color: colors.sellRed,
-                              border: `1px solid ${colors.sellRed}`,
-                              fontWeight: 'bold'
-                            }}
-                          />
-                        );
-                      })
-                    ) : (
+                    {(analysisData?.support_resistance?.resistance || []).map((level, index) => (
+                      <Chip 
+                        key={index}
+                        label={typeof level === 'number' ? level.toFixed(4) : '0.0000'}
+                        color="error"
+                        size="medium"
+                        sx={{ 
+                          my: 0.5,
+                          backgroundColor: `${colors.sellRed}22`,
+                          color: colors.sellRed,
+                          border: `1px solid ${colors.sellRed}`,
+                          fontWeight: 'bold'
+                        }}
+                      />
+                    ))}
+                    {(!analysisData?.support_resistance?.resistance || analysisData.support_resistance.resistance.length === 0) && (
                       <Typography variant="body2" sx={{ color: colors.secondaryText, fontStyle: 'italic' }}>
                         No resistance levels available
                       </Typography>
