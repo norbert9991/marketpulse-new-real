@@ -111,28 +111,28 @@ export const API = {
   market: {
     analyze: (data) => {
       try {
-        // Clean the symbol by removing the "-X" suffix if present
+        // Get the original symbol
         const originalSymbol = data.symbol;
-        let cleanSymbol = data.symbol;
+        let formattedSymbol = data.symbol;
         
         if (typeof data.symbol === 'string') {
-          // First method: Split at -X and take first part
+          // Format for Yahoo Finance - change "-X" to "=X"
           if (data.symbol.includes('-X')) {
-            cleanSymbol = data.symbol.split('-X')[0];
+            formattedSymbol = data.symbol.replace('-X', '=X');
           }
           
           // Safety check: Make sure we don't send an empty string
-          if (!cleanSymbol) {
-            cleanSymbol = originalSymbol;
+          if (!formattedSymbol) {
+            formattedSymbol = originalSymbol;
           }
         }
         
         // Extensive debug logging
         console.log('[API] analyze - Original Symbol:', originalSymbol);
-        console.log('[API] analyze - Cleaned Symbol:', cleanSymbol);
-        console.log('[API] analyze - Full URL:', `${API_URL}/api/market-analysis/${cleanSymbol}`);
+        console.log('[API] analyze - Formatted Symbol:', formattedSymbol);
+        console.log('[API] analyze - Full URL:', `${API_URL}/api/market-analysis/${formattedSymbol}`);
         
-        return axiosInstance.get(`/api/market-analysis/${cleanSymbol}`);
+        return axiosInstance.get(`/api/market-analysis/${formattedSymbol}`);
       } catch (error) {
         console.error('[API] Error in analyze:', error);
         return Promise.reject(error);
