@@ -264,19 +264,32 @@ const Market = () => {
 
   // Calculate sentiment based on analysis data
   const getSentimentAnalysis = () => {
-    if (!analysisData) return mockData.sentimentAnalysis;
+    if (!analysisData || !analysisData.sentiment) {
+      console.log('Using mock sentiment data since actual data is missing');
+      return mockData.sentimentAnalysis;
+    }
 
-    const sentiment = analysisData.sentiment;
-    if (!sentiment) return mockData.sentimentAnalysis;
-
+    // Safely extract sentiment data with defaults for missing values
+    const sentiment = analysisData.sentiment || {};
+    
+    // Check that all required properties exist, if not use mock data
+    if (typeof sentiment.news_sentiment === 'undefined' || 
+        typeof sentiment.social_sentiment === 'undefined') {
+      console.log('Sentiment data is incomplete, using mock data');
+      return mockData.sentimentAnalysis;
+    }
+    
+    // Convert values and provide defaults as needed
     return {
-      overall: sentiment.overall,
-      confidence: sentiment.confidence,
-      newsSentiment: (sentiment.news_sentiment + 1) / 2, // Convert from -1 to 1 range to 0 to 1
-      socialSentiment: (sentiment.social_sentiment + 1) / 2,
-      marketMood: sentiment.market_mood,
-      newsCount: sentiment.news_count,
-      socialCount: sentiment.social_count
+      overall: sentiment.overall || 'Neutral',
+      confidence: sentiment.confidence || 50,
+      newsSentiment: typeof sentiment.news_sentiment === 'number' ? 
+        (sentiment.news_sentiment + 1) / 2 : 0.5, // Convert from -1 to 1 range to 0 to 1
+      socialSentiment: typeof sentiment.social_sentiment === 'number' ? 
+        (sentiment.social_sentiment + 1) / 2 : 0.5,
+      marketMood: sentiment.market_mood || 'Neutral',
+      newsCount: sentiment.news_count || 0,
+      socialCount: sentiment.social_count || 0
     };
   };
 
