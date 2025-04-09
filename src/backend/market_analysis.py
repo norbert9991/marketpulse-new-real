@@ -10,16 +10,18 @@ import os
 
 def store_price_data(symbol, historical_data):
     """Store price data in MySQL database"""
+    conn = None
+    cursor = None
     try:
-        db = db_manager.get_connection()
-        cursor = db.cursor(dictionary=True)
+        conn = db_manager.get_connection()
+        cursor = conn.cursor()
         
         # Store support and resistance levels
         support_levels = historical_data.get('support_resistance', {}).get('support', [])
         resistance_levels = historical_data.get('support_resistance', {}).get('resistance', [])
         
         # Begin transaction
-        db.start_transaction()
+        conn.begin()
         
         # Store price history
         historical_prices = historical_data.get('historical_data', {})
@@ -30,39 +32,37 @@ def store_price_data(symbol, historical_data):
         closes = historical_prices.get('close', [])
         
         for i, date in enumerate(dates):
-            cursor.execute('''
+            cursor.execute("""
                 INSERT INTO price_history 
                 (symbol, open_price, high_price, low_price, close_price, timestamp, created_at)
                 VALUES (%s, %s, %s, %s, %s, %s, NOW())
-                ON DUPLICATE KEY UPDATE
-                open_price = VALUES(open_price),
-                high_price = VALUES(high_price),
-                low_price = VALUES(low_price),
-                close_price = VALUES(close_price),
+                ON CONFLICT (symbol, timestamp) DO UPDATE SET
+                open_price = EXCLUDED.open_price,
+                high_price = EXCLUDED.high_price,
+                low_price = EXCLUDED.low_price,
+                close_price = EXCLUDED.close_price,
                 created_at = NOW()
-            ''', (symbol, opens[i], highs[i], lows[i], closes[i], date))
+            """, (symbol, opens[i], highs[i], lows[i], closes[i], date))
         
         # Update support levels
         for level in support_levels:
-            cursor.execute('''
+            cursor.execute("""
                 INSERT INTO support_resistance 
                 (symbol, level_type, level_value, updated_at)
                 VALUES (%s, %s, %s, NOW())
-                ON DUPLICATE KEY UPDATE
-                level_value = VALUES(level_value),
+                ON CONFLICT (symbol, level_type, level_value) DO UPDATE SET
                 updated_at = NOW()
-            ''', (symbol, 'support', level))
+            """, (symbol, 'support', level))
         
         # Update resistance levels
         for level in resistance_levels:
-            cursor.execute('''
+            cursor.execute("""
                 INSERT INTO support_resistance 
                 (symbol, level_type, level_value, updated_at)
                 VALUES (%s, %s, %s, NOW())
-                ON DUPLICATE KEY UPDATE
-                level_value = VALUES(level_value),
+                ON CONFLICT (symbol, level_type, level_value) DO UPDATE SET
                 updated_at = NOW()
-            ''', (symbol, 'resistance', level))
+            """, (symbol, 'resistance', level))
         
         # Store price predictions
         predictions = historical_data.get('predictions', [])
@@ -71,30 +71,30 @@ def store_price_data(symbol, historical_data):
         end_date = datetime.now()
         for i, pred in enumerate(predictions):
             prediction_date = end_date + timedelta(days=i+1)
-            cursor.execute('''
+            cursor.execute("""
                 INSERT INTO price_predictions 
                 (symbol, prediction_date, predicted_price, created_at)
                 VALUES (%s, %s, %s, NOW())
-                ON DUPLICATE KEY UPDATE
-                predicted_price = VALUES(predicted_price),
+                ON CONFLICT (symbol, prediction_date) DO UPDATE SET
+                predicted_price = EXCLUDED.predicted_price,
                 created_at = NOW()
-            ''', (symbol, prediction_date.strftime('%Y-%m-%d'), pred))
+            """, (symbol, prediction_date.strftime('%Y-%m-%d'), pred))
         
         # Store technical indicators
         technical_indicators = historical_data.get('technical_indicators', {})
-        cursor.execute('''
+        cursor.execute("""
             INSERT INTO technical_indicators 
             (symbol, rsi, macd, macd_signal, macd_hist, sma20, sma50, sma200)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            ON DUPLICATE KEY UPDATE
-            rsi = VALUES(rsi),
-            macd = VALUES(macd),
-            macd_signal = VALUES(macd_signal),
-            macd_hist = VALUES(macd_hist),
-            sma20 = VALUES(sma20),
-            sma50 = VALUES(sma50),
-            sma200 = VALUES(sma200)
-        ''', (
+            ON CONFLICT (symbol) DO UPDATE SET
+            rsi = EXCLUDED.rsi,
+            macd = EXCLUDED.macd,
+            macd_signal = EXCLUDED.macd_signal,
+            macd_hist = EXCLUDED.macd_hist,
+            sma20 = EXCLUDED.sma20,
+            sma50 = EXCLUDED.sma50,
+            sma200 = EXCLUDED.sma200
+        """, (
             symbol,
             technical_indicators.get('rsi', 0),
             technical_indicators.get('macd', 0),
@@ -105,14 +105,20 @@ def store_price_data(symbol, historical_data):
             technical_indicators.get('sma200', 0)
         ))
         
-        db.commit()
+        conn.commit()
         cursor.close()
+        db_manager.release_connection(conn)
         return True
     except Exception as e:
-        if 'db' in locals() and 'cursor' in locals():
-            db.rollback()
-            cursor.close()
         print(f"Error storing price data: {e}")
+        if cursor:
+            cursor.close()
+        if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
+            db_manager.release_connection(conn)
         return False
 
 def analyze_stock(symbol):
@@ -216,34 +222,41 @@ def analyze_stock(symbol):
         store_price_data(symbol, response)
         
         # Store or update analysis results in the market_data table
-        db = db_manager.get_connection()
-        cursor = db.cursor(dictionary=True)
+        conn = db_manager.get_connection()
+        cursor = conn.cursor()
         
-        # Check if the symbol already exists
-        cursor.execute('''
-            SELECT * FROM market_data WHERE symbol = %s
-        ''', (symbol,))
-        existing = cursor.fetchone()
-        
-        if existing:
-            # Update existing record
-            cursor.execute('''
-                UPDATE market_data SET 
-                    current_price = %s,
-                    change_percentage = %s,
-                    trend = %s,
-                    updated_at = NOW()
-                WHERE symbol = %s
-            ''', (response['current_price'], response['slope'], response['trend'], symbol))
-        else:
-            # Insert new record
-            cursor.execute('''
-                INSERT INTO market_data (symbol, current_price, change_percentage, trend, updated_at) 
-                VALUES (%s, %s, %s, %s, NOW())
-            ''', (symbol, response['current_price'], response['slope'], response['trend']))
-        
-        db.commit()
-        cursor.close()
+        try:
+            # Check if the symbol already exists
+            cursor.execute("""
+                SELECT * FROM market_data WHERE symbol = %s
+            """, (symbol,))
+            existing = cursor.fetchone()
+            
+            if existing:
+                # Update existing record
+                cursor.execute("""
+                    UPDATE market_data SET 
+                        current_price = %s,
+                        change_percentage = %s,
+                        trend = %s,
+                        updated_at = NOW()
+                    WHERE symbol = %s
+                """, (response['current_price'], response['slope'], response['trend'], symbol))
+            else:
+                # Insert new record
+                cursor.execute("""
+                    INSERT INTO market_data (symbol, current_price, change_percentage, trend, updated_at) 
+                    VALUES (%s, %s, %s, %s, NOW())
+                """, (symbol, response['current_price'], response['slope'], response['trend']))
+            
+            conn.commit()
+            cursor.close()
+            db_manager.release_connection(conn)
+        except Exception as e:
+            print(f"Database error in analyze_stock: {e}")
+            cursor.close()
+            db_manager.release_connection(conn)
+            # Continue processing - we don't want to fail the entire analysis if DB storage fails
         
         return response
         

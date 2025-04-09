@@ -26,7 +26,6 @@ import {
 import { styled } from '@mui/system';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
-import api from '../utils/api'; // Import the API utility
 import { 
   Save as SaveIcon,
   Add as AddIcon,
@@ -38,6 +37,8 @@ import {
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon
 } from '@mui/icons-material';
+import { API } from '../axiosConfig';
+
 
 // Define theme colors to match the user components
 const colors = {
@@ -110,10 +111,8 @@ const AdminSettings = () => {
         return;
       }
 
-      // Use API utility instead of fetch with hardcoded URL
-      const response = await api.get('/admin/profile');
-
-      // Set admin data from response
+      const response = await API.admin.getProfile();
+      
       setCurrentAdmin(response.data.user);
       setFormData({
         username: response.data.user.username,
@@ -137,8 +136,7 @@ const AdminSettings = () => {
         return;
       }
 
-      // Use API utility instead of fetch with hardcoded URL
-      const response = await api.get('/admin/admins');
+      const response = await API.admin.getAdmins();
       
       setAdmins(response.data.admins);
     } catch (err) {
@@ -189,32 +187,29 @@ const AdminSettings = () => {
         }
       }
 
-      // Use API utility instead of fetch with hardcoded URL
-      const response = await api.put('/admin/update-profile', {
+      const response = await API.admin.updateProfile({
         username: formData.username,
         email: formData.email,
         currentPassword: formData.currentPassword,
         newPassword: formData.newPassword
       });
 
-      // Check response and update UI
-      if (response.data.status === 'success') {
-        setSuccess('Profile updated successfully');
-        
-        // Clear password fields
-        setFormData({
-          ...formData,
-          currentPassword: '',
-          newPassword: '',
-          confirmPassword: ''
-        });
-        
-        fetchCurrentAdmin();
-      } else {
-        setError(response.data.message || 'Failed to update profile');
-      }
+      setSuccess('Profile updated successfully');
+      setFormData({
+        ...formData,
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+      
+      // Update current admin data
+      setCurrentAdmin({
+        ...currentAdmin,
+        username: formData.username,
+        email: formData.email
+      });
     } catch (err) {
-      setError('Error updating profile: ' + (err.response?.data?.message || err.message));
+      setError('Failed to update profile: ' + (err.response?.data?.message || err.message));
     } finally {
       setSaving(false);
     }
@@ -226,59 +221,53 @@ const AdminSettings = () => {
     setNewAdminError('');
 
     try {
-      // Validate passwords
+      // Validate form
+      if (!newAdmin.username || !newAdmin.email || !newAdmin.password) {
+        throw new Error('All fields are required');
+      }
+
       if (newAdmin.password !== newAdmin.confirmPassword) {
         throw new Error('Passwords do not match');
       }
 
-      // Use API utility instead of fetch with hardcoded URL
-      const response = await api.post('/admin/add-admin', {
+      const response = await API.admin.addAdmin({
         username: newAdmin.username,
         email: newAdmin.email,
         password: newAdmin.password
       });
 
-      // Check response and update UI
-      if (response.data.status === 'success') {
-        // Reset form and close dialog
-        setNewAdmin({
-          username: '',
-          email: '',
-          password: '',
-          confirmPassword: ''
-        });
-        setShowAddAdminDialog(false);
-        
-        // Refresh admins list
-        fetchAdmins();
-      } else {
-        throw new Error(response.data.message || 'Failed to add admin');
-      }
+      setSuccess('Admin added successfully');
+      setShowAddAdminDialog(false);
+      
+      // Reset form
+      setNewAdmin({
+        username: '',
+        email: '',
+        password: '',
+        confirmPassword: ''
+      });
+      
+      // Refresh admin list
+      fetchAdmins();
     } catch (err) {
-      setNewAdminError('Error adding admin: ' + (err.response?.data?.message || err.message));
+      setNewAdminError('Failed to add admin: ' + (err.response?.data?.message || err.message));
     } finally {
       setNewAdminLoading(false);
     }
   };
 
   const handleDeleteAdmin = async (adminId) => {
-    if (!window.confirm('Are you sure you want to delete this admin?')) {
-      return;
-    }
-
     try {
-      // Use API utility instead of fetch with hardcoded URL
-      const response = await api.delete(`/admin/delete-admin/${adminId}`);
-
-      // Check response and update UI
-      if (response.data.status === 'success') {
-        // Refresh admins list
+      if (window.confirm('Are you sure you want to delete this admin?')) {
+        const response = await API.admin.deleteAdmin(adminId);
+        
+        setSuccess('Admin deleted successfully');
+        
+        // Refresh admin list
         fetchAdmins();
-      } else {
-        throw new Error(response.data.message || 'Failed to delete admin');
       }
     } catch (err) {
-      setError('Error deleting admin: ' + (err.response?.data?.message || err.message));
+      setError('Failed to delete admin: ' + (err.response?.data?.message || err.message));
     }
   };
 

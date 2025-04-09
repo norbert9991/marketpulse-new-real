@@ -20,7 +20,7 @@ def token_required(f):
             token = auth_header.split(' ')[1] if ' ' in auth_header else auth_header
             data = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
             conn = db_manager.get_connection()
-            cursor = conn.cursor(dictionary=True)
+            cursor = conn.cursor()
             cursor.execute("SELECT * FROM login WHERE user_id = %s", (data['user_id'],))
             current_user = cursor.fetchone()
             cursor.close()
@@ -68,7 +68,7 @@ def update_email(current_user):
     
     try:
         conn = db_manager.get_connection()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
         
         # Verify current password
         cursor.execute("SELECT pass FROM login WHERE user_id = %s", (current_user['user_id'],))
@@ -132,7 +132,7 @@ def update_password(current_user):
     
     try:
         conn = db_manager.get_connection()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
         
         # Verify current password
         cursor.execute("SELECT pass FROM login WHERE user_id = %s", (current_user['user_id'],))
@@ -179,7 +179,7 @@ def delete_account(current_user):
     
     try:
         conn = db_manager.get_connection()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
         
         # Verify password
         cursor.execute("SELECT pass FROM login WHERE user_id = %s", (current_user['user_id'],))

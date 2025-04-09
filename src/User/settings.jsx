@@ -24,8 +24,7 @@ import LockIcon from '@mui/icons-material/Lock';
 import EmailIcon from '@mui/icons-material/Email';
 import SecurityIcon from '@mui/icons-material/Security';
 import DeleteIcon from '@mui/icons-material/Delete';
-import axios from 'axios';
-import api from '../utils/api'; // Import the API utility
+import { API } from '../axiosConfig';
 
 // Forex Trading Color Palette
 const colors = {
@@ -60,25 +59,20 @@ const Settings = () => {
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
-    fetchUserProfile();
+    fetchUserData();
   }, []);
 
-  const fetchUserProfile = async () => {
+  const fetchUserData = async () => {
     try {
-      // Use API utility instead of axios with hardcoded URL
-      const userResponse = await api.get('/auth/me');
-      
-      if (userResponse.data && userResponse.data.user) {
-        setUser(userResponse.data.user);
-        setEmail(userResponse.data.user.email || '');
-        setUsername(userResponse.data.user.username || '');
-      } else {
-        setMessage({ type: 'error', text: 'Failed to load user data' });
-      }
+      setLoading(true);
+      const userResponse = await API.auth.me();
+      setUser(userResponse.data.user);
+      setEmail(userResponse.data.user.email);
+      setUsername(userResponse.data.user.username);
+      setLoading(false);
     } catch (error) {
-      console.error('Error fetching profile:', error);
-      setMessage({ type: 'error', text: 'Failed to load profile data' });
-    } finally {
+      console.error('Error fetching user data:', error);
+      setMessage({ type: 'error', text: 'Failed to load user data' });
       setLoading(false);
     }
   };
@@ -87,26 +81,18 @@ const Settings = () => {
     e.preventDefault();
     setProcessing(true);
     try {
-      // Use API utility instead of axios with hardcoded URL
-      const response = await api.put('/settings/update-email', {
-        email,
-        password: currentPassword
+      const response = await API.settings.updateEmail({
+        current_password: currentPassword,
+        new_email: email
       });
       
-      if (response.data.status === 'success') {
-        setMessage({
-          type: 'success',
-          text: response.data.message || 'Email updated successfully'
-        });
-        setCurrentPassword('');
-        setOpenEmailDialog(false);
-        fetchUserProfile();
-      } else {
-        setMessage({
-          type: 'error',
-          text: response.data.message || 'Failed to update email'
-        });
-      }
+      setMessage({
+        type: 'success',
+        text: response.data.message || 'Email updated successfully'
+      });
+      setCurrentPassword('');
+      setOpenEmailDialog(false);
+      fetchUserData();
     } catch (error) {
       console.error('Error updating email:', error);
       setMessage({ 
@@ -133,27 +119,19 @@ const Settings = () => {
 
     setProcessing(true);
     try {
-      // Use API utility instead of axios with hardcoded URL
-      const response = await api.put('/settings/update-password', {
-        currentPassword,
-        newPassword
+      const response = await API.settings.updatePassword({
+        current_password: currentPassword,
+        new_password: newPassword
       });
       
-      if (response.data.status === 'success') {
-        setMessage({
-          type: 'success',
-          text: response.data.message || 'Password updated successfully'
-        });
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
-        setOpenPasswordDialog(false);
-      } else {
-        setMessage({
-          type: 'error',
-          text: response.data.message || 'Failed to update password'
-        });
-      }
+      setMessage({
+        type: 'success',
+        text: response.data.message || 'Password updated successfully'
+      });
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setOpenPasswordDialog(false);
     } catch (error) {
       console.error('Error updating password:', error);
       setMessage({ 
@@ -165,35 +143,28 @@ const Settings = () => {
     }
   };
 
-  const handleDeleteAccount = async (e) => {
-    e.preventDefault();
+  const handleDeleteAccount = async () => {
+    if (!deletePassword) {
+      setMessage({ type: 'error', text: 'Please enter your password to confirm account deletion' });
+      return;
+    }
+
     setProcessing(true);
     try {
-      // Use API utility instead of axios with hardcoded URL
-      const response = await api.delete('/settings/delete-account', {
-        data: { password: deletePassword }
-      });
+      await API.settings.deleteAccount();
       
-      if (response.data.status === 'success') {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        navigate('/login', { state: { message: 'Account deleted successfully' } });
-      } else {
-        setMessage({
-          type: 'error',
-          text: response.data.message || 'Failed to delete account'
-        });
-        setOpenDeleteDialog(false);
-      }
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      navigate('/');
     } catch (error) {
       console.error('Error deleting account:', error);
       setMessage({ 
         type: 'error', 
         text: error.response?.data?.message || 'Failed to delete account' 
       });
-      setOpenDeleteDialog(false);
     } finally {
       setProcessing(false);
+      setOpenDeleteDialog(false);
     }
   };
 

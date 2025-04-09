@@ -1,71 +1,118 @@
-# Getting Started with Create React App
+# MarketPulse
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A comprehensive market analysis and trading platform.
 
-## Available Scripts
+## Project Overview
 
-In the project directory, you can run:
+MarketPulse is a web application that provides market analysis, trading capabilities, and portfolio management features.
 
-### `npm start`
+## Features
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- Real-time market data
+- Technical analysis tools
+- User authentication and authorization
+- Portfolio management
+- Admin dashboard
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Tech Stack
 
-### `npm test`
+- Frontend: React, Material-UI
+- Backend: Flask (Python)
+- Database: PostgreSQL
+- Deployment: Render
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Deployment Instructions for Render
 
-### `npm run build`
+### Prerequisites
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+- A Render account
+- Git repository with your code
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Deployment Steps
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+1. **Push your code to a Git repository**
+   - Ensure all code is committed and pushed to your repository
 
-### `npm run eject`
+2. **Create a PostgreSQL database on Render**
+   - Go to the Render Dashboard
+   - Click "New" > "PostgreSQL"
+   - Configure your database (name, region, plan)
+   - Note the connection details for later use
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+3. **Deploy the Backend Service**
+   - In the Render Dashboard, click "New" > "Web Service"
+   - Connect your Git repository
+   - Configure the service:
+     - Name: `marketpulse-api`
+     - Environment: Python
+     - Region: Choose your preferred region
+     - Branch: main (or your deployment branch)
+     - Build Command: `cd src/backend && pip install -r requirements.txt`
+     - Start Command: `cd src/backend && gunicorn main:app`
+   - Add the following environment variables:
+     - `SECRET_KEY`: A random secret key
+     - `DATABASE_URL`: Will be automatically provided if using Render's PostgreSQL
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+4. **Deploy the Frontend Service**
+   - In the Render Dashboard, click "New" > "Static Site"
+   - Connect your Git repository
+   - Configure the service:
+     - Name: `marketpulse-frontend`
+     - Environment: Node
+     - Region: Choose your preferred region
+     - Branch: main (or your deployment branch)
+     - Build Command: `npm install && npm run build`
+     - Publish Directory: `build`
+   - Add the following environment variable:
+     - `REACT_APP_API_URL`: URL of your backend API (e.g., `https://marketpulse-api.onrender.com`)
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+5. **Initialize the Database**
+   - Use the PostgreSQL console in Render to run the SQL commands from `finals.sql`
+   - Or connect to the database using a PostgreSQL client and run the script
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+### Alternative: One-Click Deployment
 
-## Learn More
+You can also deploy the entire application (frontend, backend, and database) with a single click using the `render.yaml` file in this repository.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+1. Fork this repository
+2. Click the "Deploy to Render" button in your fork
+3. Follow the prompts to configure your services
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Local Development
 
-### Code Splitting
+### Backend Setup
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+1. Navigate to the backend directory:
+   ```
+   cd src/backend
+   ```
 
-### Analyzing the Bundle Size
+2. Install dependencies:
+   ```
+   pip install -r requirements.txt
+   ```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+3. Set up environment variables:
+   - Copy `.env.sample` to `.env`
+   - Update the values in `.env` file
 
-### Making a Progressive Web App
+4. Run the Flask server:
+   ```
+   python main.py
+   ```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+### Frontend Setup
 
-### Advanced Configuration
+1. Install dependencies:
+   ```
+   npm install
+   ```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+2. Start the development server:
+   ```
+   npm start
+   ```
 
-### Deployment
+## License
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
-"# Marketpulse" 
+This project is licensed under the MIT License - see the LICENSE file for details.

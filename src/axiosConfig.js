@@ -173,8 +173,38 @@ export const API = {
   // Favorites endpoints
   favorites: {
     getAll: () => axiosInstance.get('/api/favorites'),
-    toggle: (data) => axiosInstance.post('/api/favorites/toggle', data),
-    check: (symbol) => axiosInstance.get(`/api/favorites/check/${symbol}`),
+    toggle: (data) => {
+      try {
+        // Clean the symbol as a precaution
+        let cleanData = {...data};
+        
+        if (data.symbol && typeof data.symbol === 'string' && data.symbol.includes('-X')) {
+          cleanData.symbol = data.symbol.split('-X')[0];
+          console.log('[API] toggle favorite - Original Symbol:', data.symbol, 'Cleaned to:', cleanData.symbol);
+        }
+        
+        return axiosInstance.post('/api/favorites/toggle', cleanData);
+      } catch (error) {
+        console.error('[API] Error in favorites.toggle:', error);
+        return Promise.reject(error);
+      }
+    },
+    check: (symbol) => {
+      try {
+        // Clean the symbol for checking favorites
+        let cleanSymbol = symbol;
+        
+        if (typeof symbol === 'string' && symbol.includes('-X')) {
+          cleanSymbol = symbol.split('-X')[0];
+          console.log('[API] check favorite - Original Symbol:', symbol, 'Cleaned to:', cleanSymbol);
+        }
+        
+        return axiosInstance.get(`/api/favorites/check/${cleanSymbol}`);
+      } catch (error) {
+        console.error('[API] Error in favorites.check:', error);
+        return Promise.reject(error);
+      }
+    },
   },
   
   // Admin endpoints

@@ -9,12 +9,21 @@ from market_analysis_routes import market_analysis_bp  # Import the market analy
 from admin_settings_routes import admin_settings_bp  # Import the admin settings blueprint
 from db_connection import db_manager
 from market_analysis import analyze_stock
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key-here'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fb4f4f255fb38f23a4d7379be97c837b')
 
-# Configure CORS
-CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
+# Configure CORS to allow requests from any origin to ensure maximum compatibility
+CORS(app, 
+     resources={r"/*": {"origins": "*"}}, 
+     supports_credentials=True,
+     allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Origin"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
 # Register blueprints
 app.register_blueprint(auth_bp)
@@ -23,6 +32,21 @@ app.register_blueprint(dashboard_bp)
 app.register_blueprint(settings_bp)  # Register the settings blueprint
 app.register_blueprint(market_analysis_bp)  # Register the market analysis blueprint
 app.register_blueprint(admin_settings_bp)  # Register the admin settings blueprint
+
+# Root route for testing
+@app.route('/', methods=['GET'])
+def index():
+    return jsonify({
+        "message": "MarketPulse API is running",
+        "endpoints": {
+            "auth": "/api/auth",
+            "admin": "/api/admin",
+            "dashboard": "/api/dashboard",
+            "settings": "/api/settings",
+            "market_analysis": "/api/market-analysis",
+            "health": "/health"
+        }
+    })
 
 @app.route('/api/market/analyze', methods=['POST'])
 def analyze_market():
@@ -37,7 +61,14 @@ def analyze_market():
 @app.teardown_appcontext
 def close_db_connection(exception=None):
     """Ensure database connection is closed when app context tears down"""
-    db_manager.disconnect()
+    db_manager.close_all_connections()
+
+# Health check endpoint for Render
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({"status": "healthy"}), 200
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    # Use PORT from environment variables for Render compatibility
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=(os.environ.get('FLASK_ENV') == 'development'))

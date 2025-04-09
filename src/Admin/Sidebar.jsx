@@ -1,5 +1,5 @@
 // Sidebar.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Typography, Button, CircularProgress } from '@mui/material';
 import { styled } from '@mui/system';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -43,13 +43,21 @@ const Sidebar = () => {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('');
 
+  // Set active tab based on current path when component mounts
+  useEffect(() => {
+    const currentPath = location.pathname;
+    setActiveTab(currentPath);
+  }, [location.pathname]);
+
   const handleTabClick = (path) => {
     setLoading(true);
     setActiveTab(path);
     
-    // Simulate loading time
+    // Navigate using the router
+    navigate(path);
+    
+    // Reset loading after a short delay
     setTimeout(() => {
-      navigate(path);
       setLoading(false);
     }, 500);
   };

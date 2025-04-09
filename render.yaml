@@ -1,18 +1,54 @@
+# render.yaml
 services:
-  # Backend service as Docker
   - type: web
-    name: marketpulse-backend
-    runtime: docker
-    dockerfilePath: ./Dockerfile
+    name: marketpulse-api
+    env: python
+    region: oregon
+    buildCommand: pip install -r requirements.txt
+    startCommand: cd src/backend && PYTHONPATH=. gunicorn --bind 0.0.0.0:$PORT main:app
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.4
-
-  # Frontend service (if your frontend is separate)
+        value: 3.9.18
+      - key: SECRET_KEY
+        value: fb4f4f255fb38f23a4d7379be97c837b
+      - key: DATABASE_URL
+        fromDatabase:
+          name: finals_gzev
+          property: connectionString
+      - key: DB_HOST
+        value: dpg-cvpt2b8d13ps79866gc0-a
+      - key: DB_USER
+        value: finals_gzev_user
+      - key: DB_PASSWORD
+        value: pnzrRDareyMyh7Z0g7BGCHfDE7eSjdjV
+      - key: DB_NAME
+        value: finals_gzev
+      - key: DB_PORT
+        value: 5432
+      - key: FRONTEND_URL
+        value: https://marketpulse-new-real-static.onrender.com
+  
   - type: web
     name: marketpulse-frontend
+    env: static
+    region: oregon
     buildCommand: npm install && npm run build
-    startCommand: npm start
+    staticPublishPath: ./build
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-store
     envVars:
-      - key: NODE_VERSION
-        value: 16.20.0 
+      - key: REACT_APP_API_URL
+        value: https://marketpulse-new-real.onrender.com
+
+# Using existing database instead of creating a new one
+# databases:
+#   - name: marketpulse-db
+#     region: ohio
+#     plan: free
+#     databaseName: finals 
