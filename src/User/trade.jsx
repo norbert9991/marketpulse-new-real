@@ -42,6 +42,8 @@ const Trade = () => {
   const [currentPrice, setCurrentPrice] = useState(null);
   const [isBuying, setIsBuying] = useState(true);
   const [trades, setTrades] = useState([]);
+  const [simulationAmount, setSimulationAmount] = useState(10000);
+  const [tradingType, setTradingType] = useState('short-term');
 
   const totalBalance = availableBalance + lockedMargin;
 
@@ -131,19 +133,19 @@ const Trade = () => {
     };
   }, []);
 
-  // Simulate live market data
+  // Simulate rapid market changes for short-term trading
   useEffect(() => {
-    if (!chartRef.current || !candleSeriesRef.current) return;
+    if (!chartRef.current || !candleSeriesRef.current || tradingType !== 'short-term') return;
 
     let intervalId;
     let lastClose = 1.08; // Starting price for EUR/USD
     
     const generateRandomCandle = () => {
       const open = lastClose;
-      const change = (Math.random() - 0.5) * 0.005;
+      const change = (Math.random() - 0.5) * 0.01; // Larger change for more volatility
       const close = open + change;
-      const high = Math.max(open, close) + Math.random() * 0.002;
-      const low = Math.min(open, close) - Math.random() * 0.002;
+      const high = Math.max(open, close) + Math.random() * 0.005;
+      const low = Math.min(open, close) - Math.random() * 0.005;
       lastClose = close;
       
       return {
@@ -175,26 +177,11 @@ const Trade = () => {
       lineSeriesRef.current.update({ time, value: newCandle.close });
     };
 
-    // Initial data
-    const initialData = [];
-    const now = new Date();
-    for (let i = 100; i >= 0; i--) {
-      const time = (now.getTime() / 1000) - i * 60;
-      initialData.push({
-        time,
-        ...generateRandomCandle(),
-      });
-    }
-    
-    setPriceData(initialData);
-    candleSeriesRef.current.setData(initialData);
-    lineSeriesRef.current.setData(initialData.map(d => ({ time: d.time, value: d.close })));
-    
-    // Start live updates
-    intervalId = setInterval(generateData, 1000);
+    // Start live updates with a faster interval
+    intervalId = setInterval(generateData, 500); // Faster updates for short-term
     
     return () => clearInterval(intervalId);
-  }, [selectedPair]);
+  }, [selectedPair, tradingType]);
 
   const calculatePnl = (position, currentPrice) => {
     const priceDiff = position.type === 'buy' 
@@ -203,6 +190,7 @@ const Trade = () => {
     return priceDiff * position.amount * position.leverage;
   };
 
+  // Quick trade execution logic
   const handleTrade = () => {
     if (!currentPrice) return;
     
@@ -545,6 +533,85 @@ const Trade = () => {
               >
                 {position ? 'Close Position' : 'Place Trade'}
               </Button>
+            </Paper>
+
+            {/* Simulation Controls */}
+            <Paper 
+              sx={{ 
+                p: 3, 
+                backgroundColor: colors.cardBg,
+                border: `1px solid ${colors.borderColor}`,
+                borderRadius: '12px',
+                boxShadow: `0 4px 12px ${colors.shadowColor}`
+              }}
+            >
+              <Typography 
+                variant="h6" 
+                gutterBottom 
+                sx={{ 
+                  color: colors.primaryText,
+                  fontWeight: 'bold',
+                  mb: 3
+                }}
+              >
+                Simulation Controls
+              </Typography>
+              
+              <Box sx={{ textAlign: 'center', mb: 3 }}>
+                <Typography variant="h5" sx={{ color: colors.primaryText, mb: 2 }}>
+                  Set Your Simulation Amount
+                </Typography>
+                <TextField
+                  type="number"
+                  value={simulationAmount}
+                  onChange={(e) => setSimulationAmount(parseFloat(e.target.value))}
+                  sx={{ width: '200px', mb: 2 }}
+                  InputProps={{
+                    sx: {
+                      color: colors.primaryText,
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.borderColor,
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.accentBlue,
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.accentBlue,
+                      },
+                    },
+                  }}
+                />
+                <Typography variant="h6" sx={{ color: colors.primaryText, mb: 2 }}>
+                  Choose Your Trading Type
+                </Typography>
+                <Button
+                  variant={tradingType === 'short-term' ? 'contained' : 'outlined'}
+                  onClick={() => setTradingType('short-term')}
+                  sx={{
+                    mr: 1,
+                    backgroundColor: tradingType === 'short-term' ? colors.accentBlue : 'transparent',
+                    color: tradingType === 'short-term' ? colors.primaryText : colors.accentBlue,
+                    '&:hover': {
+                      backgroundColor: tradingType === 'short-term' ? colors.accentBlue : `${colors.accentBlue}20`,
+                    },
+                  }}
+                >
+                  Short Term
+                </Button>
+                <Button
+                  variant={tradingType === 'long-term' ? 'contained' : 'outlined'}
+                  onClick={() => setTradingType('long-term')}
+                  sx={{
+                    backgroundColor: tradingType === 'long-term' ? colors.accentBlue : 'transparent',
+                    color: tradingType === 'long-term' ? colors.primaryText : colors.accentBlue,
+                    '&:hover': {
+                      backgroundColor: tradingType === 'long-term' ? colors.accentBlue : `${colors.accentBlue}20`,
+                    },
+                  }}
+                >
+                  Long Term
+                </Button>
+              </Box>
             </Paper>
           </Box>
 
