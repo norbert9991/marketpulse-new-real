@@ -34,6 +34,7 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import InfoIcon from '@mui/icons-material/Info';
 import SettingsIcon from '@mui/icons-material/Settings';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import Sidebar from './Sidebar';
 import { API } from '../axiosConfig';
 
@@ -767,6 +768,11 @@ const Market = () => {
                 <Chip label="1H" size="small" sx={{ backgroundColor: colors.accentBlue, color: colors.primaryText }} />
                 <Chip label="4H" size="small" sx={{ backgroundColor: colors.cardBg, color: colors.secondaryText }} />
                 <Chip label="1D" size="small" sx={{ backgroundColor: colors.cardBg, color: colors.secondaryText }} />
+                <Tooltip title="Price history shows how the currency pair has traded over time. This chart helps identify trends and potential trading opportunities." arrow>
+                  <IconButton size="small" sx={{ color: colors.secondaryText }}>
+                    <HelpOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
               </Box>
             </Box>
             <Box sx={{ flex: 1, minHeight: 400 }}>
@@ -821,9 +827,16 @@ const Market = () => {
                 flexDirection: 'column'
               }}
             >
-              <Typography variant="h6" sx={{ color: colors.primaryText, mb: 2 }}>
-                Technical Indicators
-              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6" sx={{ color: colors.primaryText }}>
+                  Technical Indicators
+                </Typography>
+                <Tooltip title="Technical indicators are mathematical calculations based on price and volume data that help predict future price movements and generate trading signals." arrow>
+                  <IconButton size="small" sx={{ color: colors.secondaryText }}>
+                    <HelpOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
               
               {/* RSI Indicator */}
               <Box sx={{ mb: 3 }}>
@@ -831,15 +844,16 @@ const Market = () => {
                   <Typography variant="subtitle1" sx={{ color: colors.secondaryText }}>
                       RSI (14)
                     </Typography>
+                  <Tooltip title="RSI (Relative Strength Index) measures the speed and change of price movements on a scale of 0-100. Above 70 suggests overbought conditions (price may fall), below 30 suggests oversold conditions (price may rise)." arrow>
+                    <IconButton size="small" sx={{ color: colors.secondaryText, ml: 0.5, p: 0 }}>
+                      <HelpOutlineIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
                   <Typography variant="h5" sx={{ 
-                    color: getTechnicalIndicators().rsi > 70 
-                      ? colors.sellRed 
-                      : getTechnicalIndicators().rsi < 30 
-                        ? colors.buyGreen 
-                        : colors.primaryText,
+                    color: getRsiColor(getTechnicalIndicators().rsi),
                     fontWeight: 'bold'
                   }}>
-                    {getTechnicalIndicators().rsi.toFixed(1)}
+                    {getTechnicalIndicators().rsi.toFixed(2)}
                       </Typography>
                     </Box>
                 <Box sx={{ 
@@ -883,8 +897,13 @@ const Market = () => {
                     <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
                         MACD Line
                     </Typography>
+                      <Tooltip title="MACD (Moving Average Convergence Divergence) is a trend-following momentum indicator that shows the relationship between two moving averages. When MACD crosses above its signal line, it's a bullish signal; when it crosses below, it's bearish." arrow>
+                        <IconButton size="small" sx={{ color: colors.secondaryText, ml: 0.5, p: 0 }}>
+                          <HelpOutlineIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                       <Typography variant="h6" sx={{ 
-                        color: getTechnicalIndicators().macd > 0 ? colors.buyGreen : colors.sellRed,
+                        color: getMacdColor(getTechnicalIndicators().macd, getTechnicalIndicators().macdSignal),
                         fontWeight: 'bold'
                       }}>
                         {getTechnicalIndicators().macd.toFixed(4)}
@@ -952,6 +971,11 @@ const Market = () => {
                     <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
                         SMA 20
                     </Typography>
+                      <Tooltip title="Moving Averages smooth out price data to create a single flowing line, making it easier to identify trends. They represent the average price over a specific time period. When price is above the MA, it indicates an uptrend; when below, a downtrend." arrow>
+                        <IconButton size="small" sx={{ color: colors.secondaryText }}>
+                          <HelpOutlineIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                       <Typography variant="h6" sx={{ fontWeight: 'bold', color: colors.primaryText }}>
                         {getTechnicalIndicators().sma20.toFixed(4)}
                         </Typography>
@@ -968,6 +992,11 @@ const Market = () => {
                       <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
                         SMA 50
                       </Typography>
+                      <Tooltip title="Moving Averages smooth out price data to create a single flowing line, making it easier to identify trends. They represent the average price over a specific time period. When price is above the MA, it indicates an uptrend; when below, a downtrend." arrow>
+                        <IconButton size="small" sx={{ color: colors.secondaryText }}>
+                          <HelpOutlineIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                       <Typography variant="h6" sx={{ fontWeight: 'bold', color: colors.primaryText }}>
                         {getTechnicalIndicators().sma50.toFixed(4)}
                         </Typography>
@@ -984,6 +1013,11 @@ const Market = () => {
                       <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
                         SMA 200
                       </Typography>
+                      <Tooltip title="Moving Averages smooth out price data to create a single flowing line, making it easier to identify trends. They represent the average price over a specific time period. When price is above the MA, it indicates an uptrend; when below, a downtrend." arrow>
+                        <IconButton size="small" sx={{ color: colors.secondaryText }}>
+                          <HelpOutlineIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                       <Typography variant="h6" sx={{ fontWeight: 'bold', color: colors.primaryText }}>
                         {getTechnicalIndicators().sma200.toFixed(4)}
                         </Typography>

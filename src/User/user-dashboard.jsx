@@ -440,9 +440,16 @@ const UserDashboard = () => {
               boxShadow: `0 4px 12px ${colors.shadowColor}`
             }}
           >
-            <Typography variant="h6" sx={{ color: colors.primaryText, mb: 2 }}>
-              Favorite Markets
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6" sx={{ color: colors.primaryText }}>
+                Favorite Markets
+              </Typography>
+              <Tooltip title="To add currencies to your favorites, go to Market Analysis and click 'Add to Favorites' button for the currency pairs you want to track here." arrow>
+                <IconButton size="small" sx={{ color: colors.secondaryText, ml: 1 }}>
+                  <HelpOutlineIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Box>
             <Box sx={{ 
               display: 'flex', 
               flexWrap: 'wrap', 
