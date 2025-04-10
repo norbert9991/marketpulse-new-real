@@ -11,6 +11,7 @@ import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
 import CandlestickChartIcon from '@mui/icons-material/CandlestickChart';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 
 // Forex Trading Color Palette
 const colors = {
@@ -115,6 +116,131 @@ const Trade = () => {
     'AUD/USD', 'USD/CAD', 'NZD/USD', 'EUR/GBP'
   ];
 
+  // Add tutorial state
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [tutorialStep, setTutorialStep] = useState(1);
+  const maxTutorialSteps = 7;
+
+  // Tutorial component
+  const TutorialOverlay = () => {
+    // Tutorial content for each step
+    const tutorialContent = [
+      {
+        title: "Welcome to Trading Simulation!",
+        content: "This short tutorial will guide you through the basics of using the trading simulator. Click 'Next' to continue or 'Skip' to exit the tutorial.",
+        position: { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }
+      },
+      {
+        title: "Chart Overview",
+        content: "This is your price chart. It shows the historical and current price movements of your selected currency pair. You can switch between candlestick and line views using the controls at the top.",
+        position: { top: '30%', left: '50%', transform: 'translate(-50%, -50%)' }
+      },
+      {
+        title: "Technical Indicators",
+        content: "Below the chart are technical indicators like RSI and MACD that help you analyze price movements. These can signal potential buy or sell opportunities.",
+        position: { top: '70%', left: '50%', transform: 'translate(-50%, -50%)' }
+      },
+      {
+        title: "Market Orders",
+        content: "Use the Market tab to place immediate buy or sell orders at the current market price. Select your amount and leverage, then click the buy or sell button.",
+        position: { top: '50%', left: '25%', transform: 'translate(-50%, -50%)' }
+      },
+      {
+        title: "Limit & Stop Orders",
+        content: "Use the Limit/Stop tab to set orders that execute when the price reaches a specific level. Limit orders are used to buy low or sell high, while stop orders help manage risk.",
+        position: { top: '50%', left: '25%', transform: 'translate(-50%, -50%)' }
+      },
+      {
+        title: "Account Summary",
+        content: "The right panel shows your account balance, open positions, and trading history. Monitor your profits and losses here.",
+        position: { top: '30%', right: '20%', transform: 'translate(0, -50%)' }
+      },
+      {
+        title: "Ready to Trade!",
+        content: "You're all set to start trading! Remember this is a simulation, so feel free to experiment with different strategies without any real financial risk.",
+        position: { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }
+      }
+    ];
+
+    const currentTutorial = tutorialContent[tutorialStep - 1];
+
+    return (
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          zIndex: 9999,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center'
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <Paper
+          sx={{
+            position: 'absolute',
+            maxWidth: 400,
+            p: 3,
+            backgroundColor: colors.cardBg,
+            border: `1px solid ${colors.borderColor}`,
+            borderRadius: '12px',
+            boxShadow: `0 8px 24px rgba(0, 0, 0, 0.5)`,
+            ...currentTutorial.position
+          }}
+        >
+          <Typography variant="h6" sx={{ color: colors.primaryText, mb: 2, display: 'flex', alignItems: 'center' }}>
+            <BarChartIcon sx={{ mr: 1, color: colors.accentBlue }} />
+            {currentTutorial.title}
+          </Typography>
+          <Typography sx={{ color: colors.secondaryText, mb: 3 }}>
+            {currentTutorial.content}
+          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Button
+              variant="text"
+              onClick={() => setShowTutorial(false)}
+              sx={{ color: colors.secondaryText }}
+            >
+              {tutorialStep === maxTutorialSteps ? 'Close' : 'Skip'}
+            </Button>
+            <Box>
+              {tutorialStep > 1 && (
+                <Button
+                  variant="outlined"
+                  onClick={() => setTutorialStep(prev => prev - 1)}
+                  sx={{ mr: 1, borderColor: colors.borderColor, color: colors.primaryText }}
+                >
+                  Back
+                </Button>
+              )}
+              {tutorialStep < maxTutorialSteps ? (
+                <Button
+                  variant="contained"
+                  onClick={() => setTutorialStep(prev => prev + 1)}
+                  sx={{ backgroundColor: colors.accentBlue }}
+                >
+                  Next
+                </Button>
+              ) : (
+                <Button
+                  variant="contained"
+                  onClick={() => setShowTutorial(false)}
+                  sx={{ backgroundColor: colors.accentBlue }}
+                >
+                  Start Trading
+                </Button>
+              )}
+            </Box>
+          </Box>
+        </Paper>
+      </Box>
+    );
+  };
+
   // Initialize chart with advanced features
   useEffect(() => {
     if (!chartContainerRef.current || step !== 3) return;
@@ -184,17 +310,17 @@ const Trade = () => {
 
     // Add main price series (candlestick or line based on user preference)
     if (chartType === 'candles') {
-      candleSeriesRef.current = chart.addCandlestickSeries({
+    candleSeriesRef.current = chart.addCandlestickSeries({
         upColor: colors.buyGreen,
         downColor: colors.sellRed,
-        borderVisible: false,
+      borderVisible: false,
         wickUpColor: colors.buyGreen,
         wickDownColor: colors.sellRed,
-      });
+    });
     } else {
-      lineSeriesRef.current = chart.addLineSeries({
+    lineSeriesRef.current = chart.addLineSeries({
         color: colors.accentBlue,
-        lineWidth: 2,
+      lineWidth: 2,
         crosshairMarkerVisible: true,
         crosshairMarkerRadius: 4,
         crosshairMarkerBorderColor: colors.primaryText,
@@ -485,9 +611,9 @@ const Trade = () => {
       
       // Update chart with new data
       if (chartType === 'candles' && candleSeriesRef.current) {
-        candleSeriesRef.current.update(newCandle);
+      candleSeriesRef.current.update(newCandle);
       } else if (lineSeriesRef.current) {
-        lineSeriesRef.current.update({ time, value: newCandle.close });
+      lineSeriesRef.current.update({ time, value: newCandle.close });
       }
       
       // Update MA series if visible
@@ -553,9 +679,9 @@ const Trade = () => {
     
     // Update chart with initial data
     if (chartType === 'candles' && candleSeriesRef.current) {
-      candleSeriesRef.current.setData(initialData);
+    candleSeriesRef.current.setData(initialData);
     } else if (lineSeriesRef.current) {
-      lineSeriesRef.current.setData(initialData.map(d => ({ time: d.time, value: d.close })));
+    lineSeriesRef.current.setData(initialData.map(d => ({ time: d.time, value: d.close })));
     }
     
     // Update MA series with initial data
@@ -839,11 +965,25 @@ const Trade = () => {
     );
   };
 
+  // Add effect to show tutorial for first-time users
+  useEffect(() => {
+    if (step === 3 && tradingType === 'short-term') {
+      // Check if this is the first time (could use localStorage in a real app)
+      const hasSeenTutorial = localStorage.getItem('hasSeenShortTermTutorial');
+      if (!hasSeenTutorial) {
+        setShowTutorial(true);
+        localStorage.setItem('hasSeenShortTermTutorial', 'true');
+      }
+    }
+  }, [step, tradingType]);
+
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: colors.darkBg }}>
       <Sidebar />
       
-      <Box sx={{ flex: 1, p: 3, overflow: 'auto', ml: '250px' }}>
+      <Box sx={{ flex: 1, p: 3, overflow: 'auto', ml: '250px', position: 'relative' }}>
+        {showTutorial && <TutorialOverlay />}
+        
         {step === 1 && (
           // Step 1: Set simulation amount
           <Box sx={{ maxWidth: '600px', mx: 'auto', textAlign: 'center', mt: 5 }}>
@@ -1043,29 +1183,43 @@ const Trade = () => {
         
         {step === 3 && (
           <>
-            <Typography 
-              variant="h4" 
-              gutterBottom 
-              sx={{ 
-                color: colors.primaryText,
-                fontWeight: 'bold',
-                mb: 3
+        <Typography 
+          variant="h4" 
+          gutterBottom 
+          sx={{ 
+            color: colors.primaryText,
+            fontWeight: 'bold',
+            mb: 3,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}
+        >
+          <span>Forex Market Simulation {tradingType === 'short-term' ? '(Short Term)' : '(Long Term)'}</span>
+          <Tooltip title="Show Tutorial">
+            <IconButton 
+              onClick={() => {
+                setTutorialStep(1);
+                setShowTutorial(true);
               }}
+              sx={{ color: colors.accentBlue }}
             >
-              Forex Market Simulation {tradingType === 'short-term' ? '(Short Term)' : '(Long Term)'}
-            </Typography>
-            
-            <Box sx={{ display: 'flex', gap: 3, height: 'calc(100vh - 180px)' }}>
-              {/* Left Column - Chart and Trading Controls */}
-              <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3 }}>
-                {/* Chart Section */}
-                <Paper 
-                  sx={{ 
-                    p: 2, 
-                    flex: 1,
-                    backgroundColor: colors.cardBg,
-                    border: `1px solid ${colors.borderColor}`,
-                    borderRadius: '12px',
+              <HelpOutlineIcon />
+            </IconButton>
+          </Tooltip>
+        </Typography>
+        
+        <Box sx={{ display: 'flex', gap: 3, height: 'calc(100vh - 180px)' }}>
+          {/* Left Column - Chart and Trading Controls */}
+          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {/* Chart Section */}
+            <Paper 
+              sx={{ 
+                p: 2, 
+                flex: 1,
+                backgroundColor: colors.cardBg,
+                border: `1px solid ${colors.borderColor}`,
+                borderRadius: '12px',
                     boxShadow: `0 4px 12px ${colors.shadowColor}`,
                     display: 'flex',
                     flexDirection: 'column'
@@ -1284,29 +1438,29 @@ const Trade = () => {
                       />
                     </Box>
                   )}
-                </Paper>
-                
-                {/* Trading Controls */}
-                <Paper 
-                  sx={{ 
-                    p: 3, 
-                    backgroundColor: colors.cardBg,
-                    border: `1px solid ${colors.borderColor}`,
-                    borderRadius: '12px',
-                    boxShadow: `0 4px 12px ${colors.shadowColor}`
-                  }}
-                >
-                  <Typography 
-                    variant="h6" 
-                    gutterBottom 
-                    sx={{ 
-                      color: colors.primaryText,
-                      fontWeight: 'bold',
+            </Paper>
+            
+            {/* Trading Controls */}
+            <Paper 
+              sx={{ 
+                p: 3, 
+                backgroundColor: colors.cardBg,
+                border: `1px solid ${colors.borderColor}`,
+                borderRadius: '12px',
+                boxShadow: `0 4px 12px ${colors.shadowColor}`
+              }}
+            >
+              <Typography 
+                variant="h6" 
+                gutterBottom 
+                sx={{ 
+                  color: colors.primaryText,
+                  fontWeight: 'bold',
                       mb: 2
-                    }}
-                  >
+                }}
+              >
                     Short-Term Trading
-                  </Typography>
+              </Typography>
                   
                   <Tabs
                     value={activeTradingTab}
@@ -1345,244 +1499,244 @@ const Trade = () => {
                         </Typography>
                         {renderTooltip("Market orders are executed instantly at the best available price. They're used when you want to enter or exit a position quickly.")}
                       </Box>
-                      
-                      <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                        <FormControl sx={{ flex: 1 }}>
-                          <InputLabel id="pair-select-label" sx={{ color: colors.secondaryText }}>
-                            Currency Pair
-                          </InputLabel>
-                          <Select
-                            labelId="pair-select-label"
-                            value={selectedPair}
-                            label="Currency Pair"
-                            onChange={(e) => setSelectedPair(e.target.value)}
-                            sx={{ 
-                              color: colors.primaryText,
-                              '.MuiOutlinedInput-notchedOutline': {
-                                borderColor: colors.borderColor,
+              
+              <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                <FormControl sx={{ flex: 1 }}>
+                  <InputLabel id="pair-select-label" sx={{ color: colors.secondaryText }}>
+                    Currency Pair
+                  </InputLabel>
+                  <Select
+                    labelId="pair-select-label"
+                    value={selectedPair}
+                    label="Currency Pair"
+                    onChange={(e) => setSelectedPair(e.target.value)}
+                    sx={{ 
+                      color: colors.primaryText,
+                      '.MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.borderColor,
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.accentBlue,
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.accentBlue,
+                      },
+                    }}
+                    MenuProps={{
+                      PaperProps: {
+                        sx: {
+                          backgroundColor: colors.panelBg,
+                          border: `1px solid ${colors.borderColor}`,
+                          '& .MuiMenuItem-root': {
+                            color: colors.primaryText,
+                            '&:hover': {
+                              backgroundColor: colors.hoverBg,
+                            },
+                            '&.Mui-selected': {
+                              backgroundColor: colors.accentBlue,
+                              '&:hover': {
+                                backgroundColor: colors.accentBlue,
                               },
-                              '&:hover .MuiOutlinedInput-notchedOutline': {
-                                borderColor: colors.accentBlue,
-                              },
-                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                borderColor: colors.accentBlue,
-                              },
-                            }}
-                            MenuProps={{
-                              PaperProps: {
-                                sx: {
-                                  backgroundColor: colors.panelBg,
-                                  border: `1px solid ${colors.borderColor}`,
-                                  '& .MuiMenuItem-root': {
-                                    color: colors.primaryText,
-                                    '&:hover': {
-                                      backgroundColor: colors.hoverBg,
-                                    },
-                                    '&.Mui-selected': {
-                                      backgroundColor: colors.accentBlue,
-                                      '&:hover': {
-                                        backgroundColor: colors.accentBlue,
-                                      },
-                                    }
-                                  }
-                                }
-                              }
-                            }}
-                          >
-                            {forexPairs.map(pair => (
-                              <MenuItem key={pair} value={pair}>
-                                {pair}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
+                            }
+                          }
+                        }
+                      }
+                    }}
+                  >
+                    {forexPairs.map(pair => (
+                      <MenuItem key={pair} value={pair}>
+                        {pair}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
 
-                        <FormControl sx={{ flex: 1 }}>
-                          <InputLabel id="order-type-label" sx={{ color: colors.secondaryText }}>
-                            Order Type
-                          </InputLabel>
-                          <Select
-                            labelId="order-type-label"
-                            value={orderType}
-                            label="Order Type"
-                            onChange={(e) => setOrderType(e.target.value)}
-                            sx={{ 
-                              color: colors.primaryText,
-                              '.MuiOutlinedInput-notchedOutline': {
-                                borderColor: colors.borderColor,
+                <FormControl sx={{ flex: 1 }}>
+                  <InputLabel id="order-type-label" sx={{ color: colors.secondaryText }}>
+                    Order Type
+                  </InputLabel>
+                  <Select
+                    labelId="order-type-label"
+                    value={orderType}
+                    label="Order Type"
+                    onChange={(e) => setOrderType(e.target.value)}
+                    sx={{ 
+                      color: colors.primaryText,
+                      '.MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.borderColor,
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.accentBlue,
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.accentBlue,
+                      },
+                    }}
+                    MenuProps={{
+                      PaperProps: {
+                        sx: {
+                          backgroundColor: colors.panelBg,
+                          border: `1px solid ${colors.borderColor}`,
+                          '& .MuiMenuItem-root': {
+                            color: colors.primaryText,
+                            '&:hover': {
+                              backgroundColor: colors.hoverBg,
+                            },
+                            '&.Mui-selected': {
+                              backgroundColor: colors.accentBlue,
+                              '&:hover': {
+                                backgroundColor: colors.accentBlue,
                               },
-                              '&:hover .MuiOutlinedInput-notchedOutline': {
-                                borderColor: colors.accentBlue,
-                              },
-                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                borderColor: colors.accentBlue,
-                              },
-                            }}
-                            MenuProps={{
-                              PaperProps: {
-                                sx: {
-                                  backgroundColor: colors.panelBg,
-                                  border: `1px solid ${colors.borderColor}`,
-                                  '& .MuiMenuItem-root': {
-                                    color: colors.primaryText,
-                                    '&:hover': {
-                                      backgroundColor: colors.hoverBg,
-                                    },
-                                    '&.Mui-selected': {
-                                      backgroundColor: colors.accentBlue,
-                                      '&:hover': {
-                                        backgroundColor: colors.accentBlue,
-                                      },
-                                    }
-                                  }
-                                }
-                              }
-                            }}
-                          >
-                            <MenuItem value="market">Market</MenuItem>
+                            }
+                          }
+                        }
+                      }
+                    }}
+                  >
+                    <MenuItem value="market">Market</MenuItem>
                             <MenuItem value="limit">Limit</MenuItem>
                             <MenuItem value="stop">Stop</MenuItem>
-                          </Select>
-                        </FormControl>
-                      </Box>
+                  </Select>
+                </FormControl>
+              </Box>
 
-                      <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+              <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
                         <Tooltip title="Buy when you expect the price to rise">
-                          <Button 
-                            variant={isBuying ? 'contained' : 'outlined'} 
-                            color="success"
-                            onClick={() => setIsBuying(true)}
-                            sx={{
-                              flex: 1,
-                              backgroundColor: isBuying ? colors.buyGreen : 'transparent',
-                              borderColor: colors.buyGreen,
-                              color: isBuying ? colors.primaryText : colors.buyGreen,
-                              '&:hover': {
-                                backgroundColor: isBuying ? colors.buyGreen : `${colors.buyGreen}20`,
-                                borderColor: colors.buyGreen,
-                              }
-                            }}
-                          >
-                            Buy
-                          </Button>
+                <Button 
+                  variant={isBuying ? 'contained' : 'outlined'} 
+                  color="success"
+                  onClick={() => setIsBuying(true)}
+                  sx={{
+                    flex: 1,
+                    backgroundColor: isBuying ? colors.buyGreen : 'transparent',
+                    borderColor: colors.buyGreen,
+                    color: isBuying ? colors.primaryText : colors.buyGreen,
+                    '&:hover': {
+                      backgroundColor: isBuying ? colors.buyGreen : `${colors.buyGreen}20`,
+                      borderColor: colors.buyGreen,
+                    }
+                  }}
+                >
+                  Buy
+                </Button>
                         </Tooltip>
                         <Tooltip title="Sell when you expect the price to fall">
-                          <Button 
-                            variant={!isBuying ? 'contained' : 'outlined'} 
-                            color="error"
-                            onClick={() => setIsBuying(false)}
-                            sx={{
-                              flex: 1,
-                              backgroundColor: !isBuying ? colors.sellRed : 'transparent',
-                              borderColor: colors.sellRed,
-                              color: !isBuying ? colors.primaryText : colors.sellRed,
-                              '&:hover': {
-                                backgroundColor: !isBuying ? colors.sellRed : `${colors.sellRed}20`,
-                                borderColor: colors.sellRed,
-                              }
-                            }}
-                          >
-                            Sell
-                          </Button>
+                <Button 
+                  variant={!isBuying ? 'contained' : 'outlined'} 
+                  color="error"
+                  onClick={() => setIsBuying(false)}
+                  sx={{
+                    flex: 1,
+                    backgroundColor: !isBuying ? colors.sellRed : 'transparent',
+                    borderColor: colors.sellRed,
+                    color: !isBuying ? colors.primaryText : colors.sellRed,
+                    '&:hover': {
+                      backgroundColor: !isBuying ? colors.sellRed : `${colors.sellRed}20`,
+                      borderColor: colors.sellRed,
+                    }
+                  }}
+                >
+                  Sell
+                </Button>
                         </Tooltip>
-                      </Box>
+              </Box>
 
-                      <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+              <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
                         <Tooltip title="Amount of money you want to invest in this trade">
-                          <TextField
-                            label="Amount"
-                            type="number"
-                            value={amount}
-                            onChange={(e) => setAmount(parseFloat(e.target.value))}
-                            sx={{ flex: 1 }}
-                            InputLabelProps={{
-                              sx: { color: colors.secondaryText },
-                            }}
-                            InputProps={{
-                              sx: {
-                                color: colors.primaryText,
-                                '& .MuiOutlinedInput-notchedOutline': {
-                                  borderColor: colors.borderColor,
-                                },
-                                '&:hover .MuiOutlinedInput-notchedOutline': {
-                                  borderColor: colors.accentBlue,
-                                },
-                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                  borderColor: colors.accentBlue,
-                                },
-                              },
-                            }}
-                          />
+                <TextField
+                  label="Amount"
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(parseFloat(e.target.value))}
+                  sx={{ flex: 1 }}
+                  InputLabelProps={{
+                    sx: { color: colors.secondaryText },
+                  }}
+                  InputProps={{
+                    sx: {
+                      color: colors.primaryText,
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.borderColor,
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.accentBlue,
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.accentBlue,
+                      },
+                    },
+                  }}
+                />
                         </Tooltip>
-                        
+                
                         <Tooltip title="Multiply your investment power (higher leverage = higher risk)">
-                          <FormControl sx={{ flex: 1 }}>
-                            <InputLabel id="leverage-label" sx={{ color: colors.secondaryText }}>
-                              Leverage
-                            </InputLabel>
-                            <Select
-                              labelId="leverage-label"
-                              value={leverage}
-                              label="Leverage"
-                              onChange={(e) => setLeverage(parseInt(e.target.value))}
-                              sx={{ 
-                                color: colors.primaryText,
-                                '.MuiOutlinedInput-notchedOutline': {
-                                  borderColor: colors.borderColor,
-                                },
-                                '&:hover .MuiOutlinedInput-notchedOutline': {
-                                  borderColor: colors.accentBlue,
-                                },
-                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                  borderColor: colors.accentBlue,
-                                },
-                              }}
-                              MenuProps={{
-                                PaperProps: {
-                                  sx: {
-                                    backgroundColor: colors.panelBg,
-                                    border: `1px solid ${colors.borderColor}`,
-                                    '& .MuiMenuItem-root': {
-                                      color: colors.primaryText,
-                                      '&:hover': {
-                                        backgroundColor: colors.hoverBg,
-                                      },
-                                      '&.Mui-selected': {
-                                        backgroundColor: colors.accentBlue,
-                                        '&:hover': {
-                                          backgroundColor: colors.accentBlue,
-                                        },
-                                      }
-                                    }
-                                  }
-                                }
-                              }}
-                            >
-                              {[1, 5, 10, 20, 30, 50, 100].map(val => (
-                                <MenuItem key={val} value={val}>{val}x</MenuItem>
-                              ))}
-                            </Select>
-                          </FormControl>
-                        </Tooltip>
-                      </Box>
-                      
-                      <Tooltip title={position ? "Close your current position" : "Open a new position at the current market price"}>
-                        <Button 
-                          variant="contained" 
-                          color="primary" 
-                          fullWidth 
-                          size="large"
-                          onClick={handleTrade}
-                          sx={{
-                            backgroundColor: isBuying ? colors.buyGreen : colors.sellRed,
+                <FormControl sx={{ flex: 1 }}>
+                  <InputLabel id="leverage-label" sx={{ color: colors.secondaryText }}>
+                    Leverage
+                  </InputLabel>
+                  <Select
+                    labelId="leverage-label"
+                    value={leverage}
+                    label="Leverage"
+                    onChange={(e) => setLeverage(parseInt(e.target.value))}
+                    sx={{ 
+                      color: colors.primaryText,
+                      '.MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.borderColor,
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.accentBlue,
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.accentBlue,
+                      },
+                    }}
+                    MenuProps={{
+                      PaperProps: {
+                        sx: {
+                          backgroundColor: colors.panelBg,
+                          border: `1px solid ${colors.borderColor}`,
+                          '& .MuiMenuItem-root': {
+                            color: colors.primaryText,
                             '&:hover': {
-                              backgroundColor: isBuying ? colors.buyGreen : colors.sellRed,
-                              opacity: 0.9
+                              backgroundColor: colors.hoverBg,
+                            },
+                            '&.Mui-selected': {
+                              backgroundColor: colors.accentBlue,
+                              '&:hover': {
+                                backgroundColor: colors.accentBlue,
+                              },
                             }
-                          }}
-                        >
+                          }
+                        }
+                      }
+                    }}
+                  >
+                              {[1, 5, 10, 20, 30, 50, 100].map(val => (
+                      <MenuItem key={val} value={val}>{val}x</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                        </Tooltip>
+              </Box>
+              
+                      <Tooltip title={position ? "Close your current position" : "Open a new position at the current market price"}>
+              <Button 
+                variant="contained" 
+                color="primary" 
+                fullWidth 
+                size="large"
+                onClick={handleTrade}
+                sx={{
+                            backgroundColor: isBuying ? colors.buyGreen : colors.sellRed,
+                  '&:hover': {
+                              backgroundColor: isBuying ? colors.buyGreen : colors.sellRed,
+                    opacity: 0.9
+                  }
+                }}
+              >
                           {position ? 'Close Position' : `${isBuying ? 'Buy' : 'Sell'} ${selectedPair}`}
-                        </Button>
+              </Button>
                       </Tooltip>
                     </Box>
                   )}
@@ -1949,78 +2103,78 @@ const Trade = () => {
                       )}
                     </Box>
                   )}
-                </Paper>
-              </Box>
-              
-              {/* Right Column - Account Summary */}
-              <Paper 
+            </Paper>
+          </Box>
+
+          {/* Right Column - Account Summary */}
+          <Paper 
+            sx={{ 
+              p: 3, 
+              width: 300, 
+              backgroundColor: colors.cardBg,
+              border: `1px solid ${colors.borderColor}`,
+              borderRadius: '12px',
+              boxShadow: `0 4px 12px ${colors.shadowColor}`,
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            <Typography 
+              variant="h6" 
+              gutterBottom 
+              sx={{ 
+                color: colors.primaryText,
+                fontWeight: 'bold',
+                mb: 3
+              }}
+            >
+              Account Summary
+            </Typography>
+            
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" sx={{ color: colors.secondaryText }}>Available</Typography>
+              <Typography variant="h5" sx={{ color: colors.primaryText }}>
+                ${availableBalance.toFixed(2)}
+              </Typography>
+            </Box>
+            
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" sx={{ color: colors.secondaryText }}>Locked Margin</Typography>
+              <Typography variant="h6" sx={{ color: colors.secondaryText }}>
+                ${lockedMargin.toFixed(2)}
+              </Typography>
+            </Box>
+            
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="body2" sx={{ color: colors.secondaryText }}>Total Balance</Typography>
+              <Typography variant="h5" sx={{ color: colors.accentBlue }}>
+                ${totalBalance.toFixed(2)}
+              </Typography>
+            </Box>
+            
+            {position && (
+              <Box 
                 sx={{ 
-                  p: 3, 
-                  width: 300, 
-                  backgroundColor: colors.cardBg,
-                  border: `1px solid ${colors.borderColor}`,
-                  borderRadius: '12px',
-                  boxShadow: `0 4px 12px ${colors.shadowColor}`,
-                  display: 'flex',
-                  flexDirection: 'column'
+                  mb: 3, 
+                  p: 2, 
+                  backgroundColor: colors.panelBg, 
+                  borderRadius: '8px',
+                  border: `1px solid ${colors.borderColor}`
                 }}
               >
                 <Typography 
-                  variant="h6" 
+                  variant="subtitle2" 
                   gutterBottom 
-                  sx={{ 
-                    color: colors.primaryText,
-                    fontWeight: 'bold',
-                    mb: 3
-                  }}
+                  sx={{ color: colors.primaryText }}
                 >
-                  Account Summary
+                  Open Position
                 </Typography>
-                
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" sx={{ color: colors.secondaryText }}>Available</Typography>
-                  <Typography variant="h5" sx={{ color: colors.primaryText }}>
-                    ${availableBalance.toFixed(2)}
-                  </Typography>
-                </Box>
-                
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" sx={{ color: colors.secondaryText }}>Locked Margin</Typography>
-                  <Typography variant="h6" sx={{ color: colors.secondaryText }}>
-                    ${lockedMargin.toFixed(2)}
-                  </Typography>
-                </Box>
-                
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="body2" sx={{ color: colors.secondaryText }}>Total Balance</Typography>
-                  <Typography variant="h5" sx={{ color: colors.accentBlue }}>
-                    ${totalBalance.toFixed(2)}
-                  </Typography>
-                </Box>
-                
-                {position && (
-                  <Box 
-                    sx={{ 
-                      mb: 3, 
-                      p: 2, 
-                      backgroundColor: colors.panelBg, 
-                      borderRadius: '8px',
-                      border: `1px solid ${colors.borderColor}`
-                    }}
-                  >
-                    <Typography 
-                      variant="subtitle2" 
-                      gutterBottom 
-                      sx={{ color: colors.primaryText }}
-                    >
-                      Open Position
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: colors.secondaryText }}>
-                      {position.type.toUpperCase()} {position.pair} @ {position.price.toFixed(5)}
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: colors.secondaryText }}>
-                      Amount: ${position.amount} (x{position.leverage})
-                    </Typography>
+                <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                  {position.type.toUpperCase()} {position.pair} @ {position.price.toFixed(5)}
+                </Typography>
+                <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                  Amount: ${position.amount} (x{position.leverage})
+                </Typography>
                     
                     {position.stopLoss && (
                       <Typography variant="body2" sx={{ color: colors.sellRed }}>
@@ -2034,46 +2188,46 @@ const Trade = () => {
                       </Typography>
                     )}
                     
-                    <Typography 
-                      variant="body2" 
-                      sx={{ 
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
                         color: calculatePnl(position, currentPrice) >= 0 ? colors.profitGreen : colors.lossRed,
                         fontWeight: 'bold',
                         mt: 1
-                      }}
-                    >
-                      Current PnL: ${calculatePnl(position, currentPrice).toFixed(2)} 
+                  }}
+                >
+                  Current PnL: ${calculatePnl(position, currentPrice).toFixed(2)}
                       ({(calculatePnl(position, currentPrice) / position.amount * 100).toFixed(2)}%)
-                    </Typography>
+                </Typography>
                     
-                    <Button 
-                      variant="outlined" 
-                      color="error" 
-                      fullWidth 
-                      size="small"
+                <Button 
+                  variant="outlined" 
+                  color="error" 
+                  fullWidth 
+                  size="small"
                       onClick={() => closePosition()}
-                      sx={{ 
-                        mt: 1,
-                        borderColor: colors.sellRed,
-                        color: colors.sellRed,
-                        '&:hover': {
-                          borderColor: colors.sellRed,
-                          backgroundColor: `${colors.sellRed}20`
-                        }
-                      }}
-                    >
-                      Close Position
-                    </Button>
-                  </Box>
-                )}
-                
+                  sx={{ 
+                    mt: 1,
+                    borderColor: colors.sellRed,
+                    color: colors.sellRed,
+                    '&:hover': {
+                      borderColor: colors.sellRed,
+                      backgroundColor: `${colors.sellRed}20`
+                    }
+                  }}
+                >
+                  Close Position
+                </Button>
+              </Box>
+            )}
+            
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                  <Typography 
-                    variant="subtitle2" 
-                    sx={{ color: colors.primaryText }}
-                  >
-                    Latest Trades
-                  </Typography>
+            <Typography 
+              variant="subtitle2" 
+              sx={{ color: colors.primaryText }}
+            >
+              Latest Trades
+            </Typography>
                   
                   <Chip 
                     label={`${trades.length} trade${trades.length !== 1 ? 's' : ''}`}
@@ -2086,23 +2240,23 @@ const Trade = () => {
                   />
                 </Box>
                 
-                <Box sx={{ flex: 1, overflow: 'auto' }}>
+            <Box sx={{ flex: 1, overflow: 'auto' }}>
                   {trades.length === 0 ? (
                     <Typography variant="body2" sx={{ color: colors.secondaryText, textAlign: 'center', py: 2 }}>
                       No trades yet
                     </Typography>
                   ) : (
                     trades.slice(-5).reverse().map((trade, i) => (
-                      <Box 
-                        key={i} 
-                        sx={{ 
-                          mb: 1, 
-                          p: 1, 
-                          backgroundColor: colors.panelBg, 
-                          borderRadius: '8px',
-                          border: `1px solid ${colors.borderColor}`
-                        }}
-                      >
+                <Box 
+                  key={i} 
+                  sx={{ 
+                    mb: 1, 
+                    p: 1, 
+                    backgroundColor: colors.panelBg, 
+                    borderRadius: '8px',
+                    border: `1px solid ${colors.borderColor}`
+                  }}
+                >
                         <Typography variant="caption" sx={{ color: colors.secondaryText, display: 'flex', justifyContent: 'space-between' }}>
                           <span>{formatTime(trade.time)}</span>
                           <span>{trade.type.toUpperCase()} {trade.pair}</span>
@@ -2110,18 +2264,18 @@ const Trade = () => {
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <Typography variant="body2" sx={{ color: colors.secondaryText }}>
                             {trade.price.toFixed(5)} → {trade.exitPrice.toFixed(5)}
-                          </Typography>
-                          <Typography 
-                            variant="body2" 
-                            sx={{ 
+                  </Typography>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
                               color: trade.pnl >= 0 ? colors.profitGreen : colors.lossRed,
                               fontWeight: 'bold'
-                            }}
-                          >
+                    }}
+                  >
                             ${trade.pnl.toFixed(2)}
-                          </Typography>
-                        </Box>
-                      </Box>
+                  </Typography>
+                </Box>
+            </Box>
                     ))
                   )}
                 </Box>
@@ -2147,8 +2301,8 @@ const Trade = () => {
                 >
                   Save Simulation
                 </Button>
-              </Paper>
-            </Box>
+          </Paper>
+        </Box>
           </>
         )}
       </Box>
