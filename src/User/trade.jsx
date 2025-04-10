@@ -280,7 +280,7 @@ const Trade = () => {
         chartRef.current = null;
       }
     };
-  }, [step, showIndicators, chartType, activeTradingTab]);
+  }, [step, showIndicators, chartType]);
 
   // Simulate rapid market changes for short-term trading with realistic data
   useEffect(() => {
@@ -684,13 +684,17 @@ const Trade = () => {
       executeOrder(newOrder, currentPrice);
     } else {
       // For limit and stop orders, add to open orders
+      console.log("Adding order to open orders:", newOrder);
       setOpenOrders(prev => [...prev, newOrder]);
+      
+      // Show confirmation
+      alert(`${newOrder.type.toUpperCase()} ${newOrder.direction.toUpperCase()} order placed at ${newOrder.price.toFixed(5)}`);
     }
     
     // Reset pending order form
     setPendingOrder({
       type: 'limit',
-      price: null,
+      price: currentPrice, // Set default to current price
       amount: 1000,
       direction: 'buy',
       stopLoss: null,
@@ -783,6 +787,56 @@ const Trade = () => {
       setAvailableBalance(prev => prev - amount);
       setLockedMargin(amount);
     }
+  };
+
+  // Add a useEffect to set price when currentPrice changes or when switching to limit/stop tab
+  useEffect(() => {
+    if (currentPrice && activeTradingTab === 1) {
+      setPendingOrder(prev => ({
+        ...prev,
+        price: currentPrice
+      }));
+    }
+  }, [currentPrice, activeTradingTab]);
+
+  // Make sure we update pendingOrder when switching tabs
+  const handleTabChange = (event, newValue) => {
+    setActiveTradingTab(newValue);
+    
+    // When switching to limit/stop tab, initialize with current price
+    if (newValue === 1 && currentPrice) {
+      setPendingOrder(prev => ({
+        ...prev,
+        price: currentPrice
+      }));
+    }
+  };
+
+  // Add tooltip components to make chart section more beginner-friendly
+  const renderTooltip = (content) => {
+    return (
+      <Tooltip
+        title={content}
+        arrow
+        placement="top"
+        sx={{ 
+          '& .MuiTooltip-tooltip': {
+            backgroundColor: colors.panelBg,
+            color: colors.primaryText,
+            border: `1px solid ${colors.borderColor}`,
+            fontSize: '0.8rem',
+            maxWidth: 300
+          }
+        }}
+      >
+        <IconButton 
+          size="small"
+          sx={{ padding: 0, color: colors.secondaryText }}
+        >
+          <TrendingUpIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+    );
   };
 
   return (
@@ -1029,6 +1083,7 @@ const Trade = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <Typography sx={{ color: colors.primaryText, fontWeight: 'bold', mr: 2 }}>
                         {selectedPair} - {currentPrice ? currentPrice.toFixed(5) : '-.-----'}
+                        {renderTooltip("Current price of the selected currency pair")}
                       </Typography>
                       <Chip 
                         size="small" 
@@ -1044,57 +1099,60 @@ const Trade = () => {
                     
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       {/* Timeframe Selector */}
-                      <Select
-                        value={selectedTimeframe}
-                        onChange={(e) => setSelectedTimeframe(e.target.value)}
-                        size="small"
-                        sx={{ 
-                          minWidth: 70,
-                          height: 30,
-                          color: colors.primaryText,
-                          '.MuiOutlinedInput-notchedOutline': {
-                            borderColor: colors.borderColor,
-                          },
-                          '&:hover .MuiOutlinedInput-notchedOutline': {
-                            borderColor: colors.accentBlue,
-                          },
-                          '.MuiSelect-select': {
-                            padding: '2px 14px',
-                          }
-                        }}
-                        MenuProps={{
-                          PaperProps: {
-                            sx: {
-                              backgroundColor: colors.panelBg,
-                              border: `1px solid ${colors.borderColor}`,
-                              '& .MuiMenuItem-root': {
-                                color: colors.primaryText,
-                                fontSize: '0.875rem',
-                                minHeight: 'auto',
-                                '&:hover': {
-                                  backgroundColor: colors.hoverBg,
-                                },
-                                '&.Mui-selected': {
-                                  backgroundColor: colors.accentBlue,
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Select
+                          value={selectedTimeframe}
+                          onChange={(e) => setSelectedTimeframe(e.target.value)}
+                          size="small"
+                          sx={{ 
+                            minWidth: 70,
+                            height: 30,
+                            color: colors.primaryText,
+                            '.MuiOutlinedInput-notchedOutline': {
+                              borderColor: colors.borderColor,
+                            },
+                            '&:hover .MuiOutlinedInput-notchedOutline': {
+                              borderColor: colors.accentBlue,
+                            },
+                            '.MuiSelect-select': {
+                              padding: '2px 14px',
+                            }
+                          }}
+                          MenuProps={{
+                            PaperProps: {
+                              sx: {
+                                backgroundColor: colors.panelBg,
+                                border: `1px solid ${colors.borderColor}`,
+                                '& .MuiMenuItem-root': {
+                                  color: colors.primaryText,
+                                  fontSize: '0.875rem',
+                                  minHeight: 'auto',
                                   '&:hover': {
-                                    backgroundColor: colors.accentBlue,
+                                    backgroundColor: colors.hoverBg,
                                   },
+                                  '&.Mui-selected': {
+                                    backgroundColor: colors.accentBlue,
+                                    '&:hover': {
+                                      backgroundColor: colors.accentBlue,
+                                    },
+                                  }
                                 }
                               }
                             }
-                          }
-                        }}
-                      >
-                        <MenuItem value="1m">1m</MenuItem>
-                        <MenuItem value="5m">5m</MenuItem>
-                        <MenuItem value="15m">15m</MenuItem>
-                        <MenuItem value="1h">1h</MenuItem>
-                        <MenuItem value="4h">4h</MenuItem>
-                        <MenuItem value="1d">1D</MenuItem>
-                      </Select>
+                          }}
+                        >
+                          <MenuItem value="1m">1m</MenuItem>
+                          <MenuItem value="5m">5m</MenuItem>
+                          <MenuItem value="15m">15m</MenuItem>
+                          <MenuItem value="1h">1h</MenuItem>
+                          <MenuItem value="4h">4h</MenuItem>
+                          <MenuItem value="1d">1D</MenuItem>
+                        </Select>
+                        {renderTooltip("Select timeframe for chart display")}
+                      </Box>
                       
                       {/* Chart Type */}
-                      <Tooltip title="Candlestick Chart">
+                      <Tooltip title="Candlestick Chart - Shows open, high, low, close prices">
                         <IconButton 
                           size="small"
                           onClick={() => setChartType('candles')}
@@ -1107,7 +1165,7 @@ const Trade = () => {
                         </IconButton>
                       </Tooltip>
                       
-                      <Tooltip title="Line Chart">
+                      <Tooltip title="Line Chart - Shows price movement as a continuous line">
                         <IconButton 
                           size="small"
                           onClick={() => setChartType('line')}
@@ -1138,6 +1196,7 @@ const Trade = () => {
                             }
                           }}
                         />
+                        {renderTooltip("Toggle technical indicators such as RSI, MACD, and Moving Averages")}
                       </Box>
                     </Box>
                   </Box>
@@ -1251,7 +1310,7 @@ const Trade = () => {
                   
                   <Tabs
                     value={activeTradingTab}
-                    onChange={(e, newValue) => setActiveTradingTab(newValue)}
+                    onChange={handleTabChange}
                     sx={{
                       mb: 2,
                       borderBottom: `1px solid ${colors.borderColor}`,
@@ -1266,14 +1325,27 @@ const Trade = () => {
                       }
                     }}
                   >
-                    <Tab label="Market" sx={{ minWidth: 80 }} />
-                    <Tab label="Limit/Stop" sx={{ minWidth: 80 }} />
-                    <Tab label="Open Orders" sx={{ minWidth: 80 }} />
+                    <Tooltip title="Execute trades immediately at current market price">
+                      <Tab label="Market" sx={{ minWidth: 80 }} />
+                    </Tooltip>
+                    <Tooltip title="Place orders to be executed when price reaches a specific level">
+                      <Tab label="Limit/Stop" sx={{ minWidth: 80 }} />
+                    </Tooltip>
+                    <Tooltip title="View and manage your pending orders">
+                      <Tab label="Open Orders" sx={{ minWidth: 80 }} />
+                    </Tooltip>
                   </Tabs>
                   
                   {/* Tab Panels */}
                   {activeTradingTab === 0 && (
                     <Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          Market orders execute immediately at the current price
+                        </Typography>
+                        {renderTooltip("Market orders are executed instantly at the best available price. They're used when you want to enter or exit a position quickly.")}
+                      </Box>
+                      
                       <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
                         <FormControl sx={{ flex: 1 }}>
                           <InputLabel id="pair-select-label" sx={{ color: colors.secondaryText }}>
@@ -1375,138 +1447,159 @@ const Trade = () => {
                       </Box>
 
                       <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                        <Button 
-                          variant={isBuying ? 'contained' : 'outlined'} 
-                          color="success"
-                          onClick={() => setIsBuying(true)}
-                          sx={{
-                            flex: 1,
-                            backgroundColor: isBuying ? colors.buyGreen : 'transparent',
-                            borderColor: colors.buyGreen,
-                            color: isBuying ? colors.primaryText : colors.buyGreen,
-                            '&:hover': {
-                              backgroundColor: isBuying ? colors.buyGreen : `${colors.buyGreen}20`,
+                        <Tooltip title="Buy when you expect the price to rise">
+                          <Button 
+                            variant={isBuying ? 'contained' : 'outlined'} 
+                            color="success"
+                            onClick={() => setIsBuying(true)}
+                            sx={{
+                              flex: 1,
+                              backgroundColor: isBuying ? colors.buyGreen : 'transparent',
                               borderColor: colors.buyGreen,
-                            }
-                          }}
-                        >
-                          Buy
-                        </Button>
-                        <Button 
-                          variant={!isBuying ? 'contained' : 'outlined'} 
-                          color="error"
-                          onClick={() => setIsBuying(false)}
-                          sx={{
-                            flex: 1,
-                            backgroundColor: !isBuying ? colors.sellRed : 'transparent',
-                            borderColor: colors.sellRed,
-                            color: !isBuying ? colors.primaryText : colors.sellRed,
-                            '&:hover': {
-                              backgroundColor: !isBuying ? colors.sellRed : `${colors.sellRed}20`,
-                              borderColor: colors.sellRed,
-                            }
-                          }}
-                        >
-                          Sell
-                        </Button>
-                      </Box>
-
-                      <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                        <TextField
-                          label="Amount"
-                          type="number"
-                          value={amount}
-                          onChange={(e) => setAmount(parseFloat(e.target.value))}
-                          sx={{ flex: 1 }}
-                          InputLabelProps={{
-                            sx: { color: colors.secondaryText },
-                          }}
-                          InputProps={{
-                            sx: {
-                              color: colors.primaryText,
-                              '& .MuiOutlinedInput-notchedOutline': {
-                                borderColor: colors.borderColor,
-                              },
-                              '&:hover .MuiOutlinedInput-notchedOutline': {
-                                borderColor: colors.accentBlue,
-                              },
-                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                borderColor: colors.accentBlue,
-                              },
-                            },
-                          }}
-                        />
-                        
-                        <FormControl sx={{ flex: 1 }}>
-                          <InputLabel id="leverage-label" sx={{ color: colors.secondaryText }}>
-                            Leverage
-                          </InputLabel>
-                          <Select
-                            labelId="leverage-label"
-                            value={leverage}
-                            label="Leverage"
-                            onChange={(e) => setLeverage(parseInt(e.target.value))}
-                            sx={{ 
-                              color: colors.primaryText,
-                              '.MuiOutlinedInput-notchedOutline': {
-                                borderColor: colors.borderColor,
-                              },
-                              '&:hover .MuiOutlinedInput-notchedOutline': {
-                                borderColor: colors.accentBlue,
-                              },
-                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                borderColor: colors.accentBlue,
-                              },
-                            }}
-                            MenuProps={{
-                              PaperProps: {
-                                sx: {
-                                  backgroundColor: colors.panelBg,
-                                  border: `1px solid ${colors.borderColor}`,
-                                  '& .MuiMenuItem-root': {
-                                    color: colors.primaryText,
-                                    '&:hover': {
-                                      backgroundColor: colors.hoverBg,
-                                    },
-                                    '&.Mui-selected': {
-                                      backgroundColor: colors.accentBlue,
-                                      '&:hover': {
-                                        backgroundColor: colors.accentBlue,
-                                      },
-                                    }
-                                  }
-                                }
+                              color: isBuying ? colors.primaryText : colors.buyGreen,
+                              '&:hover': {
+                                backgroundColor: isBuying ? colors.buyGreen : `${colors.buyGreen}20`,
+                                borderColor: colors.buyGreen,
                               }
                             }}
                           >
-                            {[1, 5, 10, 20, 30, 50, 100].map(val => (
-                              <MenuItem key={val} value={val}>{val}x</MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
+                            Buy
+                          </Button>
+                        </Tooltip>
+                        <Tooltip title="Sell when you expect the price to fall">
+                          <Button 
+                            variant={!isBuying ? 'contained' : 'outlined'} 
+                            color="error"
+                            onClick={() => setIsBuying(false)}
+                            sx={{
+                              flex: 1,
+                              backgroundColor: !isBuying ? colors.sellRed : 'transparent',
+                              borderColor: colors.sellRed,
+                              color: !isBuying ? colors.primaryText : colors.sellRed,
+                              '&:hover': {
+                                backgroundColor: !isBuying ? colors.sellRed : `${colors.sellRed}20`,
+                                borderColor: colors.sellRed,
+                              }
+                            }}
+                          >
+                            Sell
+                          </Button>
+                        </Tooltip>
+                      </Box>
+
+                      <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                        <Tooltip title="Amount of money you want to invest in this trade">
+                          <TextField
+                            label="Amount"
+                            type="number"
+                            value={amount}
+                            onChange={(e) => setAmount(parseFloat(e.target.value))}
+                            sx={{ flex: 1 }}
+                            InputLabelProps={{
+                              sx: { color: colors.secondaryText },
+                            }}
+                            InputProps={{
+                              sx: {
+                                color: colors.primaryText,
+                                '& .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: colors.borderColor,
+                                },
+                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: colors.accentBlue,
+                                },
+                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: colors.accentBlue,
+                                },
+                              },
+                            }}
+                          />
+                        </Tooltip>
+                        
+                        <Tooltip title="Multiply your investment power (higher leverage = higher risk)">
+                          <FormControl sx={{ flex: 1 }}>
+                            <InputLabel id="leverage-label" sx={{ color: colors.secondaryText }}>
+                              Leverage
+                            </InputLabel>
+                            <Select
+                              labelId="leverage-label"
+                              value={leverage}
+                              label="Leverage"
+                              onChange={(e) => setLeverage(parseInt(e.target.value))}
+                              sx={{ 
+                                color: colors.primaryText,
+                                '.MuiOutlinedInput-notchedOutline': {
+                                  borderColor: colors.borderColor,
+                                },
+                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: colors.accentBlue,
+                                },
+                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: colors.accentBlue,
+                                },
+                              }}
+                              MenuProps={{
+                                PaperProps: {
+                                  sx: {
+                                    backgroundColor: colors.panelBg,
+                                    border: `1px solid ${colors.borderColor}`,
+                                    '& .MuiMenuItem-root': {
+                                      color: colors.primaryText,
+                                      '&:hover': {
+                                        backgroundColor: colors.hoverBg,
+                                      },
+                                      '&.Mui-selected': {
+                                        backgroundColor: colors.accentBlue,
+                                        '&:hover': {
+                                          backgroundColor: colors.accentBlue,
+                                        },
+                                      }
+                                    }
+                                  }
+                                }
+                              }}
+                            >
+                              {[1, 5, 10, 20, 30, 50, 100].map(val => (
+                                <MenuItem key={val} value={val}>{val}x</MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        </Tooltip>
                       </Box>
                       
-                      <Button 
-                        variant="contained" 
-                        color="primary" 
-                        fullWidth 
-                        size="large"
-                        onClick={handleTrade}
-                        sx={{
-                          backgroundColor: isBuying ? colors.buyGreen : colors.sellRed,
-                          '&:hover': {
+                      <Tooltip title={position ? "Close your current position" : "Open a new position at the current market price"}>
+                        <Button 
+                          variant="contained" 
+                          color="primary" 
+                          fullWidth 
+                          size="large"
+                          onClick={handleTrade}
+                          sx={{
                             backgroundColor: isBuying ? colors.buyGreen : colors.sellRed,
-                            opacity: 0.9
-                          }
-                        }}
-                      >
-                        {position ? 'Close Position' : `${isBuying ? 'Buy' : 'Sell'} ${selectedPair}`}
-                      </Button>
+                            '&:hover': {
+                              backgroundColor: isBuying ? colors.buyGreen : colors.sellRed,
+                              opacity: 0.9
+                            }
+                          }}
+                        >
+                          {position ? 'Close Position' : `${isBuying ? 'Buy' : 'Sell'} ${selectedPair}`}
+                        </Button>
+                      </Tooltip>
                     </Box>
                   )}
                   
                   {activeTradingTab === 1 && (
                     <Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          {pendingOrder.type === 'limit' ? 
+                            'Limit orders execute when price reaches or passes your target price' : 
+                            'Stop orders trigger when price reaches your specified level'}
+                        </Typography>
+                        {renderTooltip(pendingOrder.type === 'limit' ? 
+                          "Limit orders let you buy at a lower price or sell at a higher price than the current market price" : 
+                          "Stop orders are used to limit losses or protect profits by triggering when price reaches a certain level")}
+                      </Box>
+                      
                       <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
                         <FormControl sx={{ flex: 1 }}>
                           <InputLabel id="pending-order-type-label" sx={{ color: colors.secondaryText }}>
@@ -1536,172 +1629,231 @@ const Trade = () => {
                         </FormControl>
                         
                         <Box sx={{ flex: 1, display: 'flex', gap: 1 }}>
-                          <Button 
-                            variant={pendingOrder.direction === 'buy' ? 'contained' : 'outlined'} 
-                            color="success"
-                            onClick={() => setPendingOrder(prev => ({ ...prev, direction: 'buy' }))}
-                            fullWidth
-                            sx={{
-                              backgroundColor: pendingOrder.direction === 'buy' ? colors.buyGreen : 'transparent',
-                              borderColor: colors.buyGreen,
-                              color: pendingOrder.direction === 'buy' ? colors.primaryText : colors.buyGreen,
-                              '&:hover': {
-                                backgroundColor: pendingOrder.direction === 'buy' ? colors.buyGreen : `${colors.buyGreen}20`,
+                          <Tooltip title="Buy when you expect the price to rise">
+                            <Button 
+                              variant={pendingOrder.direction === 'buy' ? 'contained' : 'outlined'} 
+                              color="success"
+                              onClick={() => setPendingOrder(prev => ({ ...prev, direction: 'buy' }))}
+                              fullWidth
+                              sx={{
+                                backgroundColor: pendingOrder.direction === 'buy' ? colors.buyGreen : 'transparent',
                                 borderColor: colors.buyGreen,
-                              }
-                            }}
-                          >
-                            Buy
-                          </Button>
-                          <Button 
-                            variant={pendingOrder.direction === 'sell' ? 'contained' : 'outlined'} 
-                            color="error"
-                            onClick={() => setPendingOrder(prev => ({ ...prev, direction: 'sell' }))}
-                            fullWidth
-                            sx={{
-                              backgroundColor: pendingOrder.direction === 'sell' ? colors.sellRed : 'transparent',
-                              borderColor: colors.sellRed,
-                              color: pendingOrder.direction === 'sell' ? colors.primaryText : colors.sellRed,
-                              '&:hover': {
-                                backgroundColor: pendingOrder.direction === 'sell' ? colors.sellRed : `${colors.sellRed}20`,
+                                color: pendingOrder.direction === 'buy' ? colors.primaryText : colors.buyGreen,
+                                '&:hover': {
+                                  backgroundColor: pendingOrder.direction === 'buy' ? colors.buyGreen : `${colors.buyGreen}20`,
+                                  borderColor: colors.buyGreen,
+                                }
+                              }}
+                            >
+                              Buy
+                            </Button>
+                          </Tooltip>
+                          <Tooltip title="Sell when you expect the price to fall">
+                            <Button 
+                              variant={pendingOrder.direction === 'sell' ? 'contained' : 'outlined'} 
+                              color="error"
+                              onClick={() => setPendingOrder(prev => ({ ...prev, direction: 'sell' }))}
+                              fullWidth
+                              sx={{
+                                backgroundColor: pendingOrder.direction === 'sell' ? colors.sellRed : 'transparent',
                                 borderColor: colors.sellRed,
-                              }
-                            }}
-                          >
-                            Sell
-                          </Button>
+                                color: pendingOrder.direction === 'sell' ? colors.primaryText : colors.sellRed,
+                                '&:hover': {
+                                  backgroundColor: pendingOrder.direction === 'sell' ? colors.sellRed : `${colors.sellRed}20`,
+                                  borderColor: colors.sellRed,
+                                }
+                              }}
+                            >
+                              Sell
+                            </Button>
+                          </Tooltip>
                         </Box>
                       </Box>
                       
                       <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                        <TextField
-                          label="Price"
-                          type="number"
-                          value={pendingOrder.price || ''}
-                          onChange={(e) => setPendingOrder(prev => ({ ...prev, price: parseFloat(e.target.value) }))}
-                          sx={{ flex: 1 }}
-                          InputLabelProps={{
-                            sx: { color: colors.secondaryText },
-                          }}
-                          InputProps={{
-                            sx: {
-                              color: colors.primaryText,
-                              '& .MuiOutlinedInput-notchedOutline': {
-                                borderColor: colors.borderColor,
+                        <Tooltip title={`Target price for your ${pendingOrder.type} order. You can also click on the chart to set this price.`}>
+                          <TextField
+                            label="Price"
+                            type="number"
+                            value={pendingOrder.price || currentPrice || ''}
+                            onChange={(e) => setPendingOrder(prev => ({ ...prev, price: parseFloat(e.target.value) }))}
+                            InputProps={{
+                              startAdornment: (
+                                <Button
+                                  size="small"
+                                  onClick={() => setPendingOrder(prev => ({ ...prev, price: currentPrice }))}
+                                  sx={{ 
+                                    minWidth: 'auto', 
+                                    p: 0, 
+                                    mr: 1,
+                                    color: colors.accentBlue,
+                                    '&:hover': {
+                                      backgroundColor: 'transparent',
+                                      opacity: 0.8
+                                    }
+                                  }}
+                                >
+                                  Current
+                                </Button>
+                              ),
+                              sx: {
+                                color: colors.primaryText,
+                                '& .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: colors.borderColor,
+                                },
+                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: colors.accentBlue,
+                                },
+                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: colors.accentBlue,
+                                },
                               },
-                              '&:hover .MuiOutlinedInput-notchedOutline': {
-                                borderColor: colors.accentBlue,
-                              },
-                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                borderColor: colors.accentBlue,
-                              },
-                            },
-                          }}
-                        />
+                            }}
+                            sx={{ flex: 1 }}
+                            InputLabelProps={{
+                              sx: { color: colors.secondaryText },
+                            }}
+                          />
+                        </Tooltip>
                         
-                        <TextField
-                          label="Amount"
-                          type="number"
-                          value={pendingOrder.amount}
-                          onChange={(e) => setPendingOrder(prev => ({ ...prev, amount: parseFloat(e.target.value) }))}
-                          sx={{ flex: 1 }}
-                          InputLabelProps={{
-                            sx: { color: colors.secondaryText },
-                          }}
-                          InputProps={{
-                            sx: {
-                              color: colors.primaryText,
-                              '& .MuiOutlinedInput-notchedOutline': {
-                                borderColor: colors.borderColor,
+                        <Tooltip title="Amount of money you want to invest in this trade">
+                          <TextField
+                            label="Amount"
+                            type="number"
+                            value={pendingOrder.amount}
+                            onChange={(e) => setPendingOrder(prev => ({ ...prev, amount: parseFloat(e.target.value) }))}
+                            sx={{ flex: 1 }}
+                            InputLabelProps={{
+                              sx: { color: colors.secondaryText },
+                            }}
+                            InputProps={{
+                              sx: {
+                                color: colors.primaryText,
+                                '& .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: colors.borderColor,
+                                },
+                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: colors.accentBlue,
+                                },
+                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: colors.accentBlue,
+                                },
                               },
-                              '&:hover .MuiOutlinedInput-notchedOutline': {
-                                borderColor: colors.accentBlue,
-                              },
-                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                borderColor: colors.accentBlue,
-                              },
-                            },
-                          }}
-                        />
+                            }}
+                          />
+                        </Tooltip>
                       </Box>
                       
                       <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                        <TextField
-                          label="Stop Loss"
-                          type="number"
-                          value={pendingOrder.stopLoss || ''}
-                          onChange={(e) => setPendingOrder(prev => ({ ...prev, stopLoss: parseFloat(e.target.value) }))}
-                          sx={{ flex: 1 }}
-                          InputLabelProps={{
-                            sx: { color: colors.secondaryText },
-                          }}
-                          InputProps={{
-                            sx: {
-                              color: colors.primaryText,
-                              '& .MuiOutlinedInput-notchedOutline': {
-                                borderColor: colors.borderColor,
+                        <Tooltip title="Price at which your position will automatically close to limit losses">
+                          <TextField
+                            label="Stop Loss"
+                            type="number"
+                            value={pendingOrder.stopLoss || ''}
+                            onChange={(e) => setPendingOrder(prev => ({ ...prev, stopLoss: parseFloat(e.target.value) }))}
+                            sx={{ flex: 1 }}
+                            InputLabelProps={{
+                              sx: { color: colors.secondaryText },
+                            }}
+                            InputProps={{
+                              sx: {
+                                color: colors.primaryText,
+                                '& .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: colors.borderColor,
+                                },
+                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: colors.accentBlue,
+                                },
+                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: colors.accentBlue,
+                                },
                               },
-                              '&:hover .MuiOutlinedInput-notchedOutline': {
-                                borderColor: colors.accentBlue,
-                              },
-                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                borderColor: colors.accentBlue,
-                              },
-                            },
-                          }}
-                        />
+                            }}
+                          />
+                        </Tooltip>
                         
-                        <TextField
-                          label="Take Profit"
-                          type="number"
-                          value={pendingOrder.takeProfit || ''}
-                          onChange={(e) => setPendingOrder(prev => ({ ...prev, takeProfit: parseFloat(e.target.value) }))}
-                          sx={{ flex: 1 }}
-                          InputLabelProps={{
-                            sx: { color: colors.secondaryText },
-                          }}
-                          InputProps={{
-                            sx: {
-                              color: colors.primaryText,
-                              '& .MuiOutlinedInput-notchedOutline': {
-                                borderColor: colors.borderColor,
+                        <Tooltip title="Price at which your position will automatically close to secure profits">
+                          <TextField
+                            label="Take Profit"
+                            type="number"
+                            value={pendingOrder.takeProfit || ''}
+                            onChange={(e) => setPendingOrder(prev => ({ ...prev, takeProfit: parseFloat(e.target.value) }))}
+                            sx={{ flex: 1 }}
+                            InputLabelProps={{
+                              sx: { color: colors.secondaryText },
+                            }}
+                            InputProps={{
+                              sx: {
+                                color: colors.primaryText,
+                                '& .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: colors.borderColor,
+                                },
+                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: colors.accentBlue,
+                                },
+                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: colors.accentBlue,
+                                },
                               },
-                              '&:hover .MuiOutlinedInput-notchedOutline': {
-                                borderColor: colors.accentBlue,
-                              },
-                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                borderColor: colors.accentBlue,
-                              },
-                            },
-                          }}
-                        />
+                            }}
+                          />
+                        </Tooltip>
                       </Box>
                       
-                      <Button 
-                        variant="contained" 
-                        color="primary" 
-                        fullWidth 
-                        size="large"
-                        onClick={placeOrder}
-                        sx={{
-                          backgroundColor: pendingOrder.direction === 'buy' ? colors.buyGreen : colors.sellRed,
-                          '&:hover': {
+                      <Tooltip title={`Place a ${pendingOrder.type} order to ${pendingOrder.direction} ${selectedPair} at ${pendingOrder.price?.toFixed(5) || 'specified'} price`}>
+                        <Button 
+                          variant="contained" 
+                          color="primary" 
+                          fullWidth 
+                          size="large"
+                          onClick={placeOrder}
+                          sx={{
                             backgroundColor: pendingOrder.direction === 'buy' ? colors.buyGreen : colors.sellRed,
-                            opacity: 0.9
-                          }
-                        }}
-                      >
-                        Place {pendingOrder.type.charAt(0).toUpperCase() + pendingOrder.type.slice(1)} Order
-                      </Button>
+                            '&:hover': {
+                              backgroundColor: pendingOrder.direction === 'buy' ? colors.buyGreen : colors.sellRed,
+                              opacity: 0.9
+                            }
+                          }}
+                        >
+                          Place {pendingOrder.type.charAt(0).toUpperCase() + pendingOrder.type.slice(1)} Order
+                        </Button>
+                      </Tooltip>
                     </Box>
                   )}
                   
                   {activeTradingTab === 2 && (
                     <Box>
-                      {openOrders.length === 0 ? (
-                        <Typography sx={{ color: colors.secondaryText, textAlign: 'center', py: 3 }}>
-                          No open orders
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          Orders waiting to be executed when price conditions are met
                         </Typography>
+                        {renderTooltip("Open orders are pending trades that will execute automatically when the market reaches your specified price. You can cancel them anytime before execution.")}
+                      </Box>
+                      
+                      {openOrders.length === 0 ? (
+                        <Box sx={{ textAlign: 'center', py: 3, backgroundColor: colors.panelBg, borderRadius: '8px', border: `1px dashed ${colors.borderColor}` }}>
+                          <Typography sx={{ color: colors.secondaryText, mb: 2 }}>
+                            No open orders
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: colors.secondaryText, display: 'block', mb: 1 }}>
+                            Use the Limit/Stop tab to place pending orders
+                          </Typography>
+                          <Button 
+                            variant="outlined"
+                            size="small"
+                            onClick={() => setActiveTradingTab(1)}
+                            sx={{
+                              borderColor: colors.accentBlue,
+                              color: colors.accentBlue,
+                              '&:hover': {
+                                borderColor: colors.accentBlue,
+                                backgroundColor: `${colors.accentBlue}20`
+                              }
+                            }}
+                          >
+                            Place an Order
+                          </Button>
+                        </Box>
                       ) : (
                         <TableContainer 
                           component={Paper}
@@ -1749,19 +1901,51 @@ const Trade = () => {
                                     ${order.amount}
                                   </TableCell>
                                   <TableCell>
-                                    <IconButton 
-                                      size="small" 
-                                      onClick={() => cancelOrder(order.id)}
-                                      sx={{ color: colors.sellRed }}
-                                    >
-                                      <DeleteIcon fontSize="small" />
-                                    </IconButton>
+                                    <Tooltip title="Cancel this order">
+                                      <IconButton 
+                                        size="small" 
+                                        onClick={() => cancelOrder(order.id)}
+                                        sx={{ color: colors.sellRed }}
+                                      >
+                                        <DeleteIcon fontSize="small" />
+                                      </IconButton>
+                                    </Tooltip>
                                   </TableCell>
                                 </TableRow>
                               ))}
                             </TableBody>
                           </Table>
                         </TableContainer>
+                      )}
+                      
+                      {openOrders.length > 0 && (
+                        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between' }}>
+                          <Typography variant="caption" sx={{ color: colors.secondaryText }}>
+                            {openOrders.length} pending order{openOrders.length !== 1 ? 's' : ''}
+                          </Typography>
+                          <Tooltip title="Cancel all pending orders">
+                            <Button 
+                              variant="outlined" 
+                              color="error" 
+                              size="small"
+                              onClick={() => {
+                                if (window.confirm('Cancel all pending orders?')) {
+                                  setOpenOrders([]);
+                                }
+                              }}
+                              sx={{
+                                borderColor: colors.sellRed,
+                                color: colors.sellRed,
+                                '&:hover': {
+                                  borderColor: colors.sellRed,
+                                  backgroundColor: `${colors.sellRed}20`
+                                }
+                              }}
+                            >
+                              Cancel All
+                            </Button>
+                          </Tooltip>
+                        </Box>
                       )}
                     </Box>
                   )}
