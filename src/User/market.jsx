@@ -15,8 +15,7 @@ import {
   Button,
   CircularProgress,
   Select,
-  MenuItem,
-  Alert
+  MenuItem
 } from '@mui/material';
 import { 
   LineChart, 
@@ -130,11 +129,6 @@ const Market = () => {
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteMessage, setFavoriteMessage] = useState('');
   const [showFavoriteAlert, setShowFavoriteAlert] = useState(false);
-  const [activeTab, setActiveTab] = useState(0);
-  const [historyData, setHistoryData] = useState(null);
-  const [historyLoading, setHistoryLoading] = useState(false);
-  const [historyError, setHistoryError] = useState(null);
-  const [retryCount, setRetryCount] = useState(0);
 
   // Add a ref to track if we've already logged sentiment messages
   const sentimentLoggedRef = useRef(false);
@@ -164,42 +158,40 @@ const Market = () => {
   }, [navigate]);
 
   useEffect(() => {
-    checkIfFavorite();
+    const checkIfFavorite = async () => {
+      try {
+        // Handle case where selectedPair might be an object
+        let pairSymbol = selectedPair;
+        
+        if (typeof selectedPair === 'object' && selectedPair !== null) {
+          pairSymbol = selectedPair.value || 'EURUSD=X';
+          console.warn('Selected pair is object in favorite check, using value:', pairSymbol);
+        }
+        
+        // Handle case where the symbol might have -X suffix
+        const cleanSymbol = typeof pairSymbol === 'string' && pairSymbol.includes('-X') 
+          ? pairSymbol.split('-X')[0] 
+          : pairSymbol;
+          
+        console.log('Checking favorite status for clean symbol:', cleanSymbol);
+        
+        const response = await API.favorites.check(cleanSymbol);
+        setIsFavorite(response.data.isFavorite);
+      } catch (error) {
+        console.error('Error checking favorite status:', error);
+      }
+    };
+    
+    if (user) {
+      checkIfFavorite();
+    }
   }, [selectedPair, user]);
 
-  // Function to check if the current pair is a favorite
-  const checkIfFavorite = async (pairToCheck = selectedPair) => {
-    if (!user) return;
-    
-    try {
-      // Handle case where selectedPair might be an object
-      let pairSymbol = pairToCheck;
-      
-      if (typeof pairSymbol === 'object' && pairSymbol !== null) {
-        pairSymbol = pairSymbol.value || 'EURUSD=X';
-        console.warn('Selected pair is object in favorite check, using value:', pairSymbol);
-      }
-      
-      // Handle case where the symbol might have -X suffix
-      const cleanSymbol = typeof pairSymbol === 'string' && pairSymbol.includes('-X') 
-        ? pairSymbol.split('-X')[0] 
-        : pairSymbol;
-        
-      console.log('Checking favorite status for clean symbol:', cleanSymbol);
-      
-      const response = await API.favorites.check(cleanSymbol);
-      setIsFavorite(response.data.isFavorite);
-    } catch (error) {
-      console.error('Error checking favorite status:', error);
-    }
-  };
-  
   // Initial data fetch when component mounts
   useEffect(() => {
     if (user && selectedPair) {
       console.log('Initial load - fetching market analysis for:', selectedPair);
       fetchMarketAnalysis();
-      fetchPriceHistory();
     }
   }, [user]); // Only run when user changes
 
@@ -208,17 +200,20 @@ const Market = () => {
   };
 
   const handlePairChange = (event) => {
-    const newPair = event.target.value;
-    console.log('Changing to pair:', newPair);
+    // Make sure we're getting a string value, not an object
+    let newPair = event.target.value;
+    
+    // If it's an object with a value property, use that instead
+    if (typeof newPair === 'object' && newPair !== null) {
+      console.warn('Selected pair is an object instead of string:', newPair);
+      newPair = newPair.value || 'EURUSD=X';
+    }
+    
+    console.log('Setting temporary selected pair to:', newPair);
     setSelectedPair(newPair);
     
-    // Fetch market analysis for the new pair
-    fetchMarketAnalysis(newPair);
-    // Also fetch price history for the new pair
-    fetchPriceHistory(newPair);
-    
-    // Check if the new pair is a favorite
-    checkIfFavorite(newPair);
+    // Don't automatically fetch data when changing pairs
+    // User must click "Start Analyze" button to fetch data
   };
 
   const fetchMarketAnalysis = async (symbolToFetch = selectedPair) => {
@@ -615,218 +610,6 @@ const Market = () => {
     };
   };
 
-  // Add new method for fetching price history
-  const fetchPriceHistory = async (symbolToFetch = selectedPair) => {
-    setHistoryLoading(true);
-    setHistoryError(null);
-    
-    try {
-      // Clean the symbol (remove =X suffix if present, similar to how it's done in axiosConfig)
-      const cleanSymbol = symbolToFetch.replace('=X', '-X');
-      console.log('Fetching price history for symbol:', cleanSymbol);
-      
-      // Call the API to get price history data
-      const response = await API.market.getHistory(cleanSymbol);
-      console.log('Price history response:', response.status);
-      setHistoryData(response.data);
-      
-      // Reset retry count on successful fetch
-      setRetryCount(0);
-    } catch (err) {
-      console.error('Error fetching price history:', err);
-      
-      // Handle specific error cases
-      if (err.response?.status === 500) {
-        console.log('Server error encountered when fetching price history');
-        if (retryCount < 2) {
-          // Try again after a delay for server errors
-          console.log(`Retrying price history fetch (attempt ${retryCount + 1})`);
-          setTimeout(() => {
-            setRetryCount(prev => prev + 1);
-            fetchPriceHistory(symbolToFetch);
-          }, 2000);
-        } else {
-          setHistoryError('The server encountered an error. Please try again later.');
-        }
-      } else if (err.response?.status === 404) {
-        setHistoryError(`No historical data available for ${symbolToFetch}. The data may not exist in our database.`);
-        
-        // Create empty history data structure for a better UX
-        setHistoryData({
-          symbol: symbolToFetch,
-          history: []
-        });
-      } else {
-        setHistoryError(err.response?.data?.error || 'Failed to fetch price history data');
-        
-        // Create empty history data structure for a better UX
-        setHistoryData({
-          symbol: symbolToFetch,
-          history: []
-        });
-      }
-    } finally {
-      setHistoryLoading(false);
-    }
-  };
-
-  // Function to render the price history chart
-  const renderPriceHistoryChart = () => {
-    if (historyLoading) {
-      return (
-        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-          <CircularProgress />
-        </Box>
-      );
-    }
-
-    // Check if we have history data
-    const hasHistoryData = historyData && historyData.history && historyData.history.length > 0;
-    
-    // If no history data but we have analysis data, create synthetic data from historical_data
-    let chartData;
-    if (!hasHistoryData && analysisData && analysisData.historical_data) {
-      console.log('Using synthetic chart data from analysis data');
-      
-      // Create chart data from historical_data in analysisData
-      const dates = analysisData.historical_data.dates || [];
-      const prices = analysisData.historical_data.prices || [];
-      
-      if (dates.length > 0 && prices.length > 0) {
-        chartData = {
-          labels: dates,
-          datasets: [
-            {
-              label: 'Price',
-              data: prices,
-              borderColor: colors.accentBlue,
-              backgroundColor: 'rgba(33, 150, 243, 0.1)',
-              tension: 0.1,
-              fill: true
-            }
-          ]
-        };
-      }
-    } else if (hasHistoryData) {
-      // Normal case - we have history data from API
-      const historyDates = historyData.history.map(item => item.date);
-      const historyPrices = historyData.history.map(item => item.close);
-
-      chartData = {
-        labels: historyDates,
-        datasets: [
-          {
-            label: 'Price',
-            data: historyPrices,
-            borderColor: colors.accentBlue,
-            backgroundColor: 'rgba(33, 150, 243, 0.1)',
-            tension: 0.1,
-            fill: true
-          }
-        ]
-      };
-    }
-    
-    // If we still don't have chart data, create synthetic data
-    if (!chartData) {
-      console.log('Creating fully synthetic chart data');
-      
-      // Create synthetic dates and prices
-      const dates = [];
-      const prices = [];
-      const today = new Date();
-      const basePrice = analysisData ? analysisData.current_price : 1.0;
-      
-      for (let i = 30; i > 0; i--) {
-        const pastDate = new Date(today);
-        pastDate.setDate(today.getDate() - i);
-        const dateStr = pastDate.toISOString().split('T')[0].substring(5); // MM-DD format
-        
-        // Create somewhat realistic price history with small variations
-        const randomVariation = Math.sin(i * 0.2) * 0.02 + (Math.random() * 0.01 - 0.005);
-        const historicalPrice = Number((basePrice * (1 + randomVariation)).toFixed(4));
-        
-        dates.push(dateStr);
-        prices.push(historicalPrice);
-      }
-      
-      chartData = {
-        labels: dates,
-        datasets: [
-          {
-            label: 'Price',
-            data: prices,
-            borderColor: colors.accentBlue,
-            backgroundColor: 'rgba(33, 150, 243, 0.1)',
-            tension: 0.1,
-            fill: true
-          }
-        ]
-      };
-      
-      // Show info message about using synthetic data
-      if (historyError) {
-        return (
-          <>
-            <Alert severity="info" sx={{ m: 2 }}>
-              {historyError || "No historical data available. Showing estimated price trends."}
-            </Alert>
-            <Box sx={{ height: 250, p: 2 }}>
-              <Line data={chartData} options={chartOptions} />
-            </Box>
-          </>
-        );
-      }
-    }
-
-    const chartOptions = {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: true,
-          position: 'top',
-          labels: {
-            color: colors.secondaryText
-          }
-        },
-        tooltip: {
-          mode: 'index',
-          intersect: false,
-          backgroundColor: colors.panelBg,
-          titleColor: colors.primaryText,
-          bodyColor: colors.secondaryText,
-          borderColor: colors.borderColor,
-          borderWidth: 1
-        }
-      },
-      scales: {
-        x: {
-          grid: {
-            color: 'rgba(42, 47, 69, 0.3)'
-          },
-          ticks: {
-            color: colors.secondaryText
-          }
-        },
-        y: {
-          grid: {
-            color: 'rgba(42, 47, 69, 0.3)'
-          },
-          ticks: {
-            color: colors.secondaryText
-          }
-        }
-      }
-    };
-
-    return (
-      <Box sx={{ height: 300, p: 2 }}>
-        <Line data={chartData} options={chartOptions} />
-      </Box>
-    );
-  };
-
   if (!user) {
     return null;
   }
@@ -894,6 +677,9 @@ const Market = () => {
                     setSelectedPair(actualValue);
                     setTimeout(() => fetchMarketAnalysis(actualValue), 100);
                   } else {
+                    // Reset data when clicking analyze button
+                    setAnalysisData(null);
+                    setError(null);
                     fetchMarketAnalysis(selectedPair);
                   }
                 }}
@@ -984,7 +770,39 @@ const Market = () => {
               </Box>
             </Box>
             <Box sx={{ flex: 1, minHeight: 400 }}>
-              {renderPriceHistoryChart()}
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={analysisData && analysisData.historical_data && analysisData.historical_data.prices && 
+                  analysisData.historical_data.dates ? 
+                  analysisData.historical_data.prices.map((price, index) => ({
+                  time: analysisData.historical_data.dates[index],
+                  price: price
+                })) : mockData.priceHistory}>
+                  <defs>
+                    <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={colors.accentBlue} stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor={colors.accentBlue} stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={colors.borderColor} />
+                  <XAxis dataKey="time" stroke={colors.secondaryText} />
+                  <YAxis stroke={colors.secondaryText} />
+                  <ChartTooltip 
+                    contentStyle={{ 
+                      backgroundColor: colors.cardBg, 
+                      border: `1px solid ${colors.borderColor}`,
+                      borderRadius: '8px'
+                    }}
+                    labelStyle={{ color: colors.primaryText }}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="price" 
+                    stroke={colors.accentBlue} 
+                    fillOpacity={1} 
+                    fill="url(#colorPrice)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </Box>
           </Paper>
 
