@@ -719,8 +719,8 @@ const Trade = () => {
       setCurrentPrice(initialData[initialData.length - 1].close);
     }
     
-    // Start live updates
-    intervalId = setInterval(generateData, 1000); // 1 second updates for short-term
+    // Start live updates with faster refresh for short-term trading
+    intervalId = setInterval(generateData, 500); // 500ms updates for more responsive short-term trading
     
     return () => clearInterval(intervalId);
   }, [selectedPair, tradingType, step, chartType, showIndicators]);
@@ -977,6 +977,94 @@ const Trade = () => {
     }
   }, [step, tradingType]);
 
+  // Add price alert state
+  const [priceAlerts, setPriceAlerts] = useState([]);
+  const [alertPrice, setAlertPrice] = useState('');
+  const [alertActive, setAlertActive] = useState(false);
+  const audioRef = useRef(null);
+  
+  // Quick-trade preset amounts
+  const quickAmounts = [100, 500, 1000, 5000];
+  
+  // Function to add price alert
+  const addPriceAlert = () => {
+    if (!alertPrice) return;
+    
+    const newAlert = {
+      id: Date.now(),
+      price: parseFloat(alertPrice),
+      created: new Date().toISOString()
+    };
+    
+    setPriceAlerts(prev => [...prev, newAlert]);
+    setAlertPrice('');
+    setAlertActive(true);
+  };
+
+  // Function to remove price alert
+  const removeAlert = (id) => {
+    setPriceAlerts(prev => prev.filter(alert => alert.id !== id));
+    if (priceAlerts.length <= 1) {
+      setAlertActive(false);
+    }
+  };
+
+  // Check for price alerts
+  useEffect(() => {
+    if (!currentPrice || !alertActive || priceAlerts.length === 0) return;
+    
+    priceAlerts.forEach(alert => {
+      const prevPrice = priceData[priceData.length - 2]?.close;
+      if (prevPrice && currentPrice) {
+        // Alert when price crosses the alert level
+        if ((prevPrice < alert.price && currentPrice >= alert.price) || 
+            (prevPrice > alert.price && currentPrice <= alert.price)) {
+          // Play sound
+          if (audioRef.current) {
+            audioRef.current.play().catch(e => console.log("Audio play prevented:", e));
+          }
+          // Show notification
+          const direction = prevPrice < alert.price ? "above" : "below";
+          const message = `Price Alert: ${selectedPair} is now ${direction} ${alert.price.toFixed(5)}`;
+          
+          // Browser notification if supported
+          if (Notification.permission === "granted") {
+            new Notification("MarketPulse Price Alert", { body: message });
+          }
+          
+          // Alert dialog
+          alert(message);
+        }
+      }
+    });
+  }, [currentPrice, priceAlerts, alertActive, selectedPair, priceData]);
+
+  // Function for quick trade with preset amount
+  const quickTrade = (amount, isBuy) => {
+    if (!currentPrice) return;
+    
+    if (availableBalance < amount) {
+      alert("Not enough available balance!");
+      return;
+    }
+
+    const trade = {
+      pair: selectedPair,
+      type: isBuy ? 'buy' : 'sell',
+      orderType: 'market',
+      amount,
+      leverage,
+      price: currentPrice,
+      marginUsed: amount,
+      time: new Date().toISOString(),
+    };
+
+    setPosition(trade);
+    setAvailableBalance(prev => prev - amount);
+    setLockedMargin(amount);
+    setIsBuying(isBuy);
+  };
+
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: colors.darkBg }}>
       <Sidebar />
@@ -986,72 +1074,237 @@ const Trade = () => {
         
         {step === 1 && (
           // Step 1: Set simulation amount
-          <Box sx={{ maxWidth: '600px', mx: 'auto', textAlign: 'center', mt: 5 }}>
-            <Typography 
-              variant="h4" 
-              gutterBottom 
-              sx={{ 
-                color: colors.primaryText,
-                fontWeight: 'bold',
-                mb: 4
-              }}
-            >
-              Set Your Simulation Amount
-            </Typography>
-            
+          <Box sx={{ maxWidth: '800px', mx: 'auto', mt: 5 }}>
             <Paper 
               sx={{ 
                 p: 4, 
                 backgroundColor: colors.cardBg,
                 border: `1px solid ${colors.borderColor}`,
-                borderRadius: '12px',
-                boxShadow: `0 8px 16px ${colors.shadowColor}`,
-                mb: 4
+                borderRadius: '16px',
+                boxShadow: `0 12px 24px ${colors.shadowColor}`,
               }}
             >
-              <Typography variant="h5" sx={{ color: colors.primaryText, mb: 3 }}>
-                ${simulationAmount.toFixed(0)}
+              <Typography 
+                variant="h4" 
+                sx={{ 
+                  color: colors.primaryText,
+                  fontWeight: 'bold',
+                  mb: 1,
+                  textAlign: 'center'
+                }}
+              >
+                Set Your Simulation Amount
               </Typography>
               
-              <Box sx={{ px: 3, mb: 4 }}>
-                <input
-                  type="range"
-                  min="1000"
-                  max="100000"
-                  step="1000"
-                  value={simulationAmount}
-                  onChange={(e) => setSimulationAmount(parseFloat(e.target.value))}
-                  style={{ 
-                    width: '100%',
-                    accentColor: colors.accentBlue,
+              <Typography 
+                variant="body1" 
+                sx={{ 
+                  color: colors.secondaryText,
+                  mb: 4,
+                  textAlign: 'center'
+                }}
+              >
+                Choose how much virtual capital you want to start with
+              </Typography>
+              
+              <Box sx={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 4 }}>
+                <Typography 
+                  variant="h3" 
+                  sx={{ 
+                    color: colors.accentBlue,
+                    fontWeight: 'bold',
+                    mb: 2,
+                    textShadow: '0 2px 8px rgba(33, 150, 243, 0.3)'
                   }}
-                />
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
+                >
+                  ${simulationAmount.toLocaleString()}
+                </Typography>
+                
+                <Box sx={{ width: '100%', px: 4, position: 'relative', mt: 2 }}>
+                  {/* Progress fill effect */}
+                  <Box sx={{ 
+                    position: 'absolute', 
+                    top: '50%', 
+                    left: 40, 
+                    right: 40, 
+                    height: '8px', 
+                    transform: 'translateY(-50%)',
+                    backgroundColor: colors.borderColor,
+                    borderRadius: '4px',
+                  }} />
+                  
+                  <Box sx={{ 
+                    position: 'absolute', 
+                    top: '50%', 
+                    left: 40, 
+                    width: `${(simulationAmount - 1000) / 990}%`,
+                    height: '8px', 
+                    transform: 'translateY(-50%)',
+                    background: `linear-gradient(90deg, ${colors.accentBlue}, ${colors.buyGreen})`,
+                    borderRadius: '4px',
+                    transition: 'width 0.3s ease'
+                  }} />
+                  
+                  <input
+                    type="range"
+                    min="1000"
+                    max="100000"
+                    step="1000"
+                    value={simulationAmount}
+                    onChange={(e) => setSimulationAmount(parseFloat(e.target.value))}
+                    style={{ 
+                      width: '100%',
+                      accentColor: colors.accentBlue,
+                      height: '24px',
+                      borderRadius: '12px',
+                      appearance: 'none',
+                      background: 'transparent',
+                      cursor: 'pointer',
+                      position: 'relative',
+                      zIndex: 2
+                    }}
+                  />
+                </Box>
+                
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', px: 4, mt: 1 }}>
                   <Typography variant="body2" sx={{ color: colors.secondaryText }}>$1,000</Typography>
                   <Typography variant="body2" sx={{ color: colors.secondaryText }}>$100,000</Typography>
                 </Box>
               </Box>
               
-              <Button 
-                variant="contained" 
-                color="primary" 
-                size="large"
-                onClick={() => {
-                  setAvailableBalance(simulationAmount);
-                  setStep(2);
-                }}
-                sx={{
-                  backgroundColor: colors.accentBlue,
-                  px: 4,
-                  py: 1.5,
-                  '&:hover': {
+              {/* Preset Buttons */}
+              <Typography variant="subtitle2" sx={{ color: colors.primaryText, mb: 2, textAlign: 'center' }}>
+                Popular Starting Amounts
+              </Typography>
+              
+              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 5, flexWrap: 'wrap' }}>
+                {[5000, 10000, 25000, 50000].map(amount => (
+                  <Button 
+                    key={amount}
+                    variant={simulationAmount === amount ? "contained" : "outlined"}
+                    onClick={() => setSimulationAmount(amount)}
+                    sx={{
+                      borderColor: colors.borderColor,
+                      color: simulationAmount === amount ? colors.primaryText : colors.secondaryText,
+                      backgroundColor: simulationAmount === amount ? colors.accentBlue : 'transparent',
+                      '&:hover': {
+                        backgroundColor: simulationAmount === amount ? colors.accentBlue : colors.panelBg,
+                        borderColor: colors.accentBlue,
+                      },
+                      transition: 'all 0.2s ease',
+                      minWidth: '100px'
+                    }}
+                  >
+                    ${amount.toLocaleString()}
+                  </Button>
+                ))}
+              </Box>
+              
+              {/* Risk Level Indicator */}
+              <Box sx={{ mb: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <Typography variant="subtitle2" sx={{ color: colors.primaryText, mb: 1 }}>
+                  Suggested Risk Level
+                </Typography>
+                
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center', 
+                  width: '100%', 
+                  maxWidth: '500px',
+                  px: 2
+                }}>
+                  <Box sx={{ textAlign: 'center', flex: 1 }}>
+                    <Box sx={{ 
+                      height: '8px', 
+                      backgroundColor: simulationAmount <= 10000 ? colors.buyGreen : colors.borderColor,
+                      borderTopLeftRadius: '4px',
+                      borderBottomLeftRadius: '4px',
+                      transition: 'background-color 0.3s ease'
+                    }} />
+                    <Typography variant="caption" sx={{ color: colors.secondaryText, mt: 0.5, display: 'block' }}>
+                      Conservative
+                    </Typography>
+                  </Box>
+                  
+                  <Box sx={{ textAlign: 'center', flex: 1 }}>
+                    <Box sx={{ 
+                      height: '8px', 
+                      backgroundColor: simulationAmount > 10000 && simulationAmount <= 50000 ? colors.accentBlue : colors.borderColor,
+                      transition: 'background-color 0.3s ease'
+                    }} />
+                    <Typography variant="caption" sx={{ color: colors.secondaryText, mt: 0.5, display: 'block' }}>
+                      Moderate
+                    </Typography>
+                  </Box>
+                  
+                  <Box sx={{ textAlign: 'center', flex: 1 }}>
+                    <Box sx={{ 
+                      height: '8px', 
+                      backgroundColor: simulationAmount > 50000 ? colors.sellRed : colors.borderColor,
+                      borderTopRightRadius: '4px',
+                      borderBottomRightRadius: '4px',
+                      transition: 'background-color 0.3s ease'
+                    }} />
+                    <Typography variant="caption" sx={{ color: colors.secondaryText, mt: 0.5, display: 'block' }}>
+                      Aggressive
+                    </Typography>
+                  </Box>
+                </Box>
+                
+                <Typography variant="body2" sx={{ color: colors.secondaryText, mt: 2, textAlign: 'center', maxWidth: '600px' }}>
+                  {simulationAmount <= 10000 
+                    ? "Perfect for beginners. Practice basic strategies with minimal risk." 
+                    : simulationAmount <= 50000 
+                      ? "Balanced approach. Good for intermediate traders testing various methods." 
+                      : "Advanced simulation. Experience high-stakes trading and complex strategies."}
+                </Typography>
+              </Box>
+              
+              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
+                <Button 
+                  variant="outlined" 
+                  color="primary" 
+                  size="large"
+                  onClick={() => window.history.back()}
+                  sx={{
+                    borderColor: colors.borderColor,
+                    color: colors.secondaryText,
+                    px: 3,
+                    py: 1.5,
+                    '&:hover': {
+                      borderColor: colors.accentBlue,
+                      backgroundColor: 'transparent',
+                    }
+                  }}
+                >
+                  Cancel
+                </Button>
+                
+                <Button 
+                  variant="contained" 
+                  color="primary" 
+                  size="large"
+                  onClick={() => {
+                    setAvailableBalance(simulationAmount);
+                    setStep(2);
+                  }}
+                  sx={{
                     backgroundColor: colors.accentBlue,
-                    opacity: 0.9
-                  }
-                }}
-              >
-                Continue
-              </Button>
+                    px: 4,
+                    py: 1.5,
+                    '&:hover': {
+                      backgroundColor: colors.accentBlue,
+                      opacity: 0.9,
+                      transform: 'translateY(-2px)',
+                      boxShadow: `0 6px 12px rgba(33, 150, 243, 0.3)`
+                    },
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  Start Trading
+                </Button>
+              </Box>
             </Paper>
           </Box>
         )}
@@ -1500,148 +1753,296 @@ const Trade = () => {
                         {renderTooltip("Market orders are executed instantly at the best available price. They're used when you want to enter or exit a position quickly.")}
                       </Box>
               
-              <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                <FormControl sx={{ flex: 1 }}>
-                  <InputLabel id="pair-select-label" sx={{ color: colors.secondaryText }}>
-                    Currency Pair
-                  </InputLabel>
-                  <Select
-                    labelId="pair-select-label"
-                    value={selectedPair}
-                    label="Currency Pair"
-                    onChange={(e) => setSelectedPair(e.target.value)}
-                    sx={{ 
-                      color: colors.primaryText,
-                      '.MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.borderColor,
-                      },
-                      '&:hover .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.accentBlue,
-                      },
-                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.accentBlue,
-                      },
-                    }}
-                    MenuProps={{
-                      PaperProps: {
-                        sx: {
-                          backgroundColor: colors.panelBg,
-                          border: `1px solid ${colors.borderColor}`,
-                          '& .MuiMenuItem-root': {
-                            color: colors.primaryText,
-                            '&:hover': {
-                              backgroundColor: colors.hoverBg,
-                            },
-                            '&.Mui-selected': {
-                              backgroundColor: colors.accentBlue,
-                              '&:hover': {
-                                backgroundColor: colors.accentBlue,
+                      {/* Quick Trade Buttons */}
+                      <Paper sx={{ 
+                        p: 2, 
+                        mb: 2, 
+                        backgroundColor: colors.panelBg,
+                        border: `1px solid ${colors.borderColor}`,
+                        borderRadius: '8px'
+                      }}>
+                        <Typography variant="subtitle2" sx={{ mb: 1, color: colors.primaryText }}>
+                          Quick Trade
+                        </Typography>
+                        
+                        <Grid container spacing={1} sx={{ mb: 1 }}>
+                          {quickAmounts.map(amt => (
+                            <Grid item xs={6} key={amt}>
+                              <Box sx={{ display: 'flex', gap: 1 }}>
+                                <Button 
+                                  variant="contained" 
+                                  size="small"
+                                  onClick={() => quickTrade(amt, true)}
+                                  sx={{
+                                    flex: 1,
+                                    backgroundColor: colors.buyGreen,
+                                    '&:hover': {
+                                      backgroundColor: colors.buyGreen,
+                                      opacity: 0.9
+                                    }
+                                  }}
+                                >
+                                  Buy ${amt}
+                                </Button>
+                                <Button 
+                                  variant="contained" 
+                                  size="small"
+                                  onClick={() => quickTrade(amt, false)}
+                                  sx={{
+                                    flex: 1,
+                                    backgroundColor: colors.sellRed,
+                                    '&:hover': {
+                                      backgroundColor: colors.sellRed,
+                                      opacity: 0.9
+                                    }
+                                  }}
+                                >
+                                  Sell ${amt}
+                                </Button>
+                              </Box>
+                            </Grid>
+                          ))}
+                        </Grid>
+                        
+                        <Divider sx={{ my: 1, borderColor: colors.borderColor }} />
+                        
+                        {/* Price Alerts */}
+                        <Box sx={{ mt: 1 }}>
+                          <Typography variant="subtitle2" sx={{ mb: 1, color: colors.primaryText }}>
+                            Price Alerts
+                          </Typography>
+                          
+                          <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                            <TextField
+                              placeholder="Set alert price"
+                              size="small"
+                              type="number"
+                              value={alertPrice}
+                              onChange={(e) => setAlertPrice(e.target.value)}
+                              sx={{ flex: 1 }}
+                              InputProps={{
+                                sx: {
+                                  color: colors.primaryText,
+                                  '& .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: colors.borderColor,
+                                  },
+                                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: colors.accentBlue,
+                                  },
+                                  height: '36px'
+                                },
+                              }}
+                            />
+                            <Button 
+                              variant="outlined"
+                              onClick={addPriceAlert}
+                              sx={{
+                                borderColor: colors.accentBlue,
+                                color: colors.accentBlue,
+                                height: '36px',
+                                '&:hover': {
+                                  borderColor: colors.accentBlue,
+                                  backgroundColor: `${colors.accentBlue}20`
+                                }
+                              }}
+                            >
+                              Add Alert
+                            </Button>
+                          </Box>
+                          
+                          {priceAlerts.length > 0 && (
+                            <Box sx={{ maxHeight: '80px', overflow: 'auto' }}>
+                              {priceAlerts.map(alert => (
+                                <Chip
+                                  key={alert.id}
+                                  label={alert.price.toFixed(5)}
+                                  size="small"
+                                  onDelete={() => removeAlert(alert.id)}
+                                  sx={{ 
+                                    mr: 1, 
+                                    mb: 1, 
+                                    backgroundColor: `${colors.accentBlue}40`,
+                                    color: colors.primaryText,
+                                    '& .MuiChip-deleteIcon': {
+                                      color: colors.primaryText,
+                                      '&:hover': {
+                                        color: colors.sellRed
+                                      }
+                                    }
+                                  }}
+                                />
+                              ))}
+                            </Box>
+                          )}
+                          
+                          <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                            <Switch
+                              size="small"
+                              checked={alertActive}
+                              onChange={(e) => setAlertActive(e.target.checked)}
+                              sx={{
+                                '& .MuiSwitch-track': {
+                                  backgroundColor: alertActive ? `${colors.accentBlue}80` : colors.borderColor,
+                                },
+                                '& .MuiSwitch-thumb': {
+                                  backgroundColor: alertActive ? colors.accentBlue : colors.secondaryText,
+                                }
+                              }}
+                            />
+                            <Typography variant="caption" sx={{ color: colors.secondaryText }}>
+                              Alerts {alertActive ? 'Active' : 'Inactive'}
+                            </Typography>
+                          </Box>
+                          
+                          {/* Hidden audio element for alerts */}
+                          <audio ref={audioRef} preload="auto">
+                            <source src="/alert.mp3" type="audio/mpeg" />
+                          </audio>
+                        </Box>
+                      </Paper>
+              
+                      <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                        <FormControl sx={{ flex: 1 }}>
+                          <InputLabel id="pair-select-label" sx={{ color: colors.secondaryText }}>
+                            Currency Pair
+                          </InputLabel>
+                          <Select
+                            labelId="pair-select-label"
+                            value={selectedPair}
+                            label="Currency Pair"
+                            onChange={(e) => setSelectedPair(e.target.value)}
+                            sx={{ 
+                              color: colors.primaryText,
+                              '.MuiOutlinedInput-notchedOutline': {
+                                borderColor: colors.borderColor,
                               },
-                            }
-                          }
-                        }
-                      }
-                    }}
-                  >
-                    {forexPairs.map(pair => (
-                      <MenuItem key={pair} value={pair}>
-                        {pair}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                              '&:hover .MuiOutlinedInput-notchedOutline': {
+                                borderColor: colors.accentBlue,
+                              },
+                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                borderColor: colors.accentBlue,
+                              },
+                            }}
+                            MenuProps={{
+                              PaperProps: {
+                                sx: {
+                                  backgroundColor: colors.panelBg,
+                                  border: `1px solid ${colors.borderColor}`,
+                                  '& .MuiMenuItem-root': {
+                                    color: colors.primaryText,
+                                    '&:hover': {
+                                      backgroundColor: colors.hoverBg,
+                                    },
+                                    '&.Mui-selected': {
+                                      backgroundColor: colors.accentBlue,
+                                      '&:hover': {
+                                        backgroundColor: colors.accentBlue,
+                                      },
+                                    }
+                                  }
+                                }
+                              }
+                            }}
+                          >
+                            {forexPairs.map(pair => (
+                              <MenuItem key={pair} value={pair}>
+                                {pair}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
 
-                <FormControl sx={{ flex: 1 }}>
-                  <InputLabel id="order-type-label" sx={{ color: colors.secondaryText }}>
-                    Order Type
-                  </InputLabel>
-                  <Select
-                    labelId="order-type-label"
-                    value={orderType}
-                    label="Order Type"
-                    onChange={(e) => setOrderType(e.target.value)}
-                    sx={{ 
-                      color: colors.primaryText,
-                      '.MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.borderColor,
-                      },
-                      '&:hover .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.accentBlue,
-                      },
-                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.accentBlue,
-                      },
-                    }}
-                    MenuProps={{
-                      PaperProps: {
-                        sx: {
-                          backgroundColor: colors.panelBg,
-                          border: `1px solid ${colors.borderColor}`,
-                          '& .MuiMenuItem-root': {
-                            color: colors.primaryText,
-                            '&:hover': {
-                              backgroundColor: colors.hoverBg,
-                            },
-                            '&.Mui-selected': {
-                              backgroundColor: colors.accentBlue,
-                              '&:hover': {
-                                backgroundColor: colors.accentBlue,
+                        <FormControl sx={{ flex: 1 }}>
+                          <InputLabel id="order-type-label" sx={{ color: colors.secondaryText }}>
+                            Order Type
+                          </InputLabel>
+                          <Select
+                            labelId="order-type-label"
+                            value={orderType}
+                            label="Order Type"
+                            onChange={(e) => setOrderType(e.target.value)}
+                            sx={{ 
+                              color: colors.primaryText,
+                              '.MuiOutlinedInput-notchedOutline': {
+                                borderColor: colors.borderColor,
                               },
-                            }
-                          }
-                        }
-                      }
-                    }}
-                  >
-                    <MenuItem value="market">Market</MenuItem>
+                              '&:hover .MuiOutlinedInput-notchedOutline': {
+                                borderColor: colors.accentBlue,
+                              },
+                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                borderColor: colors.accentBlue,
+                              },
+                            }}
+                            MenuProps={{
+                              PaperProps: {
+                                sx: {
+                                  backgroundColor: colors.panelBg,
+                                  border: `1px solid ${colors.borderColor}`,
+                                  '& .MuiMenuItem-root': {
+                                    color: colors.primaryText,
+                                    '&:hover': {
+                                      backgroundColor: colors.hoverBg,
+                                    },
+                                    '&.Mui-selected': {
+                                      backgroundColor: colors.accentBlue,
+                                      '&:hover': {
+                                        backgroundColor: colors.accentBlue,
+                                      },
+                                    }
+                                  }
+                                }
+                              }
+                            }}
+                          >
+                            <MenuItem value="market">Market</MenuItem>
                             <MenuItem value="limit">Limit</MenuItem>
                             <MenuItem value="stop">Stop</MenuItem>
-                  </Select>
-                </FormControl>
-              </Box>
+                          </Select>
+                        </FormControl>
+                      </Box>
 
-              <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                      <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
                         <Tooltip title="Buy when you expect the price to rise">
-                <Button 
-                  variant={isBuying ? 'contained' : 'outlined'} 
-                  color="success"
-                  onClick={() => setIsBuying(true)}
-                  sx={{
-                    flex: 1,
-                    backgroundColor: isBuying ? colors.buyGreen : 'transparent',
-                    borderColor: colors.buyGreen,
-                    color: isBuying ? colors.primaryText : colors.buyGreen,
-                    '&:hover': {
-                      backgroundColor: isBuying ? colors.buyGreen : `${colors.buyGreen}20`,
-                      borderColor: colors.buyGreen,
-                    }
-                  }}
-                >
-                  Buy
-                </Button>
+                          <Button 
+                            variant={isBuying ? 'contained' : 'outlined'} 
+                            color="success"
+                            onClick={() => setIsBuying(true)}
+                            sx={{
+                              flex: 1,
+                              backgroundColor: isBuying ? colors.buyGreen : 'transparent',
+                              borderColor: colors.buyGreen,
+                              color: isBuying ? colors.primaryText : colors.buyGreen,
+                              '&:hover': {
+                                backgroundColor: isBuying ? colors.buyGreen : `${colors.buyGreen}20`,
+                                borderColor: colors.buyGreen,
+                              }
+                            }}
+                          >
+                            Buy
+                          </Button>
                         </Tooltip>
                         <Tooltip title="Sell when you expect the price to fall">
-                <Button 
-                  variant={!isBuying ? 'contained' : 'outlined'} 
-                  color="error"
-                  onClick={() => setIsBuying(false)}
-                  sx={{
-                    flex: 1,
-                    backgroundColor: !isBuying ? colors.sellRed : 'transparent',
-                    borderColor: colors.sellRed,
-                    color: !isBuying ? colors.primaryText : colors.sellRed,
-                    '&:hover': {
-                      backgroundColor: !isBuying ? colors.sellRed : `${colors.sellRed}20`,
-                      borderColor: colors.sellRed,
-                    }
-                  }}
-                >
-                  Sell
-                </Button>
+                          <Button 
+                            variant={!isBuying ? 'contained' : 'outlined'} 
+                            color="error"
+                            onClick={() => setIsBuying(false)}
+                            sx={{
+                              flex: 1,
+                              backgroundColor: !isBuying ? colors.sellRed : 'transparent',
+                              borderColor: colors.sellRed,
+                              color: !isBuying ? colors.primaryText : colors.sellRed,
+                              '&:hover': {
+                                backgroundColor: !isBuying ? colors.sellRed : `${colors.sellRed}20`,
+                                borderColor: colors.sellRed,
+                              }
+                            }}
+                          >
+                            Sell
+                          </Button>
                         </Tooltip>
-              </Box>
+                      </Box>
 
-              <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                      <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
                         <Tooltip title="Amount of money you want to invest in this trade">
                 <TextField
                   label="Amount"
@@ -1718,16 +2119,16 @@ const Trade = () => {
                   </Select>
                 </FormControl>
                         </Tooltip>
-              </Box>
-              
+                      </Box>
+                      
                       <Tooltip title={position ? "Close your current position" : "Open a new position at the current market price"}>
-              <Button 
-                variant="contained" 
-                color="primary" 
-                fullWidth 
-                size="large"
-                onClick={handleTrade}
-                sx={{
+                      <Button 
+                        variant="contained" 
+                        color="primary" 
+                        fullWidth 
+                        size="large"
+                        onClick={handleTrade}
+                        sx={{
                             backgroundColor: isBuying ? colors.buyGreen : colors.sellRed,
                   '&:hover': {
                               backgroundColor: isBuying ? colors.buyGreen : colors.sellRed,
@@ -1736,7 +2137,7 @@ const Trade = () => {
                 }}
               >
                           {position ? 'Close Position' : `${isBuying ? 'Buy' : 'Sell'} ${selectedPair}`}
-              </Button>
+                      </Button>
                       </Tooltip>
                     </Box>
                   )}
@@ -2188,36 +2589,71 @@ const Trade = () => {
                       </Typography>
                     )}
                     
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                        color: calculatePnl(position, currentPrice) >= 0 ? colors.profitGreen : colors.lossRed,
-                        fontWeight: 'bold',
-                        mt: 1
-                  }}
-                >
-                  Current PnL: ${calculatePnl(position, currentPrice).toFixed(2)}
-                      ({(calculatePnl(position, currentPrice) / position.amount * 100).toFixed(2)}%)
-                </Typography>
-                    
-                <Button 
-                  variant="outlined" 
-                  color="error" 
-                  fullWidth 
-                  size="small"
-                      onClick={() => closePosition()}
-                  sx={{ 
-                    mt: 1,
-                    borderColor: colors.sellRed,
-                    color: colors.sellRed,
-                    '&:hover': {
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: calculatePnl(position, currentPrice) >= 0 ? colors.profitGreen : colors.lossRed,
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    PnL: ${calculatePnl(position, currentPrice).toFixed(2)}
+                    ({(calculatePnl(position, currentPrice) / position.amount * 100).toFixed(2)}%)
+                  </Typography>
+                </Box>
+                
+                <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                  <Button 
+                    variant="outlined" 
+                    color="error" 
+                    fullWidth 
+                    size="small"
+                    onClick={() => closePosition()}
+                    sx={{ 
                       borderColor: colors.sellRed,
-                      backgroundColor: `${colors.sellRed}20`
-                    }
-                  }}
-                >
-                  Close Position
-                </Button>
+                      color: colors.sellRed,
+                      '&:hover': {
+                        borderColor: colors.sellRed,
+                        backgroundColor: `${colors.sellRed}20`
+                      }
+                    }}
+                  >
+                    Close
+                  </Button>
+                  
+                  {!position.stopLoss && !position.takeProfit && (
+                    <Button 
+                      variant="outlined" 
+                      color="primary" 
+                      fullWidth 
+                      size="small"
+                      onClick={() => {
+                        const stopLoss = position.type === 'buy' 
+                          ? currentPrice * 0.995 
+                          : currentPrice * 1.005;
+                        const takeProfit = position.type === 'buy'
+                          ? currentPrice * 1.01
+                          : currentPrice * 0.99;
+                        
+                        setPosition(prev => ({
+                          ...prev,
+                          stopLoss,
+                          takeProfit
+                        }));
+                      }}
+                      sx={{ 
+                        borderColor: colors.accentBlue,
+                        color: colors.accentBlue,
+                        '&:hover': {
+                          borderColor: colors.accentBlue,
+                          backgroundColor: `${colors.accentBlue}20`
+                        }
+                      }}
+                    >
+                      Add SL/TP
+                    </Button>
+                  )}
+                </Box>
               </Box>
             )}
             
