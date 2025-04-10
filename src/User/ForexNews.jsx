@@ -353,32 +353,39 @@ const ForexNews = () => {
               </Button>
             </Paper>
           ) : (
-            <Grid container spacing={3}>
+            <Box sx={{ maxWidth: '100%' }}>
               {newsData.map(article => (
-                <Grid item xs={12} md={6} lg={4} key={article.id}>
-                  <Card sx={{ 
+                <Paper
+                  key={article.id}
+                  elevation={0}
+                  sx={{ 
                     bgcolor: colors.cardBg, 
                     color: colors.primaryText,
                     border: `1px solid ${colors.borderColor}`,
                     borderRadius: 2,
-                    boxShadow: `0 4px 12px ${colors.shadowColor}`,
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
-                    '&:hover': {
-                      transform: 'translateY(-4px)',
-                      boxShadow: `0 8px 16px ${colors.shadowColor}`,
-                    }
-                  }}>
+                    mb: 3,
+                    overflow: 'hidden',
+                    width: '100%'
+                  }}
+                >
+                  {/* Card Header with image */}
+                  <Box sx={{ width: '100%', position: 'relative' }}>
                     <CardMedia
                       component="img"
-                      height="160"
+                      height="220"
                       image={article.image || 'https://via.placeholder.com/500x200?text=Forex+News'}
                       alt={article.title}
+                      sx={{ width: '100%' }}
                     />
-                    <CardContent sx={{ flexGrow: 1, p: 2, pb: 1 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Box sx={{ 
+                      position: 'absolute', 
+                      bottom: 0, 
+                      left: 0, 
+                      width: '100%', 
+                      bgcolor: 'rgba(10, 12, 20, 0.7)',
+                      p: 2
+                    }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <Typography variant="caption" sx={{ color: colors.secondaryText }}>
                           {article.source}
                         </Typography>
@@ -386,138 +393,137 @@ const ForexNews = () => {
                           {formatDate(article.date)}
                         </Typography>
                       </Box>
-                      
-                      <Typography 
-                        variant="subtitle1" 
-                        sx={{ 
-                          fontWeight: 'bold', 
-                          lineHeight: 1.3, 
-                          mb: 1,
-                          height: '52px',
-                          overflow: 'hidden',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          textOverflow: 'ellipsis'
-                        }}
-                      >
-                        {article.title}
-                      </Typography>
-                      
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
-                          color: colors.secondaryText, 
-                          mb: 2,
-                          height: '60px',
-                          overflow: 'hidden',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 3,
-                          WebkitBoxOrient: 'vertical',
-                          textOverflow: 'ellipsis'
-                        }}
-                      >
-                        {article.summary}
-                      </Typography>
-                      
-                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1 }}>
-                        <Chip 
-                          icon={article.sentiment === 'Bullish' ? <TrendingUpIcon /> : <TrendingDownIcon />}
-                          label={article.sentiment}
-                          size="small"
+                    </Box>
+                  </Box>
+                  
+                  {/* Article content */}
+                  <Box sx={{ p: 3 }}>
+                    <Typography 
+                      variant="h6" 
+                      sx={{ 
+                        fontWeight: 'bold', 
+                        mb: 2,
+                        lineHeight: 1.3
+                      }}
+                    >
+                      {article.title}
+                    </Typography>
+                    
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        color: colors.secondaryText, 
+                        mb: 3
+                      }}
+                    >
+                      {article.summary}
+                    </Typography>
+                    
+                    {/* Tags and sentiment */}
+                    <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {article.sentiment === 'Bullish' ? (
+                          <TrendingUpIcon fontSize="small" sx={{ color: colors.buyGreen }} />
+                        ) : (
+                          <TrendingDownIcon fontSize="small" sx={{ color: colors.sellRed }} />
+                        )}
+                        <Typography 
+                          variant="body2" 
                           sx={{ 
-                            bgcolor: `${getSentimentColor(article.sentiment)}20`,
-                            color: getSentimentColor(article.sentiment),
-                            borderRadius: '4px',
-                            height: '24px',
-                            '& .MuiChip-icon': {
-                              color: getSentimentColor(article.sentiment)
-                            }
-                          }} 
-                        />
-                        <Chip 
-                          label={`Impact: ${article.impact}`}
-                          size="small"
+                            color: article.sentiment === 'Bullish' ? colors.buyGreen : colors.sellRed,
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          {article.sentiment}
+                        </Typography>
+                      </Box>
+                      
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography 
+                          variant="body2" 
                           sx={{ 
-                            bgcolor: `${getImpactColor(article.impact)}20`,
                             color: getImpactColor(article.impact),
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          Impact: {article.impact}
+                        </Typography>
+                      </Box>
+                    </Box>
+                    
+                    {/* Currency tags */}
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+                      {article.relatedCurrencies && article.relatedCurrencies.map(currency => (
+                        <Chip 
+                          key={currency} 
+                          label={currency} 
+                          size="small"
+                          sx={{ 
+                            bgcolor: colors.panelBg,
+                            color: colors.secondaryText,
                             borderRadius: '4px',
                             height: '24px'
-                          }} 
+                          }}
                         />
-                      </Box>
-                      
-                      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                        {article.relatedCurrencies && article.relatedCurrencies.map(currency => (
-                          <Chip 
-                            key={currency} 
-                            label={currency} 
-                            size="small"
-                            sx={{ 
-                              bgcolor: colors.panelBg,
-                              color: colors.secondaryText,
-                              fontSize: '0.7rem',
-                              height: '20px'
-                            }}
-                          />
-                        ))}
-                      </Box>
-                    </CardContent>
-                    
-                    <Divider sx={{ bgcolor: colors.borderColor }} />
-                    
-                    <Box sx={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      p: 1
-                    }}>
-                      <Box>
-                        <Tooltip title={savedArticles.some(saved => saved.id === article.id) ? "Remove from Saved" : "Save Article"}>
-                          <IconButton 
-                            size="small" 
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              toggleSaveArticle(article);
-                            }}
-                            sx={{ color: savedArticles.some(saved => saved.id === article.id) ? colors.accentBlue : colors.secondaryText }}
-                          >
-                            {savedArticles.some(saved => saved.id === article.id) ? <BookmarkIcon /> : <BookmarkBorderIcon />}
-                          </IconButton>
-                        </Tooltip>
-                      
-                        <Tooltip title="Share Article">
-                          <IconButton 
-                            size="small"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              shareArticle(article);
-                            }}
-                            sx={{ color: colors.secondaryText }}
-                          >
-                            <ShareIcon />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                      
-                      <Tooltip title="Read Full Article">
+                      ))}
+                    </Box>
+                  </Box>
+                  
+                  {/* Action buttons */}
+                  <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    borderTop: `1px solid ${colors.borderColor}`,
+                    p: 2
+                  }}>
+                    <Box>
+                      <Tooltip title={savedArticles.some(saved => saved.id === article.id) ? "Remove from Saved" : "Save Article"}>
                         <IconButton 
-                          size="small" 
-                          component="a" 
-                          href={article.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            toggleSaveArticle(article);
+                          }}
+                          sx={{ color: savedArticles.some(saved => saved.id === article.id) ? colors.accentBlue : colors.secondaryText }}
+                        >
+                          {savedArticles.some(saved => saved.id === article.id) ? <BookmarkIcon /> : <BookmarkBorderIcon />}
+                        </IconButton>
+                      </Tooltip>
+                      
+                      <Tooltip title="Share Article">
+                        <IconButton 
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            shareArticle(article);
+                          }}
                           sx={{ color: colors.secondaryText }}
                         >
-                          <OpenInNewIcon />
+                          <ShareIcon />
                         </IconButton>
                       </Tooltip>
                     </Box>
-                  </Card>
-                </Grid>
+                    
+                    <Box>
+                      <Button
+                        variant="text"
+                        endIcon={<OpenInNewIcon />}
+                        component="a"
+                        href={article.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        sx={{ 
+                          color: colors.accentBlue,
+                          textTransform: 'none'
+                        }}
+                      >
+                        Read Full Article
+                      </Button>
+                    </Box>
+                  </Box>
+                </Paper>
               ))}
-            </Grid>
+            </Box>
           )}
         </Box>
       </Box>
