@@ -788,9 +788,6 @@ const Market = () => {
                 Price History
               </Typography>
               <Box sx={{ display: 'flex', gap: 1 }}>
-                <Chip label="1H" size="small" sx={{ backgroundColor: colors.accentBlue, color: colors.primaryText }} />
-                <Chip label="4H" size="small" sx={{ backgroundColor: colors.cardBg, color: colors.secondaryText }} />
-                <Chip label="1D" size="small" sx={{ backgroundColor: colors.cardBg, color: colors.secondaryText }} />
                 <Tooltip title="Price history shows how the currency pair has traded over time. This chart helps identify trends and potential trading opportunities." arrow>
                   <IconButton size="small" sx={{ color: colors.secondaryText }}>
                     <HelpOutlineIcon fontSize="small" />
