@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, Typography, Button, Paper, TextField, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+import { Box, Typography, Button, Paper, TextField, Select, MenuItem, FormControl, InputLabel, Slider } from '@mui/material';
 import { createChart } from 'lightweight-charts';
 import Sidebar from './Sidebar';
 
@@ -44,6 +44,7 @@ const Trade = () => {
   const [trades, setTrades] = useState([]);
   const [simulationAmount, setSimulationAmount] = useState(10000);
   const [tradingType, setTradingType] = useState('short-term');
+  const [currentStep, setCurrentStep] = useState(1);
 
   const totalBalance = availableBalance + lockedMargin;
 
@@ -249,6 +250,85 @@ const Trade = () => {
     setPosition(null);
   };
 
+  // Step 1: Set Simulation Amount
+  const renderSetAmountStep = () => (
+    <Box sx={{ textAlign: 'center', mb: 3 }}>
+      <Typography variant="h5" sx={{ color: colors.primaryText, mb: 2 }}>
+        Set Your Simulation Amount
+      </Typography>
+      <Box sx={{ width: '80%', margin: '0 auto', mb: 2 }}>
+        <Slider
+          value={simulationAmount}
+          onChange={(e, newValue) => setSimulationAmount(newValue)}
+          min={1000}
+          max={100000}
+          step={1000}
+          sx={{
+            color: colors.accentBlue,
+            '& .MuiSlider-thumb': {
+              backgroundColor: colors.primaryText,
+            },
+          }}
+        />
+      </Box>
+      <Button
+        variant="contained"
+        onClick={() => setCurrentStep(2)}
+        sx={{
+          backgroundColor: colors.accentBlue,
+          '&:hover': {
+            backgroundColor: colors.accentBlue,
+            opacity: 0.9,
+          },
+        }}
+      >
+        Next
+      </Button>
+    </Box>
+  );
+
+  // Step 2: Choose Trading Type
+  const renderChooseTypeStep = () => (
+    <Box sx={{ textAlign: 'center', mb: 3 }}>
+      <Typography variant="h6" sx={{ color: colors.primaryText, mb: 2 }}>
+        Choose Your Trading Type
+      </Typography>
+      <Button
+        variant={tradingType === 'short-term' ? 'contained' : 'outlined'}
+        onClick={() => {
+          setTradingType('short-term');
+          setCurrentStep(3);
+        }}
+        sx={{
+          mr: 1,
+          backgroundColor: tradingType === 'short-term' ? colors.accentBlue : 'transparent',
+          color: tradingType === 'short-term' ? colors.primaryText : colors.accentBlue,
+          '&:hover': {
+            backgroundColor: tradingType === 'short-term' ? colors.accentBlue : `${colors.accentBlue}20`,
+          },
+        }}
+      >
+        Short Term
+      </Button>
+      <Button
+        variant={tradingType === 'long-term' ? 'contained' : 'outlined'}
+        onClick={() => {
+          setTradingType('long-term');
+          setCurrentStep(3);
+        }}
+        sx={{
+          backgroundColor: tradingType === 'long-term' ? colors.accentBlue : 'transparent',
+          color: tradingType === 'long-term' ? colors.primaryText : colors.accentBlue,
+          '&:hover': {
+            backgroundColor: tradingType === 'long-term' ? colors.accentBlue : `${colors.accentBlue}20`,
+          },
+        }}
+      >
+        Long Term
+      </Button>
+    </Box>
+  );
+
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: colors.darkBg }}>
       <Sidebar />
@@ -266,488 +346,413 @@ const Trade = () => {
           Forex Market Simulation
         </Typography>
         
-        <Box sx={{ display: 'flex', gap: 3, height: 'calc(100vh - 180px)' }}>
-          {/* Left Column - Chart and Trading Controls */}
-          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3 }}>
-            {/* Chart Section */}
-            <Paper 
-              sx={{ 
-                p: 2, 
-                flex: 1,
-                backgroundColor: colors.cardBg,
-                border: `1px solid ${colors.borderColor}`,
-                borderRadius: '12px',
-                boxShadow: `0 4px 12px ${colors.shadowColor}`
-              }}
-            >
-              <Box ref={chartContainerRef} sx={{ width: '100%', height: '100%', minHeight: '300px' }} />
-            </Paper>
-            
-            {/* Trading Controls */}
-            <Paper 
-              sx={{ 
-                p: 3, 
-                backgroundColor: colors.cardBg,
-                border: `1px solid ${colors.borderColor}`,
-                borderRadius: '12px',
-                boxShadow: `0 4px 12px ${colors.shadowColor}`
-              }}
-            >
-              <Typography 
-                variant="h6" 
-                gutterBottom 
+        {currentStep === 1 && renderSetAmountStep()}
+        {currentStep === 2 && renderChooseTypeStep()}
+        {currentStep === 3 && (
+          <Box sx={{ display: 'flex', gap: 3, height: 'calc(100vh - 180px)' }}>
+            {/* Left Column - Chart and Trading Controls */}
+            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {/* Chart Section */}
+              <Paper 
                 sx={{ 
-                  color: colors.primaryText,
-                  fontWeight: 'bold',
-                  mb: 3
-                }}
-              >
-                Paper Trading
-              </Typography>
-              
-              <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                <FormControl sx={{ flex: 1 }}>
-                  <InputLabel id="pair-select-label" sx={{ color: colors.secondaryText }}>
-                    Currency Pair
-                  </InputLabel>
-                  <Select
-                    labelId="pair-select-label"
-                    value={selectedPair}
-                    label="Currency Pair"
-                    onChange={(e) => setSelectedPair(e.target.value)}
-                    sx={{ 
-                      color: colors.primaryText,
-                      '.MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.borderColor,
-                      },
-                      '&:hover .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.accentBlue,
-                      },
-                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.accentBlue,
-                      },
-                    }}
-                    MenuProps={{
-                      PaperProps: {
-                        sx: {
-                          backgroundColor: colors.panelBg,
-                          border: `1px solid ${colors.borderColor}`,
-                          '& .MuiMenuItem-root': {
-                            color: colors.primaryText,
-                            '&:hover': {
-                              backgroundColor: colors.hoverBg,
-                            },
-                            '&.Mui-selected': {
-                              backgroundColor: colors.accentBlue,
-                              '&:hover': {
-                                backgroundColor: colors.accentBlue,
-                              },
-                            }
-                          }
-                        }
-                      }
-                    }}
-                  >
-                    {forexPairs.map(pair => (
-                      <MenuItem key={pair} value={pair}>
-                        {pair}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-
-                <FormControl sx={{ flex: 1 }}>
-                  <InputLabel id="order-type-label" sx={{ color: colors.secondaryText }}>
-                    Order Type
-                  </InputLabel>
-                  <Select
-                    labelId="order-type-label"
-                    value={orderType}
-                    label="Order Type"
-                    onChange={(e) => setOrderType(e.target.value)}
-                    sx={{ 
-                      color: colors.primaryText,
-                      '.MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.borderColor,
-                      },
-                      '&:hover .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.accentBlue,
-                      },
-                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.accentBlue,
-                      },
-                    }}
-                    MenuProps={{
-                      PaperProps: {
-                        sx: {
-                          backgroundColor: colors.panelBg,
-                          border: `1px solid ${colors.borderColor}`,
-                          '& .MuiMenuItem-root': {
-                            color: colors.primaryText,
-                            '&:hover': {
-                              backgroundColor: colors.hoverBg,
-                            },
-                            '&.Mui-selected': {
-                              backgroundColor: colors.accentBlue,
-                              '&:hover': {
-                                backgroundColor: colors.accentBlue,
-                              },
-                            }
-                          }
-                        }
-                      }
-                    }}
-                  >
-                    <MenuItem value="market">Market</MenuItem>
-                    <MenuItem value="limit" disabled sx={{ color: colors.secondaryText }}>Limit (Coming Soon)</MenuItem>
-                    <MenuItem value="stop" disabled sx={{ color: colors.secondaryText }}>Stop (Coming Soon)</MenuItem>
-                  </Select>
-                </FormControl>
-              </Box>
-
-              <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                <Button 
-                  variant={isBuying ? 'contained' : 'outlined'} 
-                  color="success"
-                  onClick={() => setIsBuying(true)}
-                  sx={{
-                    flex: 1,
-                    backgroundColor: isBuying ? colors.buyGreen : 'transparent',
-                    borderColor: colors.buyGreen,
-                    color: isBuying ? colors.primaryText : colors.buyGreen,
-                    '&:hover': {
-                      backgroundColor: isBuying ? colors.buyGreen : `${colors.buyGreen}20`,
-                      borderColor: colors.buyGreen,
-                    }
-                  }}
-                >
-                  Buy
-                </Button>
-                <Button 
-                  variant={!isBuying ? 'contained' : 'outlined'} 
-                  color="error"
-                  onClick={() => setIsBuying(false)}
-                  sx={{
-                    flex: 1,
-                    backgroundColor: !isBuying ? colors.sellRed : 'transparent',
-                    borderColor: colors.sellRed,
-                    color: !isBuying ? colors.primaryText : colors.sellRed,
-                    '&:hover': {
-                      backgroundColor: !isBuying ? colors.sellRed : `${colors.sellRed}20`,
-                      borderColor: colors.sellRed,
-                    }
-                  }}
-                >
-                  Sell
-                </Button>
-              </Box>
-
-              <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                <TextField
-                  label="Amount"
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(parseFloat(e.target.value))}
-                  sx={{ flex: 1 }}
-                  InputLabelProps={{
-                    sx: { color: colors.secondaryText },
-                  }}
-                  InputProps={{
-                    sx: {
-                      color: colors.primaryText,
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.borderColor,
-                      },
-                      '&:hover .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.accentBlue,
-                      },
-                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.accentBlue,
-                      },
-                    },
-                  }}
-                />
-                
-                <FormControl sx={{ flex: 1 }}>
-                  <InputLabel id="leverage-label" sx={{ color: colors.secondaryText }}>
-                    Leverage
-                  </InputLabel>
-                  <Select
-                    labelId="leverage-label"
-                    value={leverage}
-                    label="Leverage"
-                    onChange={(e) => setLeverage(parseInt(e.target.value))}
-                    sx={{ 
-                      color: colors.primaryText,
-                      '.MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.borderColor,
-                      },
-                      '&:hover .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.accentBlue,
-                      },
-                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.accentBlue,
-                      },
-                    }}
-                    MenuProps={{
-                      PaperProps: {
-                        sx: {
-                          backgroundColor: colors.panelBg,
-                          border: `1px solid ${colors.borderColor}`,
-                          '& .MuiMenuItem-root': {
-                            color: colors.primaryText,
-                            '&:hover': {
-                              backgroundColor: colors.hoverBg,
-                            },
-                            '&.Mui-selected': {
-                              backgroundColor: colors.accentBlue,
-                              '&:hover': {
-                                backgroundColor: colors.accentBlue,
-                              },
-                            }
-                          }
-                        }
-                      }
-                    }}
-                  >
-                    {[1, 5, 10, 20, 30, 50].map(val => (
-                      <MenuItem key={val} value={val}>{val}x</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Box>
-              
-              <Button 
-                variant="contained" 
-                color="primary" 
-                fullWidth 
-                size="large"
-                onClick={handleTrade}
-                sx={{
-                  backgroundColor: colors.accentBlue,
-                  '&:hover': {
-                    backgroundColor: colors.accentBlue,
-                    opacity: 0.9
-                  }
-                }}
-              >
-                {position ? 'Close Position' : 'Place Trade'}
-              </Button>
-            </Paper>
-
-            {/* Simulation Controls */}
-            <Paper 
-              sx={{ 
-                p: 3, 
-                backgroundColor: colors.cardBg,
-                border: `1px solid ${colors.borderColor}`,
-                borderRadius: '12px',
-                boxShadow: `0 4px 12px ${colors.shadowColor}`
-              }}
-            >
-              <Typography 
-                variant="h6" 
-                gutterBottom 
-                sx={{ 
-                  color: colors.primaryText,
-                  fontWeight: 'bold',
-                  mb: 3
-                }}
-              >
-                Simulation Controls
-              </Typography>
-              
-              <Box sx={{ textAlign: 'center', mb: 3 }}>
-                <Typography variant="h5" sx={{ color: colors.primaryText, mb: 2 }}>
-                  Set Your Simulation Amount
-                </Typography>
-                <TextField
-                  type="number"
-                  value={simulationAmount}
-                  onChange={(e) => setSimulationAmount(parseFloat(e.target.value))}
-                  sx={{ width: '200px', mb: 2 }}
-                  InputProps={{
-                    sx: {
-                      color: colors.primaryText,
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.borderColor,
-                      },
-                      '&:hover .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.accentBlue,
-                      },
-                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.accentBlue,
-                      },
-                    },
-                  }}
-                />
-                <Typography variant="h6" sx={{ color: colors.primaryText, mb: 2 }}>
-                  Choose Your Trading Type
-                </Typography>
-                <Button
-                  variant={tradingType === 'short-term' ? 'contained' : 'outlined'}
-                  onClick={() => setTradingType('short-term')}
-                  sx={{
-                    mr: 1,
-                    backgroundColor: tradingType === 'short-term' ? colors.accentBlue : 'transparent',
-                    color: tradingType === 'short-term' ? colors.primaryText : colors.accentBlue,
-                    '&:hover': {
-                      backgroundColor: tradingType === 'short-term' ? colors.accentBlue : `${colors.accentBlue}20`,
-                    },
-                  }}
-                >
-                  Short Term
-                </Button>
-                <Button
-                  variant={tradingType === 'long-term' ? 'contained' : 'outlined'}
-                  onClick={() => setTradingType('long-term')}
-                  sx={{
-                    backgroundColor: tradingType === 'long-term' ? colors.accentBlue : 'transparent',
-                    color: tradingType === 'long-term' ? colors.primaryText : colors.accentBlue,
-                    '&:hover': {
-                      backgroundColor: tradingType === 'long-term' ? colors.accentBlue : `${colors.accentBlue}20`,
-                    },
-                  }}
-                >
-                  Long Term
-                </Button>
-              </Box>
-            </Paper>
-          </Box>
-
-          {/* Right Column - Account Summary */}
-          <Paper 
-            sx={{ 
-              p: 3, 
-              width: 300, 
-              backgroundColor: colors.cardBg,
-              border: `1px solid ${colors.borderColor}`,
-              borderRadius: '12px',
-              boxShadow: `0 4px 12px ${colors.shadowColor}`,
-              display: 'flex',
-              flexDirection: 'column'
-            }}
-          >
-            <Typography 
-              variant="h6" 
-              gutterBottom 
-              sx={{ 
-                color: colors.primaryText,
-                fontWeight: 'bold',
-                mb: 3
-              }}
-            >
-              Account Summary
-            </Typography>
-            
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="body2" sx={{ color: colors.secondaryText }}>Available</Typography>
-              <Typography variant="h5" sx={{ color: colors.primaryText }}>
-                ${availableBalance.toFixed(2)}
-              </Typography>
-            </Box>
-            
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="body2" sx={{ color: colors.secondaryText }}>Locked Margin</Typography>
-              <Typography variant="h6" sx={{ color: colors.secondaryText }}>
-                ${lockedMargin.toFixed(2)}
-              </Typography>
-            </Box>
-            
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="body2" sx={{ color: colors.secondaryText }}>Total Balance</Typography>
-              <Typography variant="h5" sx={{ color: colors.accentBlue }}>
-                ${totalBalance.toFixed(2)}
-              </Typography>
-            </Box>
-            
-            {position && (
-              <Box 
-                sx={{ 
-                  mb: 3, 
                   p: 2, 
-                  backgroundColor: colors.panelBg, 
-                  borderRadius: '8px',
-                  border: `1px solid ${colors.borderColor}`
+                  flex: 1,
+                  backgroundColor: colors.cardBg,
+                  border: `1px solid ${colors.borderColor}`,
+                  borderRadius: '12px',
+                  boxShadow: `0 4px 12px ${colors.shadowColor}`
+                }}
+              >
+                <Box ref={chartContainerRef} sx={{ width: '100%', height: '100%', minHeight: '300px' }} />
+              </Paper>
+              
+              {/* Trading Controls */}
+              <Paper 
+                sx={{ 
+                  p: 3, 
+                  backgroundColor: colors.cardBg,
+                  border: `1px solid ${colors.borderColor}`,
+                  borderRadius: '12px',
+                  boxShadow: `0 4px 12px ${colors.shadowColor}`
                 }}
               >
                 <Typography 
-                  variant="subtitle2" 
+                  variant="h6" 
                   gutterBottom 
-                  sx={{ color: colors.primaryText }}
-                >
-                  Open Position
-                </Typography>
-                <Typography variant="body2" sx={{ color: colors.secondaryText }}>
-                  {position.type.toUpperCase()} {position.pair} @ {position.price.toFixed(5)}
-                </Typography>
-                <Typography variant="body2" sx={{ color: colors.secondaryText }}>
-                  Amount: ${position.amount} (x{position.leverage})
-                </Typography>
-                <Typography 
-                  variant="body2" 
                   sx={{ 
-                    color: calculatePnl(position, currentPrice) >= 0 ? colors.profitGreen : colors.lossRed 
+                    color: colors.primaryText,
+                    fontWeight: 'bold',
+                    mb: 3
                   }}
                 >
-                  Current PnL: ${calculatePnl(position, currentPrice).toFixed(2)}
+                  Paper Trading
                 </Typography>
-                <Button 
-                  variant="outlined" 
-                  color="error" 
-                  fullWidth 
-                  size="small"
-                  onClick={closePosition}
-                  sx={{ 
-                    mt: 1,
-                    borderColor: colors.sellRed,
-                    color: colors.sellRed,
-                    '&:hover': {
+                
+                <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                  <FormControl sx={{ flex: 1 }}>
+                    <InputLabel id="pair-select-label" sx={{ color: colors.secondaryText }}>
+                      Currency Pair
+                    </InputLabel>
+                    <Select
+                      labelId="pair-select-label"
+                      value={selectedPair}
+                      label="Currency Pair"
+                      onChange={(e) => setSelectedPair(e.target.value)}
+                      sx={{ 
+                        color: colors.primaryText,
+                        '.MuiOutlinedInput-notchedOutline': {
+                          borderColor: colors.borderColor,
+                        },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: colors.accentBlue,
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: colors.accentBlue,
+                        },
+                      }}
+                      MenuProps={{
+                        PaperProps: {
+                          sx: {
+                            backgroundColor: colors.panelBg,
+                            border: `1px solid ${colors.borderColor}`,
+                            '& .MuiMenuItem-root': {
+                              color: colors.primaryText,
+                              '&:hover': {
+                                backgroundColor: colors.hoverBg,
+                              },
+                              '&.Mui-selected': {
+                                backgroundColor: colors.accentBlue,
+                                '&:hover': {
+                                  backgroundColor: colors.accentBlue,
+                                },
+                              }
+                            }
+                          }
+                        }
+                      }}
+                    >
+                      {forexPairs.map(pair => (
+                        <MenuItem key={pair} value={pair}>
+                          {pair}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  <FormControl sx={{ flex: 1 }}>
+                    <InputLabel id="order-type-label" sx={{ color: colors.secondaryText }}>
+                      Order Type
+                    </InputLabel>
+                    <Select
+                      labelId="order-type-label"
+                      value={orderType}
+                      label="Order Type"
+                      onChange={(e) => setOrderType(e.target.value)}
+                      sx={{ 
+                        color: colors.primaryText,
+                        '.MuiOutlinedInput-notchedOutline': {
+                          borderColor: colors.borderColor,
+                        },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: colors.accentBlue,
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: colors.accentBlue,
+                        },
+                      }}
+                      MenuProps={{
+                        PaperProps: {
+                          sx: {
+                            backgroundColor: colors.panelBg,
+                            border: `1px solid ${colors.borderColor}`,
+                            '& .MuiMenuItem-root': {
+                              color: colors.primaryText,
+                              '&:hover': {
+                                backgroundColor: colors.hoverBg,
+                              },
+                              '&.Mui-selected': {
+                                backgroundColor: colors.accentBlue,
+                                '&:hover': {
+                                  backgroundColor: colors.accentBlue,
+                                },
+                              }
+                            }
+                          }
+                        }
+                      }}
+                    >
+                      <MenuItem value="market">Market</MenuItem>
+                      <MenuItem value="limit" disabled sx={{ color: colors.secondaryText }}>Limit (Coming Soon)</MenuItem>
+                      <MenuItem value="stop" disabled sx={{ color: colors.secondaryText }}>Stop (Coming Soon)</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Box>
+
+                <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                  <Button 
+                    variant={isBuying ? 'contained' : 'outlined'} 
+                    color="success"
+                    onClick={() => setIsBuying(true)}
+                    sx={{
+                      flex: 1,
+                      backgroundColor: isBuying ? colors.buyGreen : 'transparent',
+                      borderColor: colors.buyGreen,
+                      color: isBuying ? colors.primaryText : colors.buyGreen,
+                      '&:hover': {
+                        backgroundColor: isBuying ? colors.buyGreen : `${colors.buyGreen}20`,
+                        borderColor: colors.buyGreen,
+                      }
+                    }}
+                  >
+                    Buy
+                  </Button>
+                  <Button 
+                    variant={!isBuying ? 'contained' : 'outlined'} 
+                    color="error"
+                    onClick={() => setIsBuying(false)}
+                    sx={{
+                      flex: 1,
+                      backgroundColor: !isBuying ? colors.sellRed : 'transparent',
                       borderColor: colors.sellRed,
-                      backgroundColor: `${colors.sellRed}20`
+                      color: !isBuying ? colors.primaryText : colors.sellRed,
+                      '&:hover': {
+                        backgroundColor: !isBuying ? colors.sellRed : `${colors.sellRed}20`,
+                        borderColor: colors.sellRed,
+                      }
+                    }}
+                  >
+                    Sell
+                  </Button>
+                </Box>
+
+                <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                  <TextField
+                    label="Amount"
+                    type="number"
+                    value={amount}
+                    onChange={(e) => setAmount(parseFloat(e.target.value))}
+                    sx={{ flex: 1 }}
+                    InputLabelProps={{
+                      sx: { color: colors.secondaryText },
+                    }}
+                    InputProps={{
+                      sx: {
+                        color: colors.primaryText,
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderColor: colors.borderColor,
+                        },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: colors.accentBlue,
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: colors.accentBlue,
+                        },
+                      },
+                    }}
+                  />
+                  
+                  <FormControl sx={{ flex: 1 }}>
+                    <InputLabel id="leverage-label" sx={{ color: colors.secondaryText }}>
+                      Leverage
+                    </InputLabel>
+                    <Select
+                      labelId="leverage-label"
+                      value={leverage}
+                      label="Leverage"
+                      onChange={(e) => setLeverage(parseInt(e.target.value))}
+                      sx={{ 
+                        color: colors.primaryText,
+                        '.MuiOutlinedInput-notchedOutline': {
+                          borderColor: colors.borderColor,
+                        },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: colors.accentBlue,
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: colors.accentBlue,
+                        },
+                      }}
+                      MenuProps={{
+                        PaperProps: {
+                          sx: {
+                            backgroundColor: colors.panelBg,
+                            border: `1px solid ${colors.borderColor}`,
+                            '& .MuiMenuItem-root': {
+                              color: colors.primaryText,
+                              '&:hover': {
+                                backgroundColor: colors.hoverBg,
+                              },
+                              '&.Mui-selected': {
+                                backgroundColor: colors.accentBlue,
+                                '&:hover': {
+                                  backgroundColor: colors.accentBlue,
+                                },
+                              }
+                            }
+                          }
+                        }
+                      }}
+                    >
+                      {[1, 5, 10, 20, 30, 50].map(val => (
+                        <MenuItem key={val} value={val}>{val}x</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Box>
+                
+                <Button 
+                  variant="contained" 
+                  color="primary" 
+                  fullWidth 
+                  size="large"
+                  onClick={handleTrade}
+                  sx={{
+                    backgroundColor: colors.accentBlue,
+                    '&:hover': {
+                      backgroundColor: colors.accentBlue,
+                      opacity: 0.9
                     }
                   }}
                 >
-                  Close Position
+                  {position ? 'Close Position' : 'Place Trade'}
                 </Button>
-              </Box>
-            )}
-            
-            <Typography 
-              variant="subtitle2" 
-              gutterBottom 
-              sx={{ color: colors.primaryText }}
+              </Paper>
+            </Box>
+
+            {/* Right Column - Account Summary */}
+            <Paper 
+              sx={{ 
+                p: 3, 
+                width: 300, 
+                backgroundColor: colors.cardBg,
+                border: `1px solid ${colors.borderColor}`,
+                borderRadius: '12px',
+                boxShadow: `0 4px 12px ${colors.shadowColor}`,
+                display: 'flex',
+                flexDirection: 'column'
+              }}
             >
-              Latest Trades
-            </Typography>
-            <Box sx={{ flex: 1, overflow: 'auto' }}>
-              {trades.slice(-5).reverse().map((trade, i) => (
+              <Typography 
+                variant="h6" 
+                gutterBottom 
+                sx={{ 
+                  color: colors.primaryText,
+                  fontWeight: 'bold',
+                  mb: 3
+                }}
+              >
+                Account Summary
+              </Typography>
+              
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" sx={{ color: colors.secondaryText }}>Available</Typography>
+                <Typography variant="h5" sx={{ color: colors.primaryText }}>
+                  ${availableBalance.toFixed(2)}
+                </Typography>
+              </Box>
+              
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" sx={{ color: colors.secondaryText }}>Locked Margin</Typography>
+                <Typography variant="h6" sx={{ color: colors.secondaryText }}>
+                  ${lockedMargin.toFixed(2)}
+                </Typography>
+              </Box>
+              
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="body2" sx={{ color: colors.secondaryText }}>Total Balance</Typography>
+                <Typography variant="h5" sx={{ color: colors.accentBlue }}>
+                  ${totalBalance.toFixed(2)}
+                </Typography>
+              </Box>
+              
+              {position && (
                 <Box 
-                  key={i} 
                   sx={{ 
-                    mb: 1, 
-                    p: 1, 
+                    mb: 3, 
+                    p: 2, 
                     backgroundColor: colors.panelBg, 
                     borderRadius: '8px',
                     border: `1px solid ${colors.borderColor}`
                   }}
                 >
-                  <Typography variant="caption" sx={{ color: colors.secondaryText }}>
-                    {formatTime(trade.time)} - {trade.type.toUpperCase()} {trade.pair}
+                  <Typography 
+                    variant="subtitle2" 
+                    gutterBottom 
+                    sx={{ color: colors.primaryText }}
+                  >
+                    Open Position
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                    {position.type.toUpperCase()} {position.pair} @ {position.price.toFixed(5)}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                    Amount: ${position.amount} (x{position.leverage})
                   </Typography>
                   <Typography 
                     variant="body2" 
                     sx={{ 
-                      color: trade.pnl >= 0 ? colors.profitGreen : colors.lossRed 
+                      color: calculatePnl(position, currentPrice) >= 0 ? colors.profitGreen : colors.lossRed 
                     }}
                   >
-                    PnL: ${trade.pnl.toFixed(2)}
+                    Current PnL: ${calculatePnl(position, currentPrice).toFixed(2)}
                   </Typography>
+                  <Button 
+                    variant="outlined" 
+                    color="error" 
+                    fullWidth 
+                    size="small"
+                    onClick={closePosition}
+                    sx={{ 
+                      mt: 1,
+                      borderColor: colors.sellRed,
+                      color: colors.sellRed,
+                      '&:hover': {
+                        borderColor: colors.sellRed,
+                        backgroundColor: `${colors.sellRed}20`
+                      }
+                    }}
+                  >
+                    Close Position
+                  </Button>
                 </Box>
-              ))}
-            </Box>
-          </Paper>
-        </Box>
+              )}
+              
+              <Typography 
+                variant="subtitle2" 
+                gutterBottom 
+                sx={{ color: colors.primaryText }}
+              >
+                Latest Trades
+              </Typography>
+              <Box sx={{ flex: 1, overflow: 'auto' }}>
+                {trades.slice(-5).reverse().map((trade, i) => (
+                  <Box 
+                    key={i} 
+                    sx={{ 
+                      mb: 1, 
+                      p: 1, 
+                      backgroundColor: colors.panelBg, 
+                      borderRadius: '8px',
+                      border: `1px solid ${colors.borderColor}`
+                    }}
+                  >
+                    <Typography variant="caption" sx={{ color: colors.secondaryText }}>
+                      {formatTime(trade.time)} - {trade.type.toUpperCase()} {trade.pair}
+                    </Typography>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        color: trade.pnl >= 0 ? colors.profitGreen : colors.lossRed 
+                      }}
+                    >
+                      PnL: ${trade.pnl.toFixed(2)}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            </Paper>
+          </Box>
+        )}
       </Box>
     </Box>
   );
