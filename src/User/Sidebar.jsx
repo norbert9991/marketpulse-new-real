@@ -5,7 +5,8 @@ import {
   Dashboard as DashboardIcon,
   ShowChart as ShowChartIcon,
   SwapHoriz as SwapHorizIcon,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Article as ArticleIcon
 } from '@mui/icons-material';
 
 // Forex Trading Color Palette
@@ -38,6 +39,7 @@ const Sidebar = () => {
   const menuItems = [
     { name: 'Dashboard', path: '/user-dashboard', icon: <DashboardIcon /> },
     { name: 'Markets', path: '/market', icon: <ShowChartIcon /> },
+    { name: 'News', path: '/forex-news', icon: <ArticleIcon /> },
     { name: 'Trade', path: '/trade', icon: <SwapHorizIcon /> },
     { name: 'Settings', path: '/settings', icon: <SettingsIcon /> },
   ];

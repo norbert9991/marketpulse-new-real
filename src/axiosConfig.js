@@ -8,6 +8,50 @@ const API_URL =
 
 console.log('Using API URL:', API_URL); // Debug log
 
+// Create a global API cache to reduce redundant calls across components
+const apiCache = {
+  data: {},
+  
+  // Get data from cache
+  get: (key) => {
+    const cachedItem = apiCache.data[key];
+    if (!cachedItem) return null;
+    
+    const now = Date.now();
+    if (now - cachedItem.timestamp > cachedItem.expiryMs) {
+      // Cache expired, clean up
+      delete apiCache.data[key];
+      return null;
+    }
+    
+    return cachedItem.data;
+  },
+  
+  // Set data in cache with expiry time
+  set: (key, data, expiryMs = 15 * 60 * 1000) => {
+    apiCache.data[key] = {
+      data,
+      timestamp: Date.now(),
+      expiryMs
+    };
+  },
+  
+  // Clear entire cache or specific key
+  clear: (key) => {
+    if (key) {
+      delete apiCache.data[key];
+    } else {
+      apiCache.data = {};
+    }
+  },
+  
+  // Get cache keys for management
+  getKeys: () => Object.keys(apiCache.data)
+};
+
+// Expose globally for debugging if needed
+window.marketPulseApiCache = apiCache;
+
 // Create a custom axios instance
 const axiosInstance = axios.create({
   baseURL: API_URL,
@@ -105,6 +149,236 @@ export const API = {
     updateEmail: (data) => axiosInstance.put('/api/settings/update-email', data),
     updatePassword: (data) => axiosInstance.put('/api/settings/update-password', data),
     deleteAccount: () => axiosInstance.delete('/api/settings/delete-account'),
+  },
+  
+  // News endpoints
+  news: {
+    getForexNews: (params = {}) => {
+      try {
+        console.log('[API] Getting forex news with params:', params);
+        
+        // Generate cache key based on params
+        const cacheKey = `forex_news_${params.category || 'all'}`;
+        
+        // First check our global runtime cache (faster than localStorage)
+        const cachedData = apiCache.get(cacheKey);
+        if (cachedData) {
+          console.log(`[API] Using runtime-cached news data for ${cacheKey}`);
+          return Promise.resolve({ data: cachedData });
+        }
+        
+        // Then check localStorage as fallback
+        const localStorageData = localStorage.getItem(cacheKey);
+        if (localStorageData) {
+          try {
+            const { data, timestamp } = JSON.parse(localStorageData);
+            const cacheAge = Date.now() - timestamp;
+            const cacheExpiryMs = 15 * 60 * 1000; // 15 minutes
+            
+            // If cache is fresh, use it and also update runtime cache
+            if (cacheAge < cacheExpiryMs) {
+              console.log(`[API] Using localStorage-cached news data (${Math.round(cacheAge / 1000 / 60)}min old)`);
+              apiCache.set(cacheKey, data, cacheExpiryMs - cacheAge); // Add to runtime cache with remaining time
+              return Promise.resolve({ data });
+            }
+            
+            console.log(`[API] Cache expired (${Math.round(cacheAge / 1000 / 60)}min old), fetching fresh data`);
+          } catch (e) {
+            console.warn('[API] Failed to parse localStorage cache:', e);
+          }
+        }
+        
+        // Mock news data - in a real app, this would be an API call
+        const mockNewsData = [
+          {
+            id: 1,
+            title: 'Fed Signals Rate Cuts on Horizon, USD Weakens Against Major Currencies',
+            summary: 'The Federal Reserve indicated potential interest rate cuts as inflation pressures ease, leading to a weakening of the US dollar against major currencies, particularly the Euro and British Pound.',
+            source: 'Financial Times',
+            date: '2023-11-15',
+            image: 'https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=500&q=80',
+            url: 'https://ft.com/markets/forex/usd-weakens',
+            impact: 'High',
+            sentiment: 'Bearish',
+            relatedCurrencies: ['USD', 'EUR', 'GBP']
+          },
+          {
+            id: 2,
+            title: 'Bank of Japan Maintains Ultra-Low Interest Rates, Yen Continues to Struggle',
+            summary: 'The Bank of Japan maintained its ultra-low interest rate policy despite rising inflation, causing the yen to continue its downward trend against major currencies.',
+            source: 'Bloomberg',
+            date: '2023-11-14',
+            image: 'https://images.unsplash.com/photo-1524673450801-b5aa9b621b76?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=500&q=80',
+            url: 'https://bloomberg.com/markets/currencies/jpy-policy',
+            impact: 'Medium',
+            sentiment: 'Bearish',
+            relatedCurrencies: ['JPY', 'USD']
+          },
+          {
+            id: 3,
+            title: 'European Central Bank Hints at Tighter Monetary Policy, Euro Strengthens',
+            summary: 'The ECB suggested it may tighten monetary policy further to combat persistent inflation, leading to a strengthening of the Euro against most major currencies.',
+            source: 'Reuters',
+            date: '2023-11-13',
+            image: 'https://images.unsplash.com/photo-1561414927-6d86591d0c4f?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=500&q=80',
+            url: 'https://reuters.com/markets/ecb-policy',
+            impact: 'High',
+            sentiment: 'Bullish',
+            relatedCurrencies: ['EUR', 'USD', 'GBP']
+          },
+          {
+            id: 4,
+            title: 'UK GDP Shows Unexpected Growth, Pound Surges',
+            summary: 'The UK economy showed unexpected growth in the third quarter, beating analyst expectations and causing the pound to surge against major currencies.',
+            source: 'The Guardian',
+            date: '2023-11-12',
+            image: 'https://images.unsplash.com/photo-1589262804704-c5aa9e6def89?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=500&q=80',
+            url: 'https://guardian.co.uk/business/gdp-growth',
+            impact: 'Medium',
+            sentiment: 'Bullish',
+            relatedCurrencies: ['GBP', 'EUR', 'USD']
+          },
+          {
+            id: 5,
+            title: 'Australian Employment Data Exceeds Expectations, AUD Strengthens',
+            summary: 'Australian employment data came in stronger than expected, prompting speculation about potential rate hikes by the RBA and strengthening the Australian dollar.',
+            source: 'Sydney Morning Herald',
+            date: '2023-11-11',
+            image: 'https://images.unsplash.com/photo-1523482580672-f109ba8cb9be?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=500&q=80',
+            url: 'https://smh.com.au/markets/employment-data',
+            impact: 'Medium',
+            sentiment: 'Bullish',
+            relatedCurrencies: ['AUD', 'USD']
+          },
+          {
+            id: 6,
+            title: 'Oil Prices Surge as OPEC+ Announces Production Cuts, CAD Benefits',
+            summary: 'Oil prices surged after OPEC+ announced deeper production cuts, leading to strength in commodity-linked currencies, particularly the Canadian dollar.',
+            source: 'CNBC',
+            date: '2023-11-10',
+            image: 'https://images.unsplash.com/photo-1544654803-b69140b285a1?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=500&q=80',
+            url: 'https://cnbc.com/energy/opec-cuts',
+            impact: 'High',
+            sentiment: 'Bullish',
+            relatedCurrencies: ['CAD', 'USD', 'NOK']
+          },
+          {
+            id: 7,
+            title: 'New Zealand Inflation Rate Slows, NZD Weakens on Rate Cut Expectations',
+            summary: 'New Zealand\'s inflation rate slowed more than expected, increasing speculation that the RBNZ may ease its monetary policy stance, causing the NZD to weaken.',
+            source: 'NZ Herald',
+            date: '2023-11-09',
+            image: 'https://images.unsplash.com/photo-1507699622108-4be3abd695ad?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=500&q=80',
+            url: 'https://nzherald.co.nz/business/inflation-slows',
+            impact: 'Medium',
+            sentiment: 'Bearish',
+            relatedCurrencies: ['NZD', 'AUD', 'USD']
+          },
+          {
+            id: 8,
+            title: 'Swiss National Bank Intervenes to Weaken Franc Amid Safe-Haven Flows',
+            summary: 'The Swiss National Bank has reportedly intervened in the foreign exchange market to weaken the Swiss franc, which had been appreciating due to its safe-haven status amid global uncertainties.',
+            source: 'Financial Times',
+            date: '2023-11-08',
+            image: 'https://images.unsplash.com/photo-1578596247888-9e584f19a188?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=500&q=80',
+            url: 'https://ft.com/markets/currencies/snb-intervention',
+            impact: 'High',
+            sentiment: 'Bearish',
+            relatedCurrencies: ['CHF', 'EUR', 'USD']
+          }
+        ];
+        
+        // Simulate API response format with a delay
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            // Filter by category if provided
+            let filteredNews = [...mockNewsData];
+            if (params.category && params.category !== 'all') {
+              if (params.category === 'majors') {
+                filteredNews = mockNewsData.filter(news => 
+                  news.relatedCurrencies.includes('USD') || 
+                  news.relatedCurrencies.includes('EUR') || 
+                  news.relatedCurrencies.includes('GBP') || 
+                  news.relatedCurrencies.includes('JPY')
+                );
+              } else if (params.category === 'economic') {
+                filteredNews = mockNewsData.filter(news => 
+                  news.title.includes('GDP') || 
+                  news.title.includes('Employment') || 
+                  news.title.includes('Inflation') ||
+                  news.summary.includes('economic')
+                );
+              } else if (params.category === 'central-banks') {
+                filteredNews = mockNewsData.filter(news => 
+                  news.title.includes('Fed') || 
+                  news.title.includes('ECB') || 
+                  news.title.includes('Bank of Japan') ||
+                  news.title.includes('Bank of England') ||
+                  news.summary.includes('central bank')
+                );
+              } else {
+                // Filter by currency
+                const currency = params.category.toUpperCase();
+                filteredNews = mockNewsData.filter(news => 
+                  news.relatedCurrencies.includes(currency)
+                );
+              }
+            }
+            
+            const responseData = {
+              articles: filteredNews,
+              totalCount: filteredNews.length,
+              lastUpdated: new Date().toISOString()
+            };
+            
+            // Update both runtime cache and localStorage
+            apiCache.set(cacheKey, responseData);
+            console.log(`[API] News data added to runtime cache with key: ${cacheKey}`);
+            
+            // Try to update localStorage too as a fallback
+            try {
+              localStorage.setItem(cacheKey, JSON.stringify({
+                data: responseData,
+                timestamp: Date.now()
+              }));
+              console.log(`[API] News data cached in localStorage with key: ${cacheKey}`);
+            } catch (error) {
+              console.warn('[API] Failed to cache news data in localStorage:', error.message);
+            }
+            
+            resolve({
+              data: responseData
+            });
+          }, 200); // Reduced timeout for better UX when cache is missing
+        });
+      } catch (error) {
+        console.error('[API] Error getting forex news:', error);
+        return Promise.reject(error);
+      }
+    },
+    
+    // Add method to clear cache if needed (e.g., for admin force refresh)
+    clearCache: (category) => {
+      const cacheKey = category ? `forex_news_${category}` : null;
+      
+      // Clear specific key or all news cache if no category specified
+      if (cacheKey) {
+        apiCache.clear(cacheKey);
+        localStorage.removeItem(cacheKey);
+        console.log(`[API] Cleared news cache for category: ${category}`);
+      } else {
+        // Clear all news cache entries
+        apiCache.getKeys().forEach(key => {
+          if (key.startsWith('forex_news_')) {
+            apiCache.clear(key);
+            localStorage.removeItem(key);
+          }
+        });
+        console.log('[API] Cleared all news cache');
+      }
+      
+      return Promise.resolve({ success: true });
+    }
   },
   
   // Market endpoints

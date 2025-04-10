@@ -8,6 +8,7 @@ import UserManagement from './Admin/UserManagement';
 import TransactionPage from './Admin/TransactionPage';
 import Trade from './User/trade';
 import Market from './User/market';
+import ForexNews from './User/ForexNews';
 import ProtectedRoute from './components/ProtectedRoute';
 import Settings from './User/settings';
 import AdminSettings from './Admin/adminsettings';
@@ -104,6 +105,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Market />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/forex-news" 
+            element={
+              <ProtectedRoute>
+                <ForexNews />
               </ProtectedRoute>
             } 
           />
