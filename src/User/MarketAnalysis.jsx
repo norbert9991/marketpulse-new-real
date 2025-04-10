@@ -22,7 +22,8 @@ import {
   TrendingUp as TrendingUpIcon,
   TrendingDown as TrendingDownIcon,
   Refresh as RefreshIcon,
-  Info as InfoIcon
+  Info as InfoIcon,
+  HelpOutline as HelpOutlineIcon
 } from '@mui/icons-material';
 import { Line } from 'react-chartjs-2';
 import {
@@ -776,8 +777,18 @@ const MarketAnalysis = ({ selectedSymbol }) => {
       }}
     >
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h6" sx={{ color: colors.primaryText }}>
+        <Typography variant="h6" sx={{ 
+          color: colors.primaryText,
+          fontWeight: 'bold',
+          display: 'flex',
+          alignItems: 'center'
+        }}>
           Market Analysis: {selectedSymbol}
+          <Tooltip title="This chart shows predicted price movements based on AI analysis of technical indicators, historical patterns, and market trends. The projection helps traders anticipate potential future price levels." arrow>
+            <IconButton size="small" sx={{ ml: 0.5, color: colors.secondaryText, p: 0 }}>
+              <HelpOutlineIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
         </Typography>
         <Button 
           variant="outlined" 
@@ -844,8 +855,18 @@ const MarketAnalysis = ({ selectedSymbol }) => {
             border: `1px solid ${colors.borderColor}`,
             borderRadius: '8px'
           }}>
-            <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText }}>
-              Price History (30 Days)
+            <Typography variant="h6" sx={{ 
+              color: colors.primaryText,
+              fontWeight: 'bold',
+              display: 'flex',
+              alignItems: 'center'
+            }}>
+              Price History
+              <Tooltip title="This chart displays historical price data over time, showing how the price has moved in the past. It helps identify patterns, trends, and potential support/resistance levels." arrow>
+                <IconButton size="small" sx={{ ml: 0.5, color: colors.secondaryText, p: 0 }}>
+                  <HelpOutlineIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
             </Typography>
             
             {historyError && (
@@ -874,7 +895,158 @@ const MarketAnalysis = ({ selectedSymbol }) => {
             ) : renderPriceHistoryChart()}
           </Paper>
           
-          {/* Rest of your component remains unchanged */}
+          {/* Technical Indicators Section */}
+          {analysisData?.technical_indicators && (
+            <Box sx={{ 
+              p: 3,
+              backgroundColor: colors.cardBg,
+              borderRadius: '8px',
+              border: `1px solid ${colors.borderColor}`,
+              mt: 2
+            }}>
+              <Typography variant="h6" sx={{ 
+                color: colors.primaryText, 
+                mb: 2,
+                display: 'flex',
+                alignItems: 'center'
+              }}>
+                Technical Indicators
+                <Tooltip title="Technical indicators are mathematical calculations based on historical price and volume data that help predict future price movements and identify trading opportunities." arrow>
+                  <IconButton size="small" sx={{ ml: 0.5, color: colors.secondaryText, p: 0 }}>
+                    <HelpOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Typography>
+
+              <Grid container spacing={2}>
+                {/* RSI */}
+                <Grid item xs={12} sm={6} md={3}>
+                  <Box sx={{ 
+                    p: 2,
+                    backgroundColor: colors.panelBg,
+                    borderRadius: '8px',
+                    border: `1px solid ${colors.borderColor}`
+                  }}>
+                    <Typography variant="body2" sx={{ 
+                      color: colors.secondaryText,
+                      mb: 1,
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}>
+                      RSI (14)
+                      <Tooltip title="RSI (Relative Strength Index) measures the speed and change of price movements on a scale of 0-100. Above 70 suggests overbought conditions (price may fall), below 30 suggests oversold conditions (price may rise)." arrow>
+                        <IconButton size="small" sx={{ ml: 0.5, color: colors.secondaryText, p: 0 }}>
+                          <HelpOutlineIcon fontSize="small" sx={{ fontSize: '0.8rem' }} />
+                        </IconButton>
+                      </Tooltip>
+                    </Typography>
+                    <Typography variant="h6" sx={{ 
+                      color: getRsiColor(analysisData.technical_indicators.rsi),
+                      fontWeight: 'bold'
+                    }}>
+                      {ensureNumber(analysisData.technical_indicators.rsi).toFixed(2)}
+                    </Typography>
+                  </Box>
+                </Grid>
+
+                {/* MACD */}
+                <Grid item xs={12} sm={6} md={3}>
+                  <Box sx={{ 
+                    p: 2,
+                    backgroundColor: colors.panelBg,
+                    borderRadius: '8px',
+                    border: `1px solid ${colors.borderColor}`
+                  }}>
+                    <Typography variant="body2" sx={{ 
+                      color: colors.secondaryText,
+                      mb: 1,
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}>
+                      MACD
+                      <Tooltip title="MACD (Moving Average Convergence Divergence) is a trend-following momentum indicator that shows the relationship between two moving averages. When MACD crosses above its signal line, it's bullish; when it crosses below, it's bearish." arrow>
+                        <IconButton size="small" sx={{ ml: 0.5, color: colors.secondaryText, p: 0 }}>
+                          <HelpOutlineIcon fontSize="small" sx={{ fontSize: '0.8rem' }} />
+                        </IconButton>
+                      </Tooltip>
+                    </Typography>
+                    <Typography variant="h6" sx={{ 
+                      color: getMacdColor(
+                        analysisData.technical_indicators.macd,
+                        analysisData.technical_indicators.macd_signal
+                      ),
+                      fontWeight: 'bold'
+                    }}>
+                      {ensureNumber(analysisData.technical_indicators.macd).toFixed(4)}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: colors.secondaryText }}>
+                      Signal: {ensureNumber(analysisData.technical_indicators.macd_signal).toFixed(4)}
+                    </Typography>
+                  </Box>
+                </Grid>
+
+                {/* SMA 50 */}
+                <Grid item xs={12} sm={6} md={3}>
+                  <Box sx={{ 
+                    p: 2,
+                    backgroundColor: colors.panelBg,
+                    borderRadius: '8px',
+                    border: `1px solid ${colors.borderColor}`
+                  }}>
+                    <Typography variant="body2" sx={{ 
+                      color: colors.secondaryText,
+                      mb: 1,
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}>
+                      SMA (50)
+                      <Tooltip title="SMA (Simple Moving Average) calculates the average price over a specific time period (50 days here). It smooths out price data to identify the overall trend direction. When price is above SMA, it indicates an uptrend." arrow>
+                        <IconButton size="small" sx={{ ml: 0.5, color: colors.secondaryText, p: 0 }}>
+                          <HelpOutlineIcon fontSize="small" sx={{ fontSize: '0.8rem' }} />
+                        </IconButton>
+                      </Tooltip>
+                    </Typography>
+                    <Typography variant="h6" sx={{ 
+                      color: colors.primaryText,
+                      fontWeight: 'bold'
+                    }}>
+                      {ensureNumber(analysisData.technical_indicators.sma50).toFixed(5)}
+                    </Typography>
+                  </Box>
+                </Grid>
+
+                {/* EMA 20 */}
+                <Grid item xs={12} sm={6} md={3}>
+                  <Box sx={{ 
+                    p: 2,
+                    backgroundColor: colors.panelBg,
+                    borderRadius: '8px',
+                    border: `1px solid ${colors.borderColor}`
+                  }}>
+                    <Typography variant="body2" sx={{ 
+                      color: colors.secondaryText,
+                      mb: 1,
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}>
+                      EMA (20)
+                      <Tooltip title="EMA (Exponential Moving Average) gives more weight to recent prices compared to SMA. It reacts more quickly to price changes and is useful for identifying shorter-term trend changes." arrow>
+                        <IconButton size="small" sx={{ ml: 0.5, color: colors.secondaryText, p: 0 }}>
+                          <HelpOutlineIcon fontSize="small" sx={{ fontSize: '0.8rem' }} />
+                        </IconButton>
+                      </Tooltip>
+                    </Typography>
+                    <Typography variant="h6" sx={{ 
+                      color: colors.primaryText,
+                      fontWeight: 'bold'
+                    }}>
+                      {ensureNumber(analysisData.technical_indicators.ema20).toFixed(5)}
+                    </Typography>
+                  </Box>
+                </Grid>
+              </Grid>
+            </Box>
+          )}
         </>
       ) : (
         <Box sx={{ textAlign: 'center', p: 4 }}>

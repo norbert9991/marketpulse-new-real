@@ -26,6 +26,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import StarIcon from '@mui/icons-material/Star';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { API } from '../axiosConfig';
 
 // Forex Trading Color Palette
@@ -513,9 +514,17 @@ const UserDashboard = () => {
                               mb: 1.5,
                               fontSize: '0.8rem',
                               textTransform: 'uppercase',
-                              textAlign: 'center'
+                              textAlign: 'center',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
                             }}>
                               Support & Resistance
+                              <Tooltip title="Support levels are price points where a currency tends to stop falling. Resistance levels are price points where a currency tends to stop rising. Traders use these to make buy/sell decisions." arrow>
+                                <IconButton size="small" sx={{ ml: 0.5, color: colors.secondaryText, p: 0 }}>
+                                  <HelpOutlineIcon fontSize="small" sx={{ fontSize: '0.9rem' }} />
+                                </IconButton>
+                              </Tooltip>
                             </Typography>
                             <Grid container spacing={1}>
                               <Grid item xs={6}>
@@ -583,9 +592,17 @@ const UserDashboard = () => {
                               mb: 1.5,
                               fontSize: '0.8rem',
                               textTransform: 'uppercase',
-                              textAlign: 'center'
+                              textAlign: 'center',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
                             }}>
                               Technical Indicators
+                              <Tooltip title="Technical indicators are mathematical calculations based on price and volume data that help predict future price movements and generate trading signals." arrow>
+                                <IconButton size="small" sx={{ ml: 0.5, color: colors.secondaryText, p: 0 }}>
+                                  <HelpOutlineIcon fontSize="small" sx={{ fontSize: '0.9rem' }} />
+                                </IconButton>
+                              </Tooltip>
                             </Typography>
                             
                             {/* RSI */}
@@ -602,9 +619,17 @@ const UserDashboard = () => {
                                     <Typography variant="body2" sx={{ 
                                       color: colors.secondaryText, 
                                       mb: 0.5,
-                                      fontSize: '0.75rem'
+                                      fontSize: '0.75rem',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center'
                                     }}>
                                       RSI (14)
+                                      <Tooltip title="RSI (Relative Strength Index) measures the speed and change of price movements on a scale of 0-100. Above 70 suggests overbought conditions (price may fall), below 30 suggests oversold conditions (price may rise)." arrow>
+                                        <IconButton size="small" sx={{ ml: 0.5, color: colors.secondaryText, p: 0 }}>
+                                          <HelpOutlineIcon fontSize="small" sx={{ fontSize: '0.8rem' }} />
+                                        </IconButton>
+                                      </Tooltip>
                                     </Typography>
                                     <Typography variant="h6" sx={{ 
                                       color: colors.primaryText,
@@ -636,9 +661,17 @@ const UserDashboard = () => {
                                     <Typography variant="body2" sx={{ 
                                       color: colors.secondaryText, 
                                       mb: 0.5,
-                                      fontSize: '0.75rem'
+                                      fontSize: '0.75rem',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center'
                                     }}>
                                       MACD
+                                      <Tooltip title="MACD (Moving Average Convergence Divergence) is a trend-following momentum indicator that shows the relationship between two moving averages. When MACD crosses above its signal line, it's a bullish signal; when it crosses below, it's bearish." arrow>
+                                        <IconButton size="small" sx={{ ml: 0.5, color: colors.secondaryText, p: 0 }}>
+                                          <HelpOutlineIcon fontSize="small" sx={{ fontSize: '0.8rem' }} />
+                                        </IconButton>
+                                      </Tooltip>
                                     </Typography>
                                     <Typography variant="body1" sx={{ 
                                       color: getMacdColor(
@@ -672,9 +705,17 @@ const UserDashboard = () => {
                                     <Typography variant="body2" sx={{ 
                                       color: colors.secondaryText, 
                                       mb: 0.5,
-                                      fontSize: '0.75rem'
+                                      fontSize: '0.75rem',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center'
                                     }}>
                                       Histogram
+                                      <Tooltip title="The Histogram shows the difference between MACD and its signal line. When positive (above zero), it suggests upward momentum; when negative (below zero), it suggests downward momentum." arrow>
+                                        <IconButton size="small" sx={{ ml: 0.5, color: colors.secondaryText, p: 0 }}>
+                                          <HelpOutlineIcon fontSize="small" sx={{ fontSize: '0.8rem' }} />
+                                        </IconButton>
+                                      </Tooltip>
                                     </Typography>
                                     <Typography variant="body1" sx={{ 
                                       color: getHistColor(marketData.technical_indicators?.macd_hist),
@@ -707,9 +748,17 @@ const UserDashboard = () => {
                                 color: colors.secondaryText, 
                                 mb: 1,
                                 fontSize: '0.75rem',
-                                textAlign: 'center'
+                                textAlign: 'center',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
                               }}>
                                 Moving Averages
+                                <Tooltip title="Moving Averages smooth out price data to create a single flowing line, making it easier to identify trends. They represent the average price over a specific time period. When price is above the MA, it indicates an uptrend; when below, a downtrend." arrow>
+                                  <IconButton size="small" sx={{ ml: 0.5, color: colors.secondaryText, p: 0 }}>
+                                    <HelpOutlineIcon fontSize="small" sx={{ fontSize: '0.8rem' }} />
+                                  </IconButton>
+                                </Tooltip>
                               </Typography>
                               <Grid container spacing={1}>
                                 <Grid item xs={4}>

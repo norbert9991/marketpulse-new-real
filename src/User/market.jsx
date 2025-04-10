@@ -15,7 +15,8 @@ import {
   Button,
   CircularProgress,
   Select,
-  MenuItem
+  MenuItem,
+  Alert
 } from '@mui/material';
 import { 
   LineChart, 
@@ -36,6 +37,9 @@ import InfoIcon from '@mui/icons-material/Info';
 import SettingsIcon from '@mui/icons-material/Settings';
 import Sidebar from './Sidebar';
 import { API } from '../axiosConfig';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
+import StarIcon from '@mui/icons-material/Star';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 
 // Forex Trading Color Palette
 const colors = {
@@ -1147,8 +1151,18 @@ const Market = () => {
                 flexDirection: 'column'
               }}
             >
-              <Typography variant="h6" sx={{ color: colors.primaryText, mb: 2 }}>
+              <Typography variant="h6" sx={{ 
+                color: colors.primaryText, 
+                mb: 2,
+                display: 'flex',
+                alignItems: 'center'
+              }}>
                 Market Analysis
+                <Tooltip title="Market analysis examines price trends, volume, and technical indicators to predict future price movements and identify trading opportunities." arrow>
+                  <IconButton size="small" sx={{ ml: 0.5, color: colors.secondaryText, p: 0 }}>
+                    <HelpOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
               </Typography>
               {error && (
                 <Typography color="error" sx={{ mb: 2 }}>
@@ -1212,8 +1226,24 @@ const Market = () => {
                 flexDirection: 'column'
               }}
             >
-              <Typography variant="h6" sx={{ color: colors.primaryText, mb: 2 }}>
+              <Typography variant="h6" sx={{ 
+                color: colors.primaryText, 
+                mb: 1
+              }}>
                 Sentiment Analysis
+              </Typography>
+              <Typography variant="body2" sx={{ 
+                color: colors.secondaryText,
+                mb: 1,
+                display: 'flex',
+                alignItems: 'center'
+              }}>
+                Overall Sentiment
+                <Tooltip title="Sentiment analysis evaluates market mood through social media, news, and trader behavior. Bullish sentiment suggests price may rise, while bearish sentiment suggests it may fall." arrow>
+                  <IconButton size="small" sx={{ ml: 0.5, color: colors.secondaryText, p: 0 }}>
+                    <HelpOutlineIcon fontSize="small" sx={{ fontSize: '0.8rem' }} />
+                  </IconButton>
+                </Tooltip>
               </Typography>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <Box>
