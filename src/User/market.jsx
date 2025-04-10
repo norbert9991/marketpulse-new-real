@@ -849,8 +849,8 @@ const Market = () => {
             >
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6" sx={{ color: colors.primaryText }}>
-                  Technical Indicators
-                </Typography>
+                Technical Indicators
+              </Typography>
                 <Tooltip title="Technical indicators are mathematical calculations based on price and volume data that help predict future price movements and generate trading signals." arrow>
                   <IconButton size="small" sx={{ color: colors.secondaryText }}>
                     <HelpOutlineIcon fontSize="small" />

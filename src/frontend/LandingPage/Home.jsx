@@ -164,7 +164,7 @@ const Home = () => {
                 }
               }}
             >
-              MARKEPULSE
+              MARKETPULSE
             </Typography>
 
             {isMobile ? (
@@ -361,7 +361,7 @@ const Home = () => {
             color: colors.secondaryText,
             lineHeight: 1.6
           }}>
-            Markepulse provides institutional-grade market analysis, predictive modeling, and real-time forecasting to help you make data-driven investment decisions.
+            Marketpulse provides institutional-grade market analysis, predictive modeling, and real-time forecasting to help you make data-driven investment decisions.
           </Typography>
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
             <Button 
@@ -424,7 +424,7 @@ const Home = () => {
               borderRadius: '2px'
             }
           }}>
-            Why Choose Markepulse Analytics?
+            Why Choose Marketpulse Analytics?
           </Typography>
           <Box sx={{ 
             display: 'flex', 
@@ -759,7 +759,7 @@ const Home = () => {
               gap: 2
             }}>
               <Typography variant="h6" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
-                MARKEPULSE
+                MARKETPULSE
               </Typography>
               <Typography variant="body2">
                 Your trusted partner in market analytics and forecasting. We provide cutting-edge technology and professional tools for successful market analysis.
@@ -796,7 +796,7 @@ const Home = () => {
                 Contact Us
               </Typography>
               <Typography variant="body2">
-                Email: support@markepulse.com<br />
+                Email: support@marketpulse.com<br />
                 Phone: +1 (555) 123-4567<br />
                 Address: 123 Trading Street, Financial District, NY 10004
               </Typography>
@@ -804,7 +804,7 @@ const Home = () => {
           </Box>
           <Divider sx={{ my: 4, backgroundColor: colors.borderColor }} />
           <Typography variant="body2" align="center">
-            © {new Date().getFullYear()} Markepulse. All rights reserved.
+            © {new Date().getFullYear()} Marketpulse. All rights reserved.
           </Typography>
         </Container>
       </Box>
