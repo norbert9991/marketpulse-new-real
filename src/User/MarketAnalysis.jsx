@@ -224,8 +224,17 @@ const MarketAnalysis = ({ selectedSymbol }) => {
       typeof pred === 'number' ? pred : parseFloat(pred)
     );
 
+    // Format the dates to display in a readable format (MM-DD)
+    const formattedDates = analysisData.prediction_dates.map(date => {
+      // Handle both "2025-04-06" format and "Day 1" format
+      if (date.includes('-')) {
+        return date.replace(/^\d{4}-/, ''); // Remove year prefix
+      }
+      return date;
+    });
+
     const chartData = {
-      labels: analysisData.prediction_dates,
+      labels: formattedDates,
       datasets: [
         {
           label: 'Predicted Price',
@@ -235,7 +244,7 @@ const MarketAnalysis = ({ selectedSymbol }) => {
           fill: true,
           tension: 0.4,
           borderWidth: 2,
-          pointRadius: 0,
+          pointRadius: 3,
           pointHoverRadius: 5,
           borderDash: [5, 5]
         }
@@ -256,7 +265,19 @@ const MarketAnalysis = ({ selectedSymbol }) => {
           titleColor: colors.primaryText,
           bodyColor: colors.primaryText,
           borderColor: colors.borderColor,
-          borderWidth: 1
+          borderWidth: 1,
+          callbacks: {
+            label: function(context) {
+              let label = context.dataset.label || '';
+              if (label) {
+                label += ': ';
+              }
+              if (context.parsed.y !== null) {
+                label += context.parsed.y.toFixed(5);
+              }
+              return label;
+            }
+          }
         }
       },
       scales: {
@@ -274,7 +295,10 @@ const MarketAnalysis = ({ selectedSymbol }) => {
             color: colors.borderColor
           },
           ticks: {
-            color: colors.secondaryText
+            color: colors.secondaryText,
+            callback: function(value) {
+              return value.toFixed(5);
+            }
           }
         }
       }

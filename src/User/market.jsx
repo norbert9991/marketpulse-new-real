@@ -338,7 +338,7 @@ const Market = () => {
         for (let i = 1; i <= 5; i++) {
           const futureDate = new Date(today);
           futureDate.setDate(today.getDate() + i);
-          const dateStr = futureDate.toISOString().split('T')[0];
+          const dateStr = futureDate.toISOString().split('T')[0]; // YYYY-MM-DD format
           
           const randomChange = (Math.random() * 0.01 - 0.005) * i;
           const prediction = Number((syntheticPrice * (1 + randomChange)).toFixed(4));
@@ -354,7 +354,7 @@ const Market = () => {
         for (let i = 30; i > 0; i--) {
           const pastDate = new Date(today);
           pastDate.setDate(today.getDate() - i);
-          const dateStr = pastDate.toISOString().split('T')[0].substring(5); // MM-DD format
+          const dateStr = pastDate.toISOString().split('T')[0]; // Full YYYY-MM-DD format
           
           // Create somewhat realistic price history with small variations
           const randomVariation = Math.sin(i * 0.2) * 0.02 + (Math.random() * 0.01 - 0.005);
@@ -1239,7 +1239,7 @@ const Market = () => {
                         <Box key={index} sx={{ display: 'flex', justifyContent: 'space-between' }}>
                           <Typography variant="body2" sx={{ color: colors.secondaryText }}>
                             {analysisData.prediction_dates && analysisData.prediction_dates[index] 
-                              ? analysisData.prediction_dates[index].replace('2025-', '') 
+                              ? analysisData.prediction_dates[index].replace(/^\d{4}-/, '') // Format as MM-DD
                               : `Day ${index + 1}`}
                           </Typography>
                           <Typography variant="body2" sx={{ color: colors.primaryText }}>
