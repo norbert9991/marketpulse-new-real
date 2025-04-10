@@ -92,6 +92,10 @@ const Trade = () => {
     }
   });
 
+  // Add state variables for the moving average values
+  const [fastMAValues, setFastMAValues] = useState([]);
+  const [slowMAValues, setSlowMAValues] = useState([]);
+
   const totalBalance = availableBalance + lockedMargin;
 
   // Format time without date-fns
@@ -295,8 +299,6 @@ const Trade = () => {
     // Fast and slow moving averages
     const fastMAPeriod = 9;
     const slowMAPeriod = 21;
-    let fastMAValues = [];
-    let slowMAValues = [];
     let priceHistory = [];
     let volumeHistory = [];
     
@@ -354,12 +356,14 @@ const Trade = () => {
         const fastMA = priceHistory.slice(-fastMAPeriod).reduce((a, b) => a + b, 0) / fastMAPeriod;
         fastMAValues.push(fastMA);
         if (fastMAValues.length > 100) fastMAValues.shift();
+        setFastMAValues([...fastMAValues]);
       }
       
       if (priceHistory.length >= slowMAPeriod) {
         const slowMA = priceHistory.slice(-slowMAPeriod).reduce((a, b) => a + b, 0) / slowMAPeriod;
         slowMAValues.push(slowMA);
         if (slowMAValues.length > 100) slowMAValues.shift();
+        setSlowMAValues([...slowMAValues]);
       }
       
       // Calculate RSI (simplified)
