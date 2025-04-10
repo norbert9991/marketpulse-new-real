@@ -130,6 +130,7 @@ const Market = () => {
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteMessage, setFavoriteMessage] = useState('');
   const [showFavoriteAlert, setShowFavoriteAlert] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
 
   // Add a ref to track if we've already logged sentiment messages
   const sentimentLoggedRef = useRef(false);
@@ -152,6 +153,9 @@ const Market = () => {
       } catch (error) {
         console.error('Error fetching user data:', error);
         // Handle auth error
+      } finally {
+        // Remove page loading state when user data is fetched
+        setPageLoading(false);
       }
     };
     
@@ -610,6 +614,25 @@ const Market = () => {
       sma200: ensureNumber(indicators.sma200)
     };
   };
+
+  if (pageLoading) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        minHeight: '100vh', 
+        backgroundColor: colors.darkBg,
+        justifyContent: 'center',
+        alignItems: 'center',
+        flexDirection: 'column',
+        gap: 2
+      }}>
+        <CircularProgress size={60} sx={{ color: colors.accentBlue }} />
+        <Typography variant="h6" sx={{ color: colors.primaryText }}>
+          Loading Market Data...
+        </Typography>
+      </Box>
+    );
+  }
 
   if (!user) {
     return null;
