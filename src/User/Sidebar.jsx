@@ -23,7 +23,7 @@ const colors = {
   gradientEnd: '#00E676'
 };
 
-const Sidebar = () => {
+const Sidebar = ({ activePage }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [activePath, setActivePath] = useState('');
@@ -39,7 +39,7 @@ const Sidebar = () => {
   const menuItems = [
     { name: 'Dashboard', path: '/user-dashboard', icon: <DashboardIcon /> },
     { name: 'Markets', path: '/market', icon: <ShowChartIcon /> },
-    { name: 'News', path: '/forex-news', icon: <ArticleIcon /> },
+    { name: 'Forex News', path: '/forex-news', icon: <ArticleIcon /> },
     { name: 'Trade', path: '/trade', icon: <SwapHorizIcon /> },
     { name: 'Settings', path: '/settings', icon: <SettingsIcon /> },
   ];
@@ -92,12 +92,12 @@ const Sidebar = () => {
             startIcon={item.icon}
             sx={{
               justifyContent: 'flex-start',
-              color: location.pathname === item.path ? colors.primaryText : colors.secondaryText,
+              color: (location.pathname === item.path || activePage === item.name) ? colors.primaryText : colors.secondaryText,
               mb: 1,
               borderRadius: '8px',
               px: 2,
               py: 1.5,
-              backgroundColor: location.pathname === item.path ? colors.hoverBg : 'transparent',
+              backgroundColor: (location.pathname === item.path || activePage === item.name) ? colors.hoverBg : 'transparent',
               '&:hover': {
                 backgroundColor: colors.hoverBg,
                 color: colors.primaryText,
@@ -106,10 +106,10 @@ const Sidebar = () => {
                 }
               },
               '& .MuiSvgIcon-root': {
-                color: location.pathname === item.path ? colors.accentBlue : 'inherit'
+                color: (location.pathname === item.path || activePage === item.name) ? colors.accentBlue : 'inherit'
               },
               position: 'relative',
-              '&::before': location.pathname === item.path ? {
+              '&::before': (location.pathname === item.path || activePage === item.name) ? {
                 content: '""',
                 position: 'absolute',
                 left: 0,

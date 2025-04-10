@@ -192,10 +192,10 @@ export const API = {
         const mockNewsData = [
           {
             id: 1,
-            title: 'Fed Signals Rate Cuts on Horizon, USD Weakens Against Major Currencies',
-            summary: 'The Federal Reserve indicated potential interest rate cuts as inflation pressures ease, leading to a weakening of the US dollar against major currencies, particularly the Euro and British Pound.',
+            title: 'Fed Signals Further Rate Cuts, USD Weakens Against Major Currencies',
+            summary: 'The Federal Reserve indicated additional interest rate cuts are likely as inflation continues to moderate, leading to a weakening of the US dollar against major currencies, particularly the Euro and British Pound.',
             source: 'Financial Times',
-            date: '2023-11-15',
+            date: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString().split('T')[0], // Yesterday
             image: 'https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=500&q=80',
             url: 'https://ft.com/markets/forex/usd-weakens',
             impact: 'High',
@@ -204,87 +204,111 @@ export const API = {
           },
           {
             id: 2,
-            title: 'Bank of Japan Maintains Ultra-Low Interest Rates, Yen Continues to Struggle',
-            summary: 'The Bank of Japan maintained its ultra-low interest rate policy despite rising inflation, causing the yen to continue its downward trend against major currencies.',
+            title: 'Bank of Japan Raises Rates, Yen Strengthens to Three-Year High',
+            summary: 'The Bank of Japan raised interest rates for the second time this year, causing the yen to surge to a three-year high against the dollar as Japan moves away from its ultra-loose monetary policy.',
             source: 'Bloomberg',
-            date: '2023-11-14',
+            date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString().split('T')[0], // 3 days ago
             image: 'https://images.unsplash.com/photo-1524673450801-b5aa9b621b76?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=500&q=80',
             url: 'https://bloomberg.com/markets/currencies/jpy-policy',
-            impact: 'Medium',
-            sentiment: 'Bearish',
+            impact: 'High',
+            sentiment: 'Bullish',
             relatedCurrencies: ['JPY', 'USD']
           },
           {
             id: 3,
-            title: 'European Central Bank Hints at Tighter Monetary Policy, Euro Strengthens',
-            summary: 'The ECB suggested it may tighten monetary policy further to combat persistent inflation, leading to a strengthening of the Euro against most major currencies.',
+            title: 'ECB Holds Rates Steady Amid Economic Growth Concerns, Euro Dips',
+            summary: 'The European Central Bank maintained its current interest rate levels despite earlier expectations of a cut, citing concerns about persistent inflation. However, the euro still weakened against major currencies as growth forecasts were revised downward.',
             source: 'Reuters',
-            date: '2023-11-13',
+            date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString().split('T')[0], // 5 days ago
             image: 'https://images.unsplash.com/photo-1561414927-6d86591d0c4f?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=500&q=80',
             url: 'https://reuters.com/markets/ecb-policy',
-            impact: 'High',
-            sentiment: 'Bullish',
+            impact: 'Medium',
+            sentiment: 'Bearish',
             relatedCurrencies: ['EUR', 'USD', 'GBP']
           },
           {
             id: 4,
-            title: 'UK GDP Shows Unexpected Growth, Pound Surges',
-            summary: 'The UK economy showed unexpected growth in the third quarter, beating analyst expectations and causing the pound to surge against major currencies.',
+            title: 'UK Inflation Drops to 2.2%, Pound Weakens on Rate Cut Expectations',
+            summary: 'British inflation fell to its lowest level in three years at 2.2%, increasing expectations for the Bank of England to cut interest rates at its next meeting. The pound weakened against the dollar and euro on the news.',
             source: 'The Guardian',
-            date: '2023-11-12',
+            date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString().split('T')[0], // 1 week ago
             image: 'https://images.unsplash.com/photo-1589262804704-c5aa9e6def89?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=500&q=80',
-            url: 'https://guardian.co.uk/business/gdp-growth',
+            url: 'https://guardian.co.uk/business/inflation-drops',
             impact: 'Medium',
-            sentiment: 'Bullish',
+            sentiment: 'Bearish',
             relatedCurrencies: ['GBP', 'EUR', 'USD']
           },
           {
             id: 5,
-            title: 'Australian Employment Data Exceeds Expectations, AUD Strengthens',
-            summary: 'Australian employment data came in stronger than expected, prompting speculation about potential rate hikes by the RBA and strengthening the Australian dollar.',
+            title: 'RBA Surprises with Rate Hike, Australian Dollar Surges',
+            summary: 'The Reserve Bank of Australia unexpectedly raised interest rates by 25 basis points to combat persistent inflation, catching markets off guard and sending the Australian dollar sharply higher against most major currencies.',
             source: 'Sydney Morning Herald',
-            date: '2023-11-11',
+            date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10).toISOString().split('T')[0], // 10 days ago
             image: 'https://images.unsplash.com/photo-1523482580672-f109ba8cb9be?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=500&q=80',
-            url: 'https://smh.com.au/markets/employment-data',
-            impact: 'Medium',
+            url: 'https://smh.com.au/markets/rba-hikes',
+            impact: 'High',
             sentiment: 'Bullish',
             relatedCurrencies: ['AUD', 'USD']
           },
           {
             id: 6,
-            title: 'Oil Prices Surge as OPEC+ Announces Production Cuts, CAD Benefits',
-            summary: 'Oil prices surged after OPEC+ announced deeper production cuts, leading to strength in commodity-linked currencies, particularly the Canadian dollar.',
+            title: 'Oil Prices Stabilize After OPEC+ Meeting, CAD Strengthens',
+            summary: 'Oil prices stabilized around $85 per barrel after OPEC+ announced it would maintain current production levels. The Canadian dollar strengthened against the USD due to Canada\'s status as a major oil exporter.',
             source: 'CNBC',
-            date: '2023-11-10',
+            date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 14).toISOString().split('T')[0], // 2 weeks ago
             image: 'https://images.unsplash.com/photo-1544654803-b69140b285a1?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=500&q=80',
-            url: 'https://cnbc.com/energy/opec-cuts',
-            impact: 'High',
+            url: 'https://cnbc.com/energy/opec-meeting',
+            impact: 'Medium',
             sentiment: 'Bullish',
             relatedCurrencies: ['CAD', 'USD', 'NOK']
           },
           {
             id: 7,
-            title: 'New Zealand Inflation Rate Slows, NZD Weakens on Rate Cut Expectations',
-            summary: 'New Zealand\'s inflation rate slowed more than expected, increasing speculation that the RBNZ may ease its monetary policy stance, causing the NZD to weaken.',
+            title: 'RBNZ Cuts Rates, New Zealand Dollar Falls to 8-Month Low',
+            summary: 'The Reserve Bank of New Zealand cut interest rates for the first time in over four years, citing slowing economic growth. The New Zealand dollar dropped to an 8-month low against the US dollar following the announcement.',
             source: 'NZ Herald',
-            date: '2023-11-09',
+            date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 21).toISOString().split('T')[0], // 3 weeks ago
             image: 'https://images.unsplash.com/photo-1507699622108-4be3abd695ad?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=500&q=80',
-            url: 'https://nzherald.co.nz/business/inflation-slows',
+            url: 'https://nzherald.co.nz/business/rbnz-cuts-rates',
             impact: 'Medium',
             sentiment: 'Bearish',
             relatedCurrencies: ['NZD', 'AUD', 'USD']
           },
           {
             id: 8,
-            title: 'Swiss National Bank Intervenes to Weaken Franc Amid Safe-Haven Flows',
-            summary: 'The Swiss National Bank has reportedly intervened in the foreign exchange market to weaken the Swiss franc, which had been appreciating due to its safe-haven status amid global uncertainties.',
+            title: 'Swiss National Bank Intervenes as Franc Hits Record High',
+            summary: 'The Swiss National Bank has reportedly intervened in the foreign exchange market to weaken the Swiss franc, which had reached a record high against the euro due to its safe-haven status amid global economic uncertainty.',
             source: 'Financial Times',
-            date: '2023-11-08',
+            date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 28).toISOString().split('T')[0], // 4 weeks ago
             image: 'https://images.unsplash.com/photo-1578596247888-9e584f19a188?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=500&q=80',
             url: 'https://ft.com/markets/currencies/snb-intervention',
             impact: 'High',
             sentiment: 'Bearish',
             relatedCurrencies: ['CHF', 'EUR', 'USD']
+          },
+          {
+            id: 9,
+            title: 'US Employment Data Exceeds Expectations, Dollar Rallies',
+            summary: 'The latest US jobs report showed employment growth significantly above forecasts, with 350,000 jobs added last month compared to the 220,000 expected. The dollar strengthened against all major currencies as expectations for rate cuts diminished.',
+            source: 'Wall Street Journal',
+            date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString().split('T')[0], // 2 days ago
+            image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=500&q=80',
+            url: 'https://wsj.com/economy/jobs-report',
+            impact: 'High',
+            sentiment: 'Bullish',
+            relatedCurrencies: ['USD', 'EUR', 'JPY']
+          },
+          {
+            id: 10,
+            title: 'Bank of Canada Unexpectedly Holds Rates, CAD Strengthens',
+            summary: 'The Bank of Canada kept its benchmark interest rate unchanged at 3.75%, surprising markets that had expected a 25 basis point cut. The Canadian dollar strengthened immediately following the announcement.',
+            source: 'CBC News',
+            date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 4).toISOString().split('T')[0], // 4 days ago
+            image: 'https://images.unsplash.com/photo-1509909756405-be0199881695?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=500&q=80',
+            url: 'https://cbc.ca/news/business/boc-rate-decision',
+            impact: 'Medium',
+            sentiment: 'Bullish',
+            relatedCurrencies: ['CAD', 'USD']
           }
         ];
         
