@@ -95,6 +95,7 @@ const UserDashboard = () => {
   const [user, setUser] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const [favoriteMarkets, setFavoriteMarkets] = useState([]);
+  const [favoritesToggled, setFavoritesToggled] = useState({});
   const [loading, setLoading] = useState(true);
   const [selectedSymbol, setSelectedSymbol] = useState(null);
   const [marketData, setMarketData] = useState(null);
@@ -329,6 +330,14 @@ const UserDashboard = () => {
     setSelectedSymbol(symbol);
   };
 
+  const toggleFavorite = (symbol, event) => {
+    event.stopPropagation(); // Prevent triggering handleMarketSelect
+    setFavoritesToggled(prev => ({
+      ...prev,
+      [symbol]: !prev[symbol]
+    }));
+  };
+
   const handleSettings = () => {
     navigate('/settings');
     handleMenuClose();
@@ -444,7 +453,7 @@ const UserDashboard = () => {
               <Typography variant="h6" sx={{ color: colors.primaryText }}>
                 Favorite Markets
               </Typography>
-              <Tooltip title="To add currencies to your favorites, go to Market Analysis and click 'Add to Favorites' button for the currency pairs you want to track here." arrow>
+              <Tooltip title="To add currencies to your favorites, go to Market Analysis and click 'Add to Favorites' button for the currency pairs you want to track here. Click the star to highlight your favorites." arrow>
                 <IconButton size="small" sx={{ color: colors.secondaryText, ml: 1 }}>
                   <HelpOutlineIcon fontSize="small" />
                 </IconButton>
@@ -463,7 +472,15 @@ const UserDashboard = () => {
                   <Chip
                     key={market.symbol}
                     label={market.symbol}
-                    icon={<StarIcon sx={{ color: colors.warningOrange }} />}
+                    icon={
+                      <StarIcon 
+                        sx={{ 
+                          color: favoritesToggled[market.symbol] ? colors.accentBlue : colors.warningOrange,
+                          transition: 'color 0.3s'
+                        }}
+                        onClick={(e) => toggleFavorite(market.symbol, e)}
+                      />
+                    }
                     onClick={() => handleMarketSelect(market.symbol)}
                     sx={{
                       backgroundColor: selectedSymbol === market.symbol ? colors.hoverBg : colors.panelBg,
