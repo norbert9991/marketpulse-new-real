@@ -164,35 +164,36 @@ const Market = () => {
   }, [navigate]);
 
   useEffect(() => {
-    const checkIfFavorite = async () => {
-      try {
-        // Handle case where selectedPair might be an object
-        let pairSymbol = selectedPair;
-        
-        if (typeof selectedPair === 'object' && selectedPair !== null) {
-          pairSymbol = selectedPair.value || 'EURUSD=X';
-          console.warn('Selected pair is object in favorite check, using value:', pairSymbol);
-        }
-        
-        // Handle case where the symbol might have -X suffix
-        const cleanSymbol = typeof pairSymbol === 'string' && pairSymbol.includes('-X') 
-          ? pairSymbol.split('-X')[0] 
-          : pairSymbol;
-          
-        console.log('Checking favorite status for clean symbol:', cleanSymbol);
-        
-        const response = await API.favorites.check(cleanSymbol);
-        setIsFavorite(response.data.isFavorite);
-      } catch (error) {
-        console.error('Error checking favorite status:', error);
-      }
-    };
-    
-    if (user) {
-      checkIfFavorite();
-    }
+    checkIfFavorite();
   }, [selectedPair, user]);
 
+  // Function to check if the current pair is a favorite
+  const checkIfFavorite = async (pairToCheck = selectedPair) => {
+    if (!user) return;
+    
+    try {
+      // Handle case where selectedPair might be an object
+      let pairSymbol = pairToCheck;
+      
+      if (typeof pairSymbol === 'object' && pairSymbol !== null) {
+        pairSymbol = pairSymbol.value || 'EURUSD=X';
+        console.warn('Selected pair is object in favorite check, using value:', pairSymbol);
+      }
+      
+      // Handle case where the symbol might have -X suffix
+      const cleanSymbol = typeof pairSymbol === 'string' && pairSymbol.includes('-X') 
+        ? pairSymbol.split('-X')[0] 
+        : pairSymbol;
+        
+      console.log('Checking favorite status for clean symbol:', cleanSymbol);
+      
+      const response = await API.favorites.check(cleanSymbol);
+      setIsFavorite(response.data.isFavorite);
+    } catch (error) {
+      console.error('Error checking favorite status:', error);
+    }
+  };
+  
   // Initial data fetch when component mounts
   useEffect(() => {
     if (user && selectedPair) {
@@ -667,6 +668,98 @@ const Market = () => {
     } finally {
       setHistoryLoading(false);
     }
+  };
+
+  // Function to render the price history chart
+  const renderPriceHistoryChart = () => {
+    if (historyLoading) {
+      return (
+        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+          <CircularProgress />
+        </Box>
+      );
+    }
+
+    if (historyError) {
+      return (
+        <Alert severity="info" sx={{ m: 2 }}>
+          {historyError}
+        </Alert>
+      );
+    }
+
+    if (!historyData || !historyData.history || historyData.history.length === 0) {
+      return (
+        <Alert severity="info" sx={{ m: 2 }}>
+          No historical data available for this currency pair.
+        </Alert>
+      );
+    }
+
+    // Prepare the chart data
+    const historyDates = historyData.history.map(item => item.date);
+    const historyPrices = historyData.history.map(item => item.close);
+
+    const chartData = {
+      labels: historyDates,
+      datasets: [
+        {
+          label: 'Price',
+          data: historyPrices,
+          borderColor: colors.accentBlue,
+          backgroundColor: 'rgba(33, 150, 243, 0.1)',
+          tension: 0.1,
+          fill: true
+        }
+      ]
+    };
+
+    const chartOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          labels: {
+            color: colors.secondaryText
+          }
+        },
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: colors.panelBg,
+          titleColor: colors.primaryText,
+          bodyColor: colors.secondaryText,
+          borderColor: colors.borderColor,
+          borderWidth: 1
+        }
+      },
+      scales: {
+        x: {
+          grid: {
+            color: 'rgba(42, 47, 69, 0.3)'
+          },
+          ticks: {
+            color: colors.secondaryText
+          }
+        },
+        y: {
+          grid: {
+            color: 'rgba(42, 47, 69, 0.3)'
+          },
+          ticks: {
+            color: colors.secondaryText
+          }
+        }
+      }
+    };
+
+    return (
+      <Box sx={{ height: 300, p: 2 }}>
+        <Line data={chartData} options={chartOptions} />
+      </Box>
+    );
   };
 
   if (!user) {
@@ -1305,98 +1398,6 @@ const Market = () => {
           </Box>
         </Box>
       </Box>
-    </Box>
-  );
-};
-
-// Function to render the price history chart
-const renderPriceHistoryChart = () => {
-  if (historyLoading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (historyError) {
-    return (
-      <Alert severity="info" sx={{ m: 2 }}>
-        {historyError}
-      </Alert>
-    );
-  }
-
-  if (!historyData || !historyData.history || historyData.history.length === 0) {
-    return (
-      <Alert severity="info" sx={{ m: 2 }}>
-        No historical data available for this currency pair.
-      </Alert>
-    );
-  }
-
-  // Prepare the chart data
-  const historyDates = historyData.history.map(item => item.date);
-  const historyPrices = historyData.history.map(item => item.close);
-
-  const chartData = {
-    labels: historyDates,
-    datasets: [
-      {
-        label: 'Price',
-        data: historyPrices,
-        borderColor: colors.accentBlue,
-        backgroundColor: 'rgba(33, 150, 243, 0.1)',
-        tension: 0.1,
-        fill: true
-      }
-    ]
-  };
-
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: true,
-        position: 'top',
-        labels: {
-          color: colors.secondaryText
-        }
-      },
-      tooltip: {
-        mode: 'index',
-        intersect: false,
-        backgroundColor: colors.panelBg,
-        titleColor: colors.primaryText,
-        bodyColor: colors.secondaryText,
-        borderColor: colors.borderColor,
-        borderWidth: 1
-      }
-    },
-    scales: {
-      x: {
-        grid: {
-          color: 'rgba(42, 47, 69, 0.3)'
-        },
-        ticks: {
-          color: colors.secondaryText
-        }
-      },
-      y: {
-        grid: {
-          color: 'rgba(42, 47, 69, 0.3)'
-        },
-        ticks: {
-          color: colors.secondaryText
-        }
-      }
-    }
-  };
-
-  return (
-    <Box sx={{ height: 300, p: 2 }}>
-      <Line data={chartData} options={chartOptions} />
     </Box>
   );
 };
