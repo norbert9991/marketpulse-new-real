@@ -1890,6 +1890,214 @@ const Trade = () => {
             </Paper>
           </Box>
         )}
+        {step === 3 && tradingType === 'long-term' && (
+          <Box sx={{ maxWidth: '1200px', mx: 'auto', mt: 5 }}>
+            <Paper 
+              sx={{ 
+                p: 4, 
+                backgroundColor: colors.cardBg,
+                border: `1px solid ${colors.borderColor}`,
+                borderRadius: '16px',
+                boxShadow: `0 12px 24px ${colors.shadowColor}`,
+                mb: 4
+              }}
+            >
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+                <Typography 
+                  variant="h4" 
+                  sx={{ 
+                    color: colors.primaryText,
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Long-Term Strategy Allocation
+                </Typography>
+                
+                <Box>
+                  <Button 
+                    variant="outlined"
+                    onClick={() => setStep(2)}
+                    sx={{
+                      borderColor: colors.borderColor,
+                      color: colors.secondaryText,
+                      mr: 2,
+                      '&:hover': {
+                        borderColor: colors.accentBlue,
+                        backgroundColor: 'transparent',
+                      }
+                    }}
+                  >
+                    Back
+                  </Button>
+                  
+                  <Button 
+                    variant="contained"
+                    onClick={startSimulation}
+                    disabled={strategies.filter(s => s.allocatedFunds > 0 && s.copyRatio > 0).length === 0}
+                    sx={{
+                      backgroundColor: colors.accentBlue,
+                      '&:hover': {
+                        backgroundColor: colors.accentBlue,
+                        opacity: 0.9,
+                      },
+                      '&.Mui-disabled': {
+                        backgroundColor: colors.borderColor,
+                        color: colors.secondaryText
+                      }
+                    }}
+                  >
+                    Run Simulation
+                  </Button>
+                </Box>
+              </Box>
+              
+              <Box sx={{ mb: 4 }}>
+                <Typography variant="h6" sx={{ color: colors.primaryText, mb: 2 }}>
+                  Your Simulation Balance: ${availableBalance.toLocaleString()}
+                </Typography>
+                <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                  Allocate your funds to different trading strategies and set a copy ratio for each one.
+                  The copy ratio determines how closely you follow each strategy's trades.
+                </Typography>
+              </Box>
+              
+              <Box sx={{ mb: 4 }}>
+                <FormControl fullWidth variant="outlined" sx={{ mb: 3 }}>
+                  <InputLabel id="simulation-period-label" sx={{ color: colors.secondaryText }}>Simulation Period</InputLabel>
+                  <Select
+                    labelId="simulation-period-label"
+                    value={simulationPeriod}
+                    onChange={(e) => setSimulationPeriod(e.target.value)}
+                    label="Simulation Period"
+                    sx={{ 
+                      color: colors.primaryText,
+                      backgroundColor: colors.panelBg,
+                      '.MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.borderColor
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.accentBlue
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.accentBlue
+                      }
+                    }}
+                  >
+                    <MenuItem value="1 Month">1 Month</MenuItem>
+                    <MenuItem value="3 Months">3 Months</MenuItem>
+                    <MenuItem value="6 Months">6 Months</MenuItem>
+                    <MenuItem value="1 Year">1 Year</MenuItem>
+                    <MenuItem value="2 Years">2 Years</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
+              
+              <TableContainer component={Paper} sx={{ backgroundColor: colors.panelBg, mb: 4 }}>
+                <Table sx={{ minWidth: 650 }}>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>Strategy</TableCell>
+                      <TableCell align="right" sx={{ color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>Total Net P/L</TableCell>
+                      <TableCell align="right" sx={{ color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>1Y Net P/L</TableCell>
+                      <TableCell align="right" sx={{ color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>Allocated Funds ($)</TableCell>
+                      <TableCell align="right" sx={{ color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>Copy Ratio (1-10)</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {strategies.map((strategy, index) => (
+                      <TableRow key={strategy.id} sx={{ '&:hover': { backgroundColor: colors.hoverBg } }}>
+                        <TableCell sx={{ color: colors.primaryText, borderBottom: `1px solid ${colors.borderColor}` }}>
+                          {strategy.name}
+                        </TableCell>
+                        <TableCell align="right" sx={{ 
+                          color: strategy.totalNetPL >= 0 ? colors.profitGreen : colors.lossRed,
+                          fontWeight: 'bold',
+                          borderBottom: `1px solid ${colors.borderColor}` 
+                        }}>
+                          {strategy.totalNetPL >= 0 ? '+' : ''}{strategy.totalNetPL}%
+                        </TableCell>
+                        <TableCell align="right" sx={{ 
+                          color: strategy.oneYearNetPL >= 0 ? colors.profitGreen : colors.lossRed,
+                          fontWeight: 'bold',
+                          borderBottom: `1px solid ${colors.borderColor}` 
+                        }}>
+                          {strategy.oneYearNetPL >= 0 ? '+' : ''}{strategy.oneYearNetPL}%
+                        </TableCell>
+                        <TableCell align="right" sx={{ borderBottom: `1px solid ${colors.borderColor}` }}>
+                          <TextField
+                            type="number"
+                            value={strategy.allocatedFunds}
+                            onChange={(e) => handleAllocationChange(index, e.target.value)}
+                            variant="outlined"
+                            size="small"
+                            InputProps={{
+                              inputProps: { min: 0, max: availableBalance },
+                              sx: { 
+                                color: colors.primaryText,
+                                backgroundColor: colors.cardBg,
+                                '.MuiOutlinedInput-notchedOutline': {
+                                  borderColor: colors.borderColor
+                                },
+                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: colors.accentBlue
+                                },
+                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: colors.accentBlue
+                                }
+                              }
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell align="right" sx={{ borderBottom: `1px solid ${colors.borderColor}` }}>
+                          <TextField
+                            type="number"
+                            value={strategy.copyRatio}
+                            onChange={(e) => handleCopyRatioChange(index, e.target.value)}
+                            variant="outlined"
+                            size="small"
+                            InputProps={{
+                              inputProps: { min: 0, max: 10 },
+                              sx: { 
+                                color: colors.primaryText,
+                                backgroundColor: colors.cardBg,
+                                '.MuiOutlinedInput-notchedOutline': {
+                                  borderColor: colors.borderColor
+                                },
+                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: colors.accentBlue
+                                },
+                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: colors.accentBlue
+                                }
+                              }
+                            }}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                p: 3, 
+                backgroundColor: colors.panelBg, 
+                borderRadius: '12px',
+                border: `1px solid ${colors.borderColor}`
+              }}>
+                <Typography variant="h6" sx={{ color: colors.primaryText }}>
+                  Total Allocated: ${totalAllocatedFunds.toLocaleString()}
+                </Typography>
+                <Typography variant="h6" sx={{ color: colors.primaryText }}>
+                  Remaining: ${(availableBalance - totalAllocatedFunds).toLocaleString()}
+                </Typography>
+              </Box>
+            </Paper>
+          </Box>
+        )}
       </Box>
     </Box>
   );
