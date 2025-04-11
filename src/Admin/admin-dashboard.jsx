@@ -12,7 +12,8 @@ import {
   Divider,
   Stack,
   CircularProgress,
-  Chip
+  Chip,
+  Grid
 } from '@mui/material';
 import { styled } from '@mui/system';
 import axios from 'axios';
@@ -42,7 +43,9 @@ const colors = {
   borderColor: '#333333',
   buyGreen: '#4caf50',
   sellRed: '#f44336',
-  hoverBg: '#2a2a2a'
+  hoverBg: '#2a2a2a',
+  shadowColor: 'rgba(0, 0, 0, 0.1)',
+  accentBlue: '#2196f3'
 };
 
 const DashboardContainer = styled('div')({
@@ -642,6 +645,201 @@ const AdminDashboard = () => {
             </MetricCard>
             ))}
         </MetricsGrid>
+
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h5" sx={{ mb: 2, fontWeight: 600, color: colors.primaryText }}>
+            System Overview
+          </Typography>
+          
+          <Paper sx={{ 
+            p: 3, 
+            backgroundColor: colors.cardBg, 
+            border: `1px solid ${colors.borderColor}`,
+            borderRadius: '12px',
+            boxShadow: `0 4px 12px ${colors.shadowColor}`
+          }}>
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={6}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                  <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText, fontWeight: 600 }}>
+                    Recent Activities
+                  </Typography>
+                  
+                  <Box sx={{ 
+                    flex: 1, 
+                    backgroundColor: `${colors.background}80`, 
+                    borderRadius: '8px', 
+                    p: 2, 
+                    overflowY: 'auto',
+                    maxHeight: '300px',
+                    border: `1px solid ${colors.borderColor}`
+                  }}>
+                    {loading ? (
+                      <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                        <CircularProgress size={28} sx={{ color: colors.primary }} />
+                      </Box>
+                    ) : (
+                      <>
+                        {/* User registrations */}
+                        {users.slice(0, 5).map((user, index) => (
+                          <Box key={index} sx={{ 
+                            mb: 2, 
+                            p: 1.5, 
+                            borderRadius: '6px',
+                            backgroundColor: index % 2 === 0 ? `${colors.hoverBg}80` : 'transparent',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 2
+                          }}>
+                            <Avatar sx={{ bgcolor: colors.primary, width: 38, height: 38 }}>
+                              {user.username.charAt(0).toUpperCase()}
+                            </Avatar>
+                            <Box sx={{ flex: 1 }}>
+                              <Typography variant="body2" sx={{ fontWeight: 500, color: colors.primaryText }}>
+                                {user.username} joined the platform
+                              </Typography>
+                              <Typography variant="caption" sx={{ color: colors.secondaryText }}>
+                                {new Date(user.created_at).toLocaleString()}
+                              </Typography>
+                            </Box>
+                            <Chip 
+                              label={user.role} 
+                              size="small"
+                              sx={{ 
+                                backgroundColor: user.role === 'admin' ? `${colors.secondary}33` : `${colors.primary}33`,
+                                color: user.role === 'admin' ? colors.secondary : colors.primary,
+                                fontWeight: 500
+                              }}
+                            />
+                          </Box>
+                        ))}
+                      </>
+                    )}
+                  </Box>
+                </Box>
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                  <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText, fontWeight: 600 }}>
+                    System Health
+                  </Typography>
+                  
+                  <Box sx={{ 
+                    flex: 1, 
+                    backgroundColor: `${colors.background}80`, 
+                    borderRadius: '8px', 
+                    p: 2,
+                    border: `1px solid ${colors.borderColor}`
+                  }}>
+                    <Grid container spacing={2}>
+                      <Grid item xs={6}>
+                        <Box sx={{ 
+                          p: 2, 
+                          borderRadius: '8px', 
+                          backgroundColor: `${colors.buyGreen}15`,
+                          border: `1px solid ${colors.buyGreen}50`,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <Typography variant="h6" sx={{ color: colors.buyGreen, fontWeight: 600 }}>
+                            Server Status
+                          </Typography>
+                          <Typography variant="body1" sx={{ color: colors.primaryText, display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box sx={{ 
+                              width: 12, 
+                              height: 12, 
+                              borderRadius: '50%', 
+                              backgroundColor: colors.buyGreen,
+                              boxShadow: `0 0 10px ${colors.buyGreen}`
+                            }} />
+                            Operational
+                          </Typography>
+                        </Box>
+                      </Grid>
+                      
+                      <Grid item xs={6}>
+                        <Box sx={{ 
+                          p: 2, 
+                          borderRadius: '8px', 
+                          backgroundColor: `${colors.accentBlue}15`,
+                          border: `1px solid ${colors.accentBlue}50`,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <Typography variant="h6" sx={{ color: colors.accentBlue, fontWeight: 600 }}>
+                            API Status
+                          </Typography>
+                          <Typography variant="body1" sx={{ color: colors.primaryText, display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box sx={{ 
+                              width: 12, 
+                              height: 12, 
+                              borderRadius: '50%', 
+                              backgroundColor: colors.accentBlue,
+                              boxShadow: `0 0 10px ${colors.accentBlue}`
+                            }} />
+                            Active
+                          </Typography>
+                        </Box>
+                      </Grid>
+                      
+                      <Grid item xs={12}>
+                        <Box sx={{ 
+                          mt: 1,
+                          p: 2, 
+                          borderRadius: '8px', 
+                          backgroundColor: colors.hoverBg,
+                          border: `1px solid ${colors.borderColor}`,
+                        }}>
+                          <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
+                            Quick Actions
+                          </Typography>
+                          <Button 
+                            variant="outlined" 
+                            size="small" 
+                            fullWidth
+                            onClick={() => navigate('/UserManagement')}
+                            sx={{ 
+                              mb: 1,
+                              borderColor: colors.primary,
+                              color: colors.primary,
+                              '&:hover': {
+                                backgroundColor: `${colors.primary}15`,
+                                borderColor: colors.primary
+                              }
+                            }}
+                          >
+                            Manage Users
+                          </Button>
+                          <Button 
+                            variant="outlined" 
+                            size="small" 
+                            fullWidth 
+                            onClick={() => navigate('/adminsettings')}
+                            sx={{ 
+                              borderColor: colors.secondary,
+                              color: colors.secondary,
+                              '&:hover': {
+                                backgroundColor: `${colors.secondary}15`,
+                                borderColor: colors.secondary
+                              }
+                            }}
+                          >
+                            System Settings
+                          </Button>
+                        </Box>
+                      </Grid>
+                    </Grid>
+                  </Box>
+                </Box>
+              </Grid>
+            </Grid>
+          </Paper>
+        </Box>
       </MainContent>
     </DashboardContainer>
   );

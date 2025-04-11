@@ -16,7 +16,9 @@ import {
   TextField,
   InputAdornment,
   IconButton,
-  Tooltip
+  Tooltip,
+  Grid,
+  Avatar
 } from '@mui/material';
 import { styled } from '@mui/system';
 import { API } from '../axiosConfig';
@@ -40,7 +42,9 @@ const colors = {
   borderColor: '#333333',
   buyGreen: '#4caf50',
   sellRed: '#f44336',
-  hoverBg: '#2a2a2a'
+  hoverBg: '#2a2a2a',
+  warningOrange: '#ffa500',
+  accentBlue: '#007bff'
 };
 
 // Create a styled container for the layout
@@ -63,6 +67,15 @@ const UserManagement = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [filterRole, setFilterRole] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    activeUsers: 0,
+    admins: 0,
+    recentLogins: 0,
+    newUsers: 0
+  });
   const navigate = useNavigate();
 
   const fetchUsers = async () => {
@@ -70,6 +83,20 @@ const UserManagement = () => {
       setLoading(true);
       const response = await API.admin.getUsers();
       setUsers(response.data.users);
+      
+      // Calculate stats
+      const now = new Date();
+      const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      
+      setStats({
+        totalUsers: response.data.users.length,
+        activeUsers: response.data.users.filter(user => user.account_status === 'active').length,
+        admins: response.data.users.filter(user => user.role === 'admin').length,
+        recentLogins: response.data.users.filter(user => new Date(user.last_login) > dayAgo).length,
+        newUsers: response.data.users.filter(user => new Date(user.created_at) > weekAgo).length
+      });
+      
       setLoading(false);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -101,11 +128,50 @@ const UserManagement = () => {
     fetchUsers();
   };
 
-  const filteredUsers = users.filter(user => 
-    user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.user_id.toString().includes(searchTerm)
-  );
+  // Get time difference as a string
+  const getTimeAgo = (dateString) => {
+    if (!dateString) return 'Never';
+    
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    
+    if (diffDays > 30) return `${Math.floor(diffDays / 30)} months ago`;
+    if (diffDays > 0) return `${diffDays} days ago`;
+    if (diffHours > 0) return `${diffHours} hours ago`;
+    if (diffMinutes > 0) return `${diffMinutes} minutes ago`;
+    return 'Just now';
+  };
+  
+  // Get login status visually
+  const getLoginStatus = (dateString) => {
+    if (!dateString) return { color: colors.secondaryText, text: 'Never logged in' };
+    
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffDays > 30) return { color: colors.sellRed, text: 'Inactive' };
+    if (diffDays > 7) return { color: colors.warningOrange, text: 'Away' };
+    return { color: colors.buyGreen, text: 'Active' };
+  };
+
+  // Filter users based on search, role and status
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = 
+      user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.user_id?.toString().includes(searchTerm);
+    
+    const matchesRole = filterRole === 'all' || user.role === filterRole;
+    const matchesStatus = filterStatus === 'all' || user.account_status === filterStatus;
+    
+    return matchesSearch && matchesRole && matchesStatus;
+  });
 
   if (loading) {
     return (
@@ -144,6 +210,93 @@ const UserManagement = () => {
           </Tooltip>
         </Box>
         
+        {/* User stats cards */}
+        <Box sx={{ mb: 3 }}>
+          <Grid container spacing={2}>
+            <Grid item xs={6} sm={4} md={2.4}>
+              <Paper sx={{ 
+                p: 2, 
+                backgroundColor: colors.cardBg,
+                border: `1px solid ${colors.borderColor}`,
+                borderRadius: '8px',
+                textAlign: 'center',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center'
+              }}>
+                <Typography variant="body2" color={colors.secondaryText}>Total Users</Typography>
+                <Typography variant="h5" color={colors.primaryText} sx={{ mt: 1, fontWeight: 'bold' }}>{stats.totalUsers}</Typography>
+              </Paper>
+            </Grid>
+            <Grid item xs={6} sm={4} md={2.4}>
+              <Paper sx={{ 
+                p: 2, 
+                backgroundColor: colors.cardBg,
+                border: `1px solid ${colors.borderColor}`,
+                borderRadius: '8px',
+                textAlign: 'center',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center'
+              }}>
+                <Typography variant="body2" color={colors.secondaryText}>Active Users</Typography>
+                <Typography variant="h5" color={colors.buyGreen} sx={{ mt: 1, fontWeight: 'bold' }}>{stats.activeUsers}</Typography>
+              </Paper>
+            </Grid>
+            <Grid item xs={6} sm={4} md={2.4}>
+              <Paper sx={{ 
+                p: 2, 
+                backgroundColor: colors.cardBg,
+                border: `1px solid ${colors.borderColor}`,
+                borderRadius: '8px',
+                textAlign: 'center',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center'
+              }}>
+                <Typography variant="body2" color={colors.secondaryText}>Admin Users</Typography>
+                <Typography variant="h5" color={colors.secondary} sx={{ mt: 1, fontWeight: 'bold' }}>{stats.admins}</Typography>
+              </Paper>
+            </Grid>
+            <Grid item xs={6} sm={4} md={2.4}>
+              <Paper sx={{ 
+                p: 2, 
+                backgroundColor: colors.cardBg,
+                border: `1px solid ${colors.borderColor}`,
+                borderRadius: '8px',
+                textAlign: 'center',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center'
+              }}>
+                <Typography variant="body2" color={colors.secondaryText}>Recent Logins (24h)</Typography>
+                <Typography variant="h5" color={colors.accentBlue} sx={{ mt: 1, fontWeight: 'bold' }}>{stats.recentLogins}</Typography>
+              </Paper>
+            </Grid>
+            <Grid item xs={6} sm={4} md={2.4}>
+              <Paper sx={{ 
+                p: 2, 
+                backgroundColor: colors.cardBg,
+                border: `1px solid ${colors.borderColor}`,
+                borderRadius: '8px',
+                textAlign: 'center',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center'
+              }}>
+                <Typography variant="body2" color={colors.secondaryText}>New Users (7d)</Typography>
+                <Typography variant="h5" color={colors.primary} sx={{ mt: 1, fontWeight: 'bold' }}>{stats.newUsers}</Typography>
+              </Paper>
+            </Grid>
+          </Grid>
+        </Box>
+        
+        {/* User List section */}
         <Paper 
           sx={{ 
             p: 3, 
@@ -153,32 +306,156 @@ const UserManagement = () => {
           }}
         >
           <Box sx={{ mb: 3 }}>
-            <TextField
-              fullWidth
-              variant="outlined"
-              placeholder="Search users by ID, username, or email"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon sx={{ color: colors.secondaryText }} />
-                  </InputAdornment>
-                ),
-                sx: {
-                  color: colors.primaryText,
-                  '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: colors.borderColor
-                  },
-                  '&:hover .MuiOutlinedInput-notchedOutline': {
-                    borderColor: colors.primary
-                  },
-                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                    borderColor: colors.primary
-                  }
-                }
-              }}
-            />
+            <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText }}>User Directory</Typography>
+            
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  variant="outlined"
+                  placeholder="Search users by ID, username, or email"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon sx={{ color: colors.secondaryText }} />
+                      </InputAdornment>
+                    ),
+                    sx: {
+                      color: colors.primaryText,
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.borderColor
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.primary
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.primary
+                      }
+                    }
+                  }}
+                />
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="caption" color={colors.secondaryText} sx={{ mb: 0.5, display: 'block' }}>Filter by Role</Typography>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Button 
+                        variant={filterRole === 'all' ? 'contained' : 'outlined'} 
+                        size="small"
+                        onClick={() => setFilterRole('all')}
+                        sx={{ 
+                          flex: 1,
+                          backgroundColor: filterRole === 'all' ? colors.primary : 'transparent',
+                          color: filterRole === 'all' ? colors.primaryText : colors.primary,
+                          borderColor: colors.primary,
+                          '&:hover': {
+                            backgroundColor: filterRole === 'all' ? colors.primary : `${colors.primary}22`,
+                            borderColor: colors.primary
+                          }
+                        }}
+                      >
+                        All
+                      </Button>
+                      <Button 
+                        variant={filterRole === 'user' ? 'contained' : 'outlined'} 
+                        size="small"
+                        onClick={() => setFilterRole('user')}
+                        sx={{ 
+                          flex: 1,
+                          backgroundColor: filterRole === 'user' ? colors.primary : 'transparent',
+                          color: filterRole === 'user' ? colors.primaryText : colors.primary,
+                          borderColor: colors.primary,
+                          '&:hover': {
+                            backgroundColor: filterRole === 'user' ? colors.primary : `${colors.primary}22`,
+                            borderColor: colors.primary
+                          }
+                        }}
+                      >
+                        Users
+                      </Button>
+                      <Button 
+                        variant={filterRole === 'admin' ? 'contained' : 'outlined'} 
+                        size="small"
+                        onClick={() => setFilterRole('admin')}
+                        sx={{ 
+                          flex: 1,
+                          backgroundColor: filterRole === 'admin' ? colors.secondary : 'transparent',
+                          color: filterRole === 'admin' ? colors.primaryText : colors.secondary,
+                          borderColor: colors.secondary,
+                          '&:hover': {
+                            backgroundColor: filterRole === 'admin' ? colors.secondary : `${colors.secondary}22`,
+                            borderColor: colors.secondary
+                          }
+                        }}
+                      >
+                        Admins
+                      </Button>
+                    </Box>
+                  </Box>
+                  
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="caption" color={colors.secondaryText} sx={{ mb: 0.5, display: 'block' }}>Filter by Status</Typography>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Button 
+                        variant={filterStatus === 'all' ? 'contained' : 'outlined'} 
+                        size="small"
+                        onClick={() => setFilterStatus('all')}
+                        sx={{ 
+                          flex: 1,
+                          backgroundColor: filterStatus === 'all' ? colors.primary : 'transparent',
+                          color: filterStatus === 'all' ? colors.primaryText : colors.primary,
+                          borderColor: colors.primary,
+                          '&:hover': {
+                            backgroundColor: filterStatus === 'all' ? colors.primary : `${colors.primary}22`,
+                            borderColor: colors.primary
+                          }
+                        }}
+                      >
+                        All
+                      </Button>
+                      <Button 
+                        variant={filterStatus === 'active' ? 'contained' : 'outlined'} 
+                        size="small"
+                        onClick={() => setFilterStatus('active')}
+                        sx={{ 
+                          flex: 1,
+                          backgroundColor: filterStatus === 'active' ? colors.buyGreen : 'transparent',
+                          color: filterStatus === 'active' ? colors.primaryText : colors.buyGreen,
+                          borderColor: colors.buyGreen,
+                          '&:hover': {
+                            backgroundColor: filterStatus === 'active' ? colors.buyGreen : `${colors.buyGreen}22`,
+                            borderColor: colors.buyGreen
+                          }
+                        }}
+                      >
+                        Active
+                      </Button>
+                      <Button 
+                        variant={filterStatus === 'suspended' ? 'contained' : 'outlined'} 
+                        size="small"
+                        onClick={() => setFilterStatus('suspended')}
+                        sx={{ 
+                          flex: 1,
+                          backgroundColor: filterStatus === 'suspended' ? colors.sellRed : 'transparent',
+                          color: filterStatus === 'suspended' ? colors.primaryText : colors.sellRed,
+                          borderColor: colors.sellRed,
+                          '&:hover': {
+                            backgroundColor: filterStatus === 'suspended' ? colors.sellRed : `${colors.sellRed}22`,
+                            borderColor: colors.sellRed
+                          }
+                        }}
+                      >
+                        Suspended
+                      </Button>
+                    </Box>
+                  </Box>
+                </Box>
+              </Grid>
+            </Grid>
           </Box>
           
           <TableContainer>
@@ -200,7 +477,20 @@ const UserManagement = () => {
                   filteredUsers.map((user) => (
                     <TableRow key={user.user_id} sx={{ '&:hover': { backgroundColor: colors.hoverBg } }}>
                       <TableCell sx={{ color: colors.primaryText, borderBottom: `1px solid ${colors.borderColor}` }}>{user.user_id}</TableCell>
-                      <TableCell sx={{ color: colors.primaryText, borderBottom: `1px solid ${colors.borderColor}` }}>{user.username}</TableCell>
+                      <TableCell sx={{ color: colors.primaryText, borderBottom: `1px solid ${colors.borderColor}` }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Avatar 
+                            sx={{ 
+                              width: 32, 
+                              height: 32, 
+                              backgroundColor: user.role === 'admin' ? colors.secondary : colors.primary
+                            }}
+                          >
+                            {user.username.charAt(0).toUpperCase()}
+                          </Avatar>
+                          {user.username}
+                        </Box>
+                      </TableCell>
                       <TableCell sx={{ color: colors.primaryText, borderBottom: `1px solid ${colors.borderColor}` }}>{user.email}</TableCell>
                       <TableCell sx={{ color: colors.primaryText, borderBottom: `1px solid ${colors.borderColor}` }}>
                         <Chip 
@@ -223,10 +513,28 @@ const UserManagement = () => {
                         />
                       </TableCell>
                       <TableCell sx={{ color: colors.primaryText, borderBottom: `1px solid ${colors.borderColor}` }}>
-                        {new Date(user.last_login).toLocaleString()}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Box sx={{ 
+                            width: 8, 
+                            height: 8, 
+                            borderRadius: '50%', 
+                            backgroundColor: getLoginStatus(user.last_login).color 
+                          }} />
+                          <Box>
+                            <Typography variant="body2">{getTimeAgo(user.last_login)}</Typography>
+                            <Typography variant="caption" color={colors.secondaryText}>
+                              {user.last_login ? new Date(user.last_login).toLocaleString() : 'Never'}
+                            </Typography>
+                          </Box>
+                        </Box>
                       </TableCell>
                       <TableCell sx={{ color: colors.primaryText, borderBottom: `1px solid ${colors.borderColor}` }}>
-                        {new Date(user.created_at).toLocaleDateString()}
+                        <Box>
+                          <Typography variant="body2">{new Date(user.created_at).toLocaleDateString()}</Typography>
+                          <Typography variant="caption" color={colors.secondaryText}>
+                            {getTimeAgo(user.created_at)}
+                          </Typography>
+                        </Box>
                       </TableCell>
                       <TableCell sx={{ borderBottom: `1px solid ${colors.borderColor}` }}>
                         <Button 
@@ -248,10 +556,16 @@ const UserManagement = () => {
                       </TableCell>
                     </TableRow>
                   ))
+                ) : loading ? (
+                  <TableRow>
+                    <TableCell colSpan={8} align="center" sx={{ py: 4, borderBottom: `1px solid ${colors.borderColor}` }}>
+                      <CircularProgress size={32} sx={{ color: colors.primary }} />
+                    </TableCell>
+                  </TableRow>
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} align="center" sx={{ color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>
-                      No users found
+                    <TableCell colSpan={8} align="center" sx={{ py: 4, borderBottom: `1px solid ${colors.borderColor}` }}>
+                      <Typography color={colors.secondaryText}>No users found</Typography>
                     </TableCell>
                   </TableRow>
                 )}

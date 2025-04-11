@@ -21,7 +21,15 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Chip
+  Chip,
+  Tabs,
+  Tab,
+  Card,
+  CardContent,
+  InputAdornment,
+  Tooltip,
+  Switch,
+  FormControlLabel
 } from '@mui/material';
 import { styled } from '@mui/system';
 import { useNavigate } from 'react-router-dom';
@@ -35,7 +43,11 @@ import {
   Email as EmailIcon,
   Lock as LockIcon,
   Visibility as VisibilityIcon,
-  VisibilityOff as VisibilityOffIcon
+  VisibilityOff as VisibilityOffIcon,
+  Settings as SettingsIcon,
+  Security as SecurityIcon,
+  Notifications as NotificationsIcon,
+  CloudUpload as CloudUploadIcon
 } from '@mui/icons-material';
 import { API } from '../axiosConfig';
 
@@ -67,6 +79,32 @@ const MainContent = styled('div')({
   marginLeft: '250px' // Match sidebar width
 });
 
+const StyledTab = styled(Tab)({
+  color: colors.secondaryText,
+  '&.Mui-selected': {
+    color: colors.primary,
+  },
+  '&.Mui-focusVisible': {
+    backgroundColor: colors.hoverBg,
+  },
+  minHeight: '48px'
+});
+
+const StyledTabs = styled(Tabs)({
+  borderBottom: `1px solid ${colors.borderColor}`,
+  '& .MuiTabs-indicator': {
+    backgroundColor: colors.primary,
+  },
+});
+
+const SettingsSection = styled(Paper)({
+  padding: '24px',
+  backgroundColor: colors.cardBg,
+  border: `1px solid ${colors.borderColor}`,
+  borderRadius: '12px',
+  marginBottom: '24px'
+});
+
 const AdminSettings = () => {
   const navigate = useNavigate();
   const [currentAdmin, setCurrentAdmin] = useState(null);
@@ -87,6 +125,7 @@ const AdminSettings = () => {
   });
   const [newAdminError, setNewAdminError] = useState('');
   const [newAdminLoading, setNewAdminLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState(0);
 
   // Form data for current admin
   const [formData, setFormData] = useState({
@@ -271,6 +310,10 @@ const AdminSettings = () => {
     }
   };
 
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
+  };
+
   if (loading) {
     return (
       <PageContainer>
@@ -288,298 +331,484 @@ const AdminSettings = () => {
     <PageContainer>
       <Sidebar />
       <MainContent>
-        <Typography variant="h4" sx={{ mb: 3, color: colors.primaryText }}>
-          Admin Settings
-        </Typography>
-
-        {error && (
-          <Alert severity="error" sx={{ mb: 2, backgroundColor: `${colors.sellRed}22`, color: colors.sellRed, border: `1px solid ${colors.sellRed}` }}>
-            {error}
-          </Alert>
-        )}
-
-        {success && (
-          <Alert severity="success" sx={{ mb: 2, backgroundColor: `${colors.buyGreen}22`, color: colors.buyGreen, border: `1px solid ${colors.buyGreen}` }}>
-            {success}
-          </Alert>
-        )}
-
-        <Grid container spacing={3}>
-          {/* Current Admin Profile */}
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ 
-              p: 3, 
-              backgroundColor: colors.cardBg,
-              border: `1px solid ${colors.borderColor}`,
-              borderRadius: '8px'
-            }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                <Avatar sx={{ width: 60, height: 60, bgcolor: colors.primary, mr: 2 }}>
-                  {currentAdmin?.username?.charAt(0).toUpperCase()}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Typography variant="h4" sx={{ color: colors.primaryText, fontWeight: 600 }}>Settings</Typography>
+        </Box>
+        
+        <Box sx={{ mb: 4 }}>
+          <StyledTabs value={activeTab} onChange={handleTabChange}>
+            <StyledTab label="Profile" icon={<PersonIcon />} iconPosition="start" />
+            <StyledTab label="Security" icon={<SecurityIcon />} iconPosition="start" />
+            <StyledTab label="Admin Management" icon={<SettingsIcon />} iconPosition="start" />
+          </StyledTabs>
+        </Box>
+        
+        {/* Profile Tab */}
+        {activeTab === 0 && (
+          <SettingsSection>
+            <Typography variant="h5" sx={{ mb: 3, color: colors.primaryText }}>Profile Settings</Typography>
+            
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4, mb: 4 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 2 }}>
+                <Avatar 
+                  src={currentAdmin?.profile_image || undefined}
+                  alt={currentAdmin?.username || ''} 
+                  sx={{ 
+                    width: 120, 
+                    height: 120, 
+                    backgroundColor: colors.secondary,
+                    mb: 2,
+                    border: `4px solid ${colors.borderColor}`
+                  }}
+                >
+                  {currentAdmin?.username ? currentAdmin.username.charAt(0).toUpperCase() : 'A'}
                 </Avatar>
-                <Box>
-                  <Typography variant="h6" sx={{ color: colors.primaryText }}>
-                    {currentAdmin?.username}
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: colors.secondaryText }}>
-                    {currentAdmin?.email}
-                  </Typography>
-                  <Chip 
-                    label="Administrator" 
-                    size="small" 
-                    sx={{ 
-                      mt: 1,
-                      backgroundColor: `${colors.secondary}33`,
-                      color: colors.secondary
-                    }} 
-                  />
-                </Box>
-              </Box>
-
-              <Divider sx={{ borderColor: colors.borderColor, mb: 3 }} />
-
-              <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText }}>
-                Update Profile
-              </Typography>
-
-              <form onSubmit={handleUpdateProfile}>
-                <TextField
-                  fullWidth
-                  label="Username"
-                  name="username"
-                  value={formData.username}
-                  onChange={handleInputChange}
-                  margin="normal"
-                  InputProps={{
-                    startAdornment: <PersonIcon sx={{ mr: 1, color: colors.secondaryText }} />,
-                    sx: {
-                      color: colors.primaryText,
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.borderColor
-                      },
-                      '&:hover .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.primary
-                      },
-                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.primary
-                      }
-                    }
-                  }}
-                  InputLabelProps={{
-                    sx: { color: colors.secondaryText }
-                  }}
-                />
-
-                <TextField
-                  fullWidth
-                  label="Email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  margin="normal"
-                  InputProps={{
-                    startAdornment: <EmailIcon sx={{ mr: 1, color: colors.secondaryText }} />,
-                    sx: {
-                      color: colors.primaryText,
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.borderColor
-                      },
-                      '&:hover .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.primary
-                      },
-                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.primary
-                      }
-                    }
-                  }}
-                  InputLabelProps={{
-                    sx: { color: colors.secondaryText }
-                  }}
-                />
-
-                <Typography variant="subtitle1" sx={{ mt: 3, mb: 2, color: colors.primaryText }}>
-                  Change Password
-                </Typography>
-
-                <TextField
-                  fullWidth
-                  label="Current Password"
-                  name="currentPassword"
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.currentPassword}
-                  onChange={handleInputChange}
-                  margin="normal"
-                  InputProps={{
-                    startAdornment: <LockIcon sx={{ mr: 1, color: colors.secondaryText }} />,
-                    endAdornment: (
-                      <IconButton
-                        onClick={() => setShowPassword(!showPassword)}
-                        edge="end"
-                        sx={{ color: colors.secondaryText }}
-                      >
-                        {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                      </IconButton>
-                    ),
-                    sx: {
-                      color: colors.primaryText,
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.borderColor
-                      },
-                      '&:hover .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.primary
-                      },
-                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.primary
-                      }
-                    }
-                  }}
-                  InputLabelProps={{
-                    sx: { color: colors.secondaryText }
-                  }}
-                />
-
-                <TextField
-                  fullWidth
-                  label="New Password"
-                  name="newPassword"
-                  type={showNewPassword ? 'text' : 'password'}
-                  value={formData.newPassword}
-                  onChange={handleInputChange}
-                  margin="normal"
-                  InputProps={{
-                    startAdornment: <LockIcon sx={{ mr: 1, color: colors.secondaryText }} />,
-                    endAdornment: (
-                      <IconButton
-                        onClick={() => setShowNewPassword(!showNewPassword)}
-                        edge="end"
-                        sx={{ color: colors.secondaryText }}
-                      >
-                        {showNewPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                      </IconButton>
-                    ),
-                    sx: {
-                      color: colors.primaryText,
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.borderColor
-                      },
-                      '&:hover .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.primary
-                      },
-                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.primary
-                      }
-                    }
-                  }}
-                  InputLabelProps={{
-                    sx: { color: colors.secondaryText }
-                  }}
-                />
-
-                <TextField
-                  fullWidth
-                  label="Confirm New Password"
-                  name="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  value={formData.confirmPassword}
-                  onChange={handleInputChange}
-                  margin="normal"
-                  InputProps={{
-                    startAdornment: <LockIcon sx={{ mr: 1, color: colors.secondaryText }} />,
-                    endAdornment: (
-                      <IconButton
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        edge="end"
-                        sx={{ color: colors.secondaryText }}
-                      >
-                        {showConfirmPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                      </IconButton>
-                    ),
-                    sx: {
-                      color: colors.primaryText,
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.borderColor
-                      },
-                      '&:hover .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.primary
-                      },
-                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.primary
-                      }
-                    }
-                  }}
-                  InputLabelProps={{
-                    sx: { color: colors.secondaryText }
-                  }}
-                />
-
-                <Button
-                  type="submit"
-                  variant="contained"
-                  startIcon={<SaveIcon />}
-                  disabled={saving}
+                
+                <Button 
+                  variant="outlined" 
+                  component="label"
+                  startIcon={<CloudUploadIcon />}
                   sx={{ 
-                    mt: 3, 
-                    backgroundColor: colors.primary,
-                    '&:hover': {
-                      backgroundColor: colors.primary
-                    }
-                  }}
-                >
-                  {saving ? <CircularProgress size={24} color="inherit" /> : 'Save Changes'}
-                </Button>
-              </form>
-            </Paper>
-          </Grid>
-
-          {/* Admin Management */}
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ 
-              p: 3, 
-              backgroundColor: colors.cardBg,
-              border: `1px solid ${colors.borderColor}`,
-              borderRadius: '8px'
-            }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h6" sx={{ color: colors.primaryText }}>
-                  Admin Accounts
-                </Typography>
-                <Button
-                  variant="outlined"
-                  startIcon={<AddIcon />}
-                  onClick={() => setShowAddAdminDialog(true)}
-                  sx={{ 
-                    color: colors.primary,
                     borderColor: colors.primary,
+                    color: colors.primary,
                     '&:hover': {
-                      borderColor: colors.primary,
-                      backgroundColor: `${colors.primary}22`
+                      backgroundColor: `${colors.primary}22`,
+                      borderColor: colors.primary
                     }
                   }}
                 >
-                  Add Admin
+                  Upload Photo
+                  <input type="file" hidden />
                 </Button>
+                
+                <Typography variant="caption" sx={{ color: colors.secondaryText, mt: 1, textAlign: 'center' }}>
+                  Recommended: Square image, at least 200x200px
+                </Typography>
               </Box>
-
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell sx={{ color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>Username</TableCell>
-                      <TableCell sx={{ color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>Email</TableCell>
-                      <TableCell sx={{ color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>Status</TableCell>
-                      <TableCell sx={{ color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {admins.map((admin) => (
+              
+              <Box sx={{ flexGrow: 1 }}>
+                <form onSubmit={handleUpdateProfile}>
+                  <Grid container spacing={3}>
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        label="Username"
+                        name="username"
+                        value={formData.username}
+                        onChange={handleInputChange}
+                        required
+                        variant="outlined"
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <PersonIcon sx={{ color: colors.secondaryText }} />
+                            </InputAdornment>
+                          ),
+                          sx: {
+                            color: colors.primaryText,
+                          }
+                        }}
+                        InputLabelProps={{
+                          sx: {
+                            color: colors.secondaryText
+                          }
+                        }}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            '& fieldset': {
+                              borderColor: colors.borderColor,
+                            },
+                            '&:hover fieldset': {
+                              borderColor: colors.primary,
+                            },
+                            '&.Mui-focused fieldset': {
+                              borderColor: colors.primary,
+                            },
+                          }
+                        }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        label="Email"
+                        name="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        required
+                        variant="outlined"
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <EmailIcon sx={{ color: colors.secondaryText }} />
+                            </InputAdornment>
+                          ),
+                          sx: {
+                            color: colors.primaryText,
+                          }
+                        }}
+                        InputLabelProps={{
+                          sx: {
+                            color: colors.secondaryText
+                          }
+                        }}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            '& fieldset': {
+                              borderColor: colors.borderColor,
+                            },
+                            '&:hover fieldset': {
+                              borderColor: colors.primary,
+                            },
+                            '&.Mui-focused fieldset': {
+                              borderColor: colors.primary,
+                            },
+                          }
+                        }}
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Button
+                        type="submit"
+                        variant="contained"
+                        color="primary"
+                        startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
+                        disabled={saving}
+                        sx={{ 
+                          mt: 2,
+                          backgroundColor: colors.primary,
+                          '&:hover': {
+                            backgroundColor: `${colors.primary}dd`
+                          }
+                        }}
+                      >
+                        Save Profile
+                      </Button>
+                    </Grid>
+                  </Grid>
+                </form>
+              </Box>
+            </Box>
+            
+            {success && (
+              <Alert severity="success" sx={{ mb: 2, backgroundColor: `${colors.buyGreen}22`, color: colors.buyGreen }}>
+                {success}
+              </Alert>
+            )}
+            
+            {error && (
+              <Alert severity="error" sx={{ mb: 2, backgroundColor: `${colors.sellRed}22`, color: colors.sellRed }}>
+                {error}
+              </Alert>
+            )}
+          </SettingsSection>
+        )}
+        
+        {/* Security Tab */}
+        {activeTab === 1 && (
+          <SettingsSection>
+            <Typography variant="h5" sx={{ mb: 3, color: colors.primaryText }}>Security Settings</Typography>
+            
+            <form onSubmit={handleUpdateProfile}>
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Current Password"
+                    name="currentPassword"
+                    type={showPassword ? 'text' : 'password'}
+                    value={formData.currentPassword}
+                    onChange={handleInputChange}
+                    variant="outlined"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <LockIcon sx={{ color: colors.secondaryText }} />
+                        </InputAdornment>
+                      ),
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => setShowPassword(!showPassword)}
+                            edge="end"
+                            sx={{ color: colors.secondaryText }}
+                          >
+                            {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                      sx: {
+                        color: colors.primaryText,
+                      }
+                    }}
+                    InputLabelProps={{
+                      sx: {
+                        color: colors.secondaryText
+                      }
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        '& fieldset': {
+                          borderColor: colors.borderColor,
+                        },
+                        '&:hover fieldset': {
+                          borderColor: colors.primary,
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: colors.primary,
+                        },
+                      }
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="New Password"
+                    name="newPassword"
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={formData.newPassword}
+                    onChange={handleInputChange}
+                    variant="outlined"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <LockIcon sx={{ color: colors.secondaryText }} />
+                        </InputAdornment>
+                      ),
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => setShowNewPassword(!showNewPassword)}
+                            edge="end"
+                            sx={{ color: colors.secondaryText }}
+                          >
+                            {showNewPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                      sx: {
+                        color: colors.primaryText,
+                      }
+                    }}
+                    InputLabelProps={{
+                      sx: {
+                        color: colors.secondaryText
+                      }
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        '& fieldset': {
+                          borderColor: colors.borderColor,
+                        },
+                        '&:hover fieldset': {
+                          borderColor: colors.primary,
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: colors.primary,
+                        },
+                      }
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Confirm New Password"
+                    name="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    variant="outlined"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <LockIcon sx={{ color: colors.secondaryText }} />
+                        </InputAdornment>
+                      ),
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            edge="end"
+                            sx={{ color: colors.secondaryText }}
+                          >
+                            {showConfirmPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                      sx: {
+                        color: colors.primaryText,
+                      }
+                    }}
+                    InputLabelProps={{
+                      sx: {
+                        color: colors.secondaryText
+                      }
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        '& fieldset': {
+                          borderColor: colors.borderColor,
+                        },
+                        '&:hover fieldset': {
+                          borderColor: colors.primary,
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: colors.primary,
+                        },
+                      }
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    color="primary"
+                    startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
+                    disabled={saving}
+                    sx={{ 
+                      mt: 2,
+                      backgroundColor: colors.primary,
+                      '&:hover': {
+                        backgroundColor: `${colors.primary}dd`
+                      }
+                    }}
+                  >
+                    Update Password
+                  </Button>
+                </Grid>
+              </Grid>
+            </form>
+            
+            <Box sx={{ mt: 4 }}>
+              <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText }}>Additional Security Settings</Typography>
+              
+              <Card sx={{ backgroundColor: `${colors.cardBg}80`, border: `1px solid ${colors.borderColor}` }}>
+                <CardContent>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12}>
+                      <FormControlLabel
+                        control={
+                          <Switch 
+                            checked={true} 
+                            sx={{
+                              '& .MuiSwitch-switchBase.Mui-checked': {
+                                color: colors.primary,
+                                '&:hover': {
+                                  backgroundColor: `${colors.primary}22`
+                                }
+                              },
+                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                                backgroundColor: colors.primary
+                              }
+                            }}
+                          />
+                        }
+                        label={
+                          <Box>
+                            <Typography variant="body1" sx={{ color: colors.primaryText }}>Two-Factor Authentication</Typography>
+                            <Typography variant="caption" sx={{ color: colors.secondaryText }}>
+                              Enable two-factor authentication for additional security
+                            </Typography>
+                          </Box>
+                        }
+                        sx={{ display: 'flex', alignItems: 'flex-start' }}
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <FormControlLabel
+                        control={
+                          <Switch 
+                            checked={false} 
+                            sx={{
+                              '& .MuiSwitch-switchBase.Mui-checked': {
+                                color: colors.primary,
+                                '&:hover': {
+                                  backgroundColor: `${colors.primary}22`
+                                }
+                              },
+                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                                backgroundColor: colors.primary
+                              }
+                            }}
+                          />
+                        }
+                        label={
+                          <Box>
+                            <Typography variant="body1" sx={{ color: colors.primaryText }}>Login Notifications</Typography>
+                            <Typography variant="caption" sx={{ color: colors.secondaryText }}>
+                              Receive notifications when your account is accessed
+                            </Typography>
+                          </Box>
+                        }
+                        sx={{ display: 'flex', alignItems: 'flex-start' }}
+                      />
+                    </Grid>
+                  </Grid>
+                </CardContent>
+              </Card>
+            </Box>
+            
+            {success && (
+              <Alert severity="success" sx={{ mt: 3, backgroundColor: `${colors.buyGreen}22`, color: colors.buyGreen }}>
+                {success}
+              </Alert>
+            )}
+            
+            {error && (
+              <Alert severity="error" sx={{ mt: 3, backgroundColor: `${colors.sellRed}22`, color: colors.sellRed }}>
+                {error}
+              </Alert>
+            )}
+          </SettingsSection>
+        )}
+        
+        {/* Admin Management Tab */}
+        {activeTab === 2 && (
+          <SettingsSection>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+              <Typography variant="h5" sx={{ color: colors.primaryText }}>Admin Management</Typography>
+              <Button 
+                variant="contained" 
+                startIcon={<AddIcon />}
+                onClick={() => setShowAddAdminDialog(true)}
+                sx={{ 
+                  backgroundColor: colors.primary,
+                  '&:hover': {
+                    backgroundColor: `${colors.primary}dd`
+                  }
+                }}
+              >
+                Add Admin
+              </Button>
+            </Box>
+            
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>Admin</TableCell>
+                    <TableCell sx={{ color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>Email</TableCell>
+                    <TableCell sx={{ color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>Status</TableCell>
+                    <TableCell sx={{ color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>Created</TableCell>
+                    <TableCell sx={{ color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {admins.length > 0 ? (
+                    admins.map((admin) => (
                       <TableRow key={admin.user_id} sx={{ '&:hover': { backgroundColor: colors.hoverBg } }}>
-                        <TableCell sx={{ color: colors.primaryText, borderBottom: `1px solid ${colors.borderColor}` }}>
+                        <TableCell sx={{ borderBottom: `1px solid ${colors.borderColor}` }}>
                           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <Avatar sx={{ width: 32, height: 32, bgcolor: colors.primary, mr: 1 }}>
-                              {admin.username.charAt(0).toUpperCase()}
+                            <Avatar 
+                              sx={{ width: 32, height: 32, backgroundColor: colors.secondary, mr: 1.5 }}
+                            >
+                              {admin.username ? admin.username.charAt(0).toUpperCase() : 'A'}
                             </Avatar>
-                            {admin.username}
+                            <Typography sx={{ color: colors.primaryText }}>{admin.username}</Typography>
                           </Box>
                         </TableCell>
                         <TableCell sx={{ color: colors.primaryText, borderBottom: `1px solid ${colors.borderColor}` }}>
@@ -587,42 +816,52 @@ const AdminSettings = () => {
                         </TableCell>
                         <TableCell sx={{ borderBottom: `1px solid ${colors.borderColor}` }}>
                           <Chip 
-                            label={admin.account_status} 
-                            size="small"
+                            label={admin.account_status || 'active'} 
+                            size="small" 
                             sx={{ 
-                              backgroundColor: 
-                                admin.account_status === 'active' ? `${colors.buyGreen}33` : 
-                                `${colors.sellRed}33`,
-                              color: 
-                                admin.account_status === 'active' ? colors.buyGreen : 
-                                colors.sellRed
+                              backgroundColor: `${colors.buyGreen}22`,
+                              color: colors.buyGreen
                             }} 
                           />
                         </TableCell>
+                        <TableCell sx={{ color: colors.primaryText, borderBottom: `1px solid ${colors.borderColor}` }}>
+                          {admin.created_at ? new Date(admin.created_at).toLocaleDateString() : 'N/A'}
+                        </TableCell>
                         <TableCell sx={{ borderBottom: `1px solid ${colors.borderColor}` }}>
-                          {admin.user_id !== currentAdmin?.user_id && (
-                            <IconButton 
-                              onClick={() => handleDeleteAdmin(admin.user_id)}
-                              sx={{ 
-                                color: colors.sellRed,
-                                '&:hover': {
-                                  backgroundColor: `${colors.sellRed}22`
-                                }
-                              }}
-                            >
-                              <DeleteIcon />
+                          <Tooltip title="Edit">
+                            <IconButton sx={{ color: colors.primary, mr: 1 }}>
+                              <EditIcon fontSize="small" />
                             </IconButton>
-                          )}
+                          </Tooltip>
+                          <Tooltip title="Delete">
+                            <IconButton 
+                              sx={{ color: colors.sellRed }}
+                              onClick={() => currentAdmin?.user_id !== admin.user_id && handleDeleteAdmin(admin.user_id)}
+                              disabled={currentAdmin?.user_id === admin.user_id}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
                         </TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Paper>
-          </Grid>
-        </Grid>
-
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} align="center" sx={{ py: 4, color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>
+                        {loading ? (
+                          <CircularProgress size={32} sx={{ color: colors.primary }} />
+                        ) : (
+                          'No admin users found'
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </SettingsSection>
+        )}
+        
         {/* Add Admin Dialog */}
         <Dialog 
           open={showAddAdminDialog} 

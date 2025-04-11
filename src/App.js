@@ -6,6 +6,7 @@ import AdminDashboard from './Admin/admin-dashboard';
 import UserDashboard from './User/user-dashboard';
 import UserManagement from './Admin/UserManagement';
 import TransactionPage from './Admin/TransactionPage';
+import ReportPage from './Admin/ReportPage';
 import Trade from './User/trade';
 import Market from './User/market';
 import ForexNews from './User/ForexNews';
@@ -71,6 +72,14 @@ function App() {
             element={
               <ProtectedRoute requiredRole="admin">
                 <TransactionPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/ReportPage" 
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <ReportPage />
               </ProtectedRoute>
             } 
           />
