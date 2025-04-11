@@ -162,6 +162,12 @@ const AnimatedButton = styled(Button)({
   }
 });
 
+const StyledDialogTitle = styled('div')({
+  textAlign: 'center',
+  padding: 0,
+  marginBottom: '32px'
+});
+
 const LoginDialog = ({ open, onClose, isLogin, toggleForm }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -208,9 +214,20 @@ const LoginDialog = ({ open, onClose, isLogin, toggleForm }) => {
         setTimeout(() => {
           const baseUrl = window.location.origin;
           
-          // Direct both admin and regular users to user dashboard to avoid admin dashboard errors
-          console.log('Redirecting to user dashboard');
-          window.location.href = `${baseUrl}/#/user-dashboard`;
+          try {
+            // Restore proper routing with error handling
+            if (response.data.user.role === 'admin') {
+              console.log('Redirecting to admin dashboard');
+              window.location.href = `${baseUrl}/#/admin-dashboard`;
+            } else {
+              console.log('Redirecting to user dashboard');
+              window.location.href = `${baseUrl}/#/user-dashboard`;
+            }
+          } catch (navError) {
+            // Fallback to user dashboard if there's a navigation error
+            console.error('Navigation error:', navError);
+            window.location.href = `${baseUrl}/#/user-dashboard`;
+          }
         }, 100);
         
       } else {
@@ -339,20 +356,22 @@ const LoginDialog = ({ open, onClose, isLogin, toggleForm }) => {
               </IconButton>
             </Box>
             
-            <DialogTitle sx={{ textAlign: 'center', p: 0, mb: 4 }}>
+            <StyledDialogTitle>
               <Typography 
                 variant="h4" 
                 component="h2" 
                 sx={{ 
                   fontWeight: 'bold',
-                  background: `linear-gradient(135deg, ${colors.gradientStart}, ${colors.gradientEnd})`,
+                  background: isLogin ? 
+                    `linear-gradient(135deg, ${colors.gradientStart}, ${colors.gradientEnd})` : 
+                    'linear-gradient(135deg, #00E676, #1DE9B6)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent'
                 }}
               >
                 {isLogin ? 'Welcome Back' : 'Create Account'}
               </Typography>
-            </DialogTitle>
+            </StyledDialogTitle>
             
             {error && (
               <Alert 
@@ -507,15 +526,15 @@ const LoginDialog = ({ open, onClose, isLogin, toggleForm }) => {
                     py: 1.8, 
                     mb: 3,
                     mt: 1,
-                    backgroundColor: colors.buyGreen,
+                    backgroundColor: '#00E676',
                     borderRadius: '12px',
                     textTransform: 'none',
                     fontSize: '1rem',
                     fontWeight: 'bold',
                     letterSpacing: '0.5px',
                     '&:hover': { 
-                      backgroundColor: colors.profitGreen,
-                      boxShadow: `0 6px 20px ${colors.buyGreen}40`
+                      backgroundColor: '#00C853',
+                      boxShadow: `0 6px 20px rgba(0, 230, 118, 0.4)`
                     },
                     transition: 'all 0.3s ease'
                   }}
@@ -533,7 +552,7 @@ const LoginDialog = ({ open, onClose, isLogin, toggleForm }) => {
                     onClick={toggleForm} 
                     sx={{ 
                       textTransform: 'none',
-                      color: colors.accentBlue,
+                      color: '#2196F3',
                       p: 0,
                       minWidth: 'auto',
                       fontWeight: 'bold',
