@@ -1146,10 +1146,18 @@ const Trade = () => {
     }
     
     newStrategies[index].allocatedFunds = numValue;
+    
+    // Automatically update copy ratio based on allocation percentage
+    if (numValue > 0) {
+      newStrategies[index].copyRatio = Math.max(1, Math.round((numValue / availableBalance) * 10));
+    } else {
+      newStrategies[index].copyRatio = 0;
+    }
+    
     setStrategies(newStrategies);
   };
   
-  // Handle copy ratio change
+  // Handle copy ratio change (kept for compatibility, but not used with the slider interface)
   const handleCopyRatioChange = (index, value) => {
     const numValue = parseInt(value) || 0;
     
@@ -1167,11 +1175,11 @@ const Trade = () => {
   const startSimulation = () => {
     // Only include strategies with allocated funds
     const selectedStrategies = strategies.filter(strategy => 
-      strategy.allocatedFunds > 0 && strategy.copyRatio > 0
+      strategy.allocatedFunds > 0
     );
     
     if (selectedStrategies.length === 0) {
-      alert('Please allocate funds to at least one strategy and set a copy ratio.');
+      alert('Please allocate funds to at least one strategy.');
       return;
     }
     
@@ -2024,54 +2032,71 @@ const Trade = () => {
                           {strategy.oneYearNetPL >= 0 ? '+' : ''}{strategy.oneYearNetPL}%
                         </TableCell>
                         <TableCell align="right" sx={{ borderBottom: `1px solid ${colors.borderColor}` }}>
-                          <TextField
-                            type="number"
-                            value={strategy.allocatedFunds}
-                            onChange={(e) => handleAllocationChange(index, e.target.value)}
-                            variant="outlined"
-                            size="small"
-                            InputProps={{
-                              inputProps: { min: 0, max: availableBalance },
-                              sx: { 
-                                color: colors.primaryText,
-                                backgroundColor: colors.cardBg,
-                                '.MuiOutlinedInput-notchedOutline': {
-                                  borderColor: colors.borderColor
-                                },
-                                '&:hover .MuiOutlinedInput-notchedOutline': {
-                                  borderColor: colors.accentBlue
-                                },
-                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                  borderColor: colors.accentBlue
-                                }
-                              }
-                            }}
-                          />
+                          <Box sx={{ width: '100%', px: 1 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                              <Typography variant="caption" sx={{ color: colors.secondaryText }}>$0</Typography>
+                              <Typography variant="caption" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                                ${strategy.allocatedFunds.toLocaleString()}
+                              </Typography>
+                              <Typography variant="caption" sx={{ color: colors.secondaryText }}>${availableBalance.toLocaleString()}</Typography>
+                            </Box>
+                            <Box sx={{ position: 'relative' }}>
+                              {/* Track background */}
+                              <Box sx={{ 
+                                position: 'absolute', 
+                                height: '4px', 
+                                width: '100%', 
+                                backgroundColor: colors.borderColor,
+                                borderRadius: '2px',
+                                top: '50%',
+                                transform: 'translateY(-50%)'
+                              }} />
+                              
+                              {/* Filled portion */}
+                              <Box sx={{ 
+                                position: 'absolute', 
+                                height: '4px', 
+                                width: `${(strategy.allocatedFunds / availableBalance) * 100}%`, 
+                                background: `linear-gradient(90deg, ${colors.accentBlue}, ${colors.buyGreen})`,
+                                borderRadius: '2px',
+                                top: '50%',
+                                transform: 'translateY(-50%)'
+                              }} />
+                              
+                              <input
+                                type="range"
+                                min="0"
+                                max={availableBalance}
+                                step="100"
+                                value={strategy.allocatedFunds}
+                                onChange={(e) => handleAllocationChange(index, e.target.value)}
+                                style={{ 
+                                  width: '100%',
+                                  accentColor: colors.accentBlue,
+                                  height: '24px',
+                                  appearance: 'none',
+                                  background: 'transparent',
+                                  cursor: 'pointer',
+                                  position: 'relative',
+                                  zIndex: 2
+                                }}
+                              />
+                            </Box>
+                          </Box>
                         </TableCell>
                         <TableCell align="right" sx={{ borderBottom: `1px solid ${colors.borderColor}` }}>
-                          <TextField
-                            type="number"
-                            value={strategy.copyRatio}
-                            onChange={(e) => handleCopyRatioChange(index, e.target.value)}
-                            variant="outlined"
-                            size="small"
-                            InputProps={{
-                              inputProps: { min: 0, max: 10 },
-                              sx: { 
-                                color: colors.primaryText,
-                                backgroundColor: colors.cardBg,
-                                '.MuiOutlinedInput-notchedOutline': {
-                                  borderColor: colors.borderColor
-                                },
-                                '&:hover .MuiOutlinedInput-notchedOutline': {
-                                  borderColor: colors.accentBlue
-                                },
-                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                  borderColor: colors.accentBlue
-                                }
-                              }
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              color: colors.primaryText,
+                              fontWeight: 'bold'
                             }}
-                          />
+                          >
+                            {/* Calculate copy ratio based on allocation percentage */}
+                            {strategy.allocatedFunds > 0 ? 
+                              Math.max(1, Math.round((strategy.allocatedFunds / availableBalance) * 10)) 
+                              : 0}
+                          </Typography>
                         </TableCell>
                       </TableRow>
                     ))}
