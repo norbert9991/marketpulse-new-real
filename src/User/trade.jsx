@@ -1667,7 +1667,7 @@ const Trade = () => {
           </Box>
         )}
         {step === 4 && tradingType === 'long-term' && simulationResults && (
-          <Box sx={{ maxWidth: '1200px', mx: 'auto', mt: 5 }}>
+          <Box sx={{ maxWidth: '1400px', mx: 'auto', mt: 5 }}>
             <Paper 
               sx={{ 
                 p: 4, 
@@ -1707,11 +1707,11 @@ const Trade = () => {
           </Box>
 
               {/* First row - 3 main panels */}
-              <Grid container spacing={3}>
+              <Grid container spacing={4}>
                 <Grid item xs={12} md={4}>
           <Paper 
             sx={{ 
-              p: 3, 
+              p: 4, 
                       backgroundColor: colors.panelBg,
               border: `1px solid ${colors.borderColor}`,
               borderRadius: '12px',
@@ -1826,7 +1826,7 @@ const Trade = () => {
                 <Grid item xs={12} md={4}>
                   <Paper 
                 sx={{ 
-                      p: 3, 
+                      p: 4, 
                   backgroundColor: colors.panelBg, 
                       border: `1px solid ${colors.borderColor}`,
                       borderRadius: '12px',
@@ -1935,13 +1935,10 @@ const Trade = () => {
                 <Grid item xs={12} md={4}>
                   <Paper 
                     sx={{ 
-                      p: 3, 
+                      p: 4, 
                       backgroundColor: colors.panelBg,
                       border: `1px solid ${colors.borderColor}`,
-                      borderRadius: '12px',
-                      height: '100%',
-                      display: 'flex',
-                      flexDirection: 'column'
+                      borderRadius: '12px'
                     }}
                   >
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -2038,7 +2035,7 @@ const Trade = () => {
                 <Grid item xs={12} md={6}>
                   <Paper 
                     sx={{ 
-                      p: 3, 
+                      p: 4, 
                       backgroundColor: colors.panelBg,
                       border: `1px solid ${colors.borderColor}`,
                       borderRadius: '12px'
@@ -2050,8 +2047,8 @@ const Trade = () => {
                     
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       {/* Donut chart */}
-                      <Box sx={{ width: 180, height: 180, position: 'relative' }}>
-                        <svg width="180" height="180" viewBox="0 0 180 180">
+                      <Box sx={{ width: 220, height: 220, position: 'relative' }}>
+                        <svg width="220" height="220" viewBox="0 0 220 220">
                           <defs>
                             <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
                               <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
@@ -2067,15 +2064,15 @@ const Trade = () => {
                           </defs>
                           
                           {/* Ring segments */}
-                          <circle cx="90" cy="90" r="60" fill="none" stroke="#00E676" strokeWidth="22" strokeDasharray="150 230" transform="rotate(-90 90 90)" filter="url(#shadow)" />
-                          <circle cx="90" cy="90" r="60" fill="none" stroke="#2196F3" strokeWidth="22" strokeDasharray="100 280" transform="rotate(60 90 90)" filter="url(#shadow)" />
-                          <circle cx="90" cy="90" r="60" fill="none" stroke="#FFA726" strokeWidth="22" strokeDasharray="30 350" transform="rotate(160 90 90)" filter="url(#shadow)" />
-                          <circle cx="90" cy="90" r="60" fill="none" stroke="#FF3D57" strokeWidth="22" strokeDasharray="23 357" transform="rotate(190 90 90)" filter="url(#shadow)" />
-                          <circle cx="90" cy="90" r="60" fill="none" stroke="#9C27B0" strokeWidth="22" strokeDasharray="20 360" transform="rotate(213 90 90)" filter="url(#shadow)" />
-                          <circle cx="90" cy="90" r="60" fill="none" stroke="#CDDC39" strokeWidth="22" strokeDasharray="15 365" transform="rotate(233 90 90)" filter="url(#shadow)" />
+                          <circle cx="110" cy="110" r="60" fill="none" stroke="#00E676" strokeWidth="22" strokeDasharray="150 230" transform="rotate(-90 110 110)" filter="url(#shadow)" />
+                          <circle cx="110" cy="110" r="60" fill="none" stroke="#2196F3" strokeWidth="22" strokeDasharray="100 280" transform="rotate(60 110 110)" filter="url(#shadow)" />
+                          <circle cx="110" cy="110" r="60" fill="none" stroke="#FFA726" strokeWidth="22" strokeDasharray="30 350" transform="rotate(160 110 110)" filter="url(#shadow)" />
+                          <circle cx="110" cy="110" r="60" fill="none" stroke="#FF3D57" strokeWidth="22" strokeDasharray="23 357" transform="rotate(190 110 110)" filter="url(#shadow)" />
+                          <circle cx="110" cy="110" r="60" fill="none" stroke="#9C27B0" strokeWidth="22" strokeDasharray="20 360" transform="rotate(213 110 110)" filter="url(#shadow)" />
+                          <circle cx="110" cy="110" r="60" fill="none" stroke="#CDDC39" strokeWidth="22" strokeDasharray="15 365" transform="rotate(233 110 110)" filter="url(#shadow)" />
                           
                           {/* Center hole */}
-                          <circle cx="90" cy="90" r="40" fill={colors.panelBg} />
+                          <circle cx="110" cy="110" r="40" fill={colors.panelBg} />
                         </svg>
                       </Box>
                       
@@ -2115,10 +2112,10 @@ const Trade = () => {
                   </Paper>
                 </Grid>
                 
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12} lg={6}>
                   <Paper 
                     sx={{ 
-                      p: 3, 
+                      p: 4, 
                       backgroundColor: colors.panelBg,
                       border: `1px solid ${colors.borderColor}`,
                       borderRadius: '12px'
@@ -2142,7 +2139,7 @@ const Trade = () => {
                       </Button>
                     </Box>
                     
-                    <Box sx={{ height: 180, display: 'flex', alignItems: 'flex-end', position: 'relative' }}>
+                    <Box sx={{ height: 220, display: 'flex', alignItems: 'flex-end', position: 'relative' }}>
                       {/* X-axis labels - rotated currency names */}
                       <Box sx={{ 
                         position: 'absolute',
@@ -2213,7 +2210,7 @@ const Trade = () => {
                 <Grid item xs={12}>
                   <Paper 
                     sx={{ 
-                      p: 3, 
+                      p: 4, 
                       backgroundColor: colors.panelBg,
                       border: `1px solid ${colors.borderColor}`,
                       borderRadius: '12px'
@@ -2250,7 +2247,7 @@ const Trade = () => {
           </Box>
         )}
         {step === 3 && tradingType === 'long-term' && (
-          <Box sx={{ maxWidth: '1200px', mx: 'auto', mt: 5 }}>
+          <Box sx={{ maxWidth: '1400px', mx: 'auto', mt: 5 }}>
             <Paper 
               sx={{ 
                 p: 4, 
