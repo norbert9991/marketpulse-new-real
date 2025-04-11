@@ -45,19 +45,22 @@ const LoginFormContainer = styled('div')({
   overflow: 'hidden',
   boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
   border: `1px solid ${colors.borderColor}`,
-  position: 'relative'
+  position: 'relative',
+  transition: 'all 0.5s ease'
 });
 
-const LoginForm = styled('div')({
+const LoginForm = styled('div')(({ position }) => ({
   padding: '50px 40px',
   width: '400px',
   display: 'flex',
   flexDirection: 'column',
   justifyContent: 'center',
   backgroundColor: colors.cardBg,
-  borderRight: `1px solid ${colors.borderColor}`,
+  borderRight: position === 'left' ? `1px solid ${colors.borderColor}` : 'none',
+  borderLeft: position === 'right' ? `1px solid ${colors.borderColor}` : 'none',
   position: 'relative',
   zIndex: 1,
+  transition: 'transform 0.5s ease',
   '&::before': {
     content: '""',
     position: 'absolute',
@@ -69,9 +72,9 @@ const LoginForm = styled('div')({
     opacity: 0.4,
     zIndex: -1
   }
-});
+}));
 
-const LoginInfo = styled('div')({
+const LoginInfo = styled('div')(({ position }) => ({
   padding: '50px 40px',
   width: '340px',
   background: `linear-gradient(135deg, ${colors.gradientStart}, ${colors.gradientEnd})`,
@@ -81,6 +84,7 @@ const LoginInfo = styled('div')({
   justifyContent: 'center',
   position: 'relative',
   overflow: 'hidden',
+  transition: 'transform 0.5s ease',
   '&::before': {
     content: '""',
     position: 'absolute',
@@ -96,7 +100,7 @@ const LoginInfo = styled('div')({
     position: 'relative',
     zIndex: 1
   }
-});
+}));
 
 const StyledTextField = styled(TextField)({
   marginBottom: '20px',
@@ -151,20 +155,6 @@ const AnimatedButton = styled(Button)({
   },
   '&:active': {
     transform: 'translateY(0)',
-  }
-});
-
-const SocialLoginButton = styled(Button)({
-  backgroundColor: 'transparent',
-  borderRadius: '12px',
-  color: colors.secondaryText,
-  border: `1px solid ${colors.borderColor}`,
-  padding: '10px 15px',
-  transition: 'all 0.3s ease',
-  '&:hover': {
-    backgroundColor: `${colors.accentBlue}10`,
-    borderColor: colors.accentBlue,
-    transform: 'translateY(-2px)',
   }
 });
 
@@ -273,131 +263,286 @@ const LoginDialog = ({ open, onClose, isLogin, toggleForm }) => {
         }
       }}
     >
-      <LoginFormContainer>
-        <LoginForm>
-          <Box sx={{ position: 'absolute', top: 16, right: 16 }}>
-            <IconButton
-              onClick={onClose}
+      <Box sx={{ position: 'relative', display: 'flex', width: '740px' }}>
+        <Box
+          sx={{
+            position: 'absolute',
+            width: '100%',
+            height: '100%',
+            overflow: 'hidden',
+            borderRadius: '16px',
+            zIndex: 0
+          }}
+        >
+          <Box
+            sx={{
+              position: 'absolute',
+              width: '200%',
+              height: '100%',
+              display: 'flex',
+              transform: isLogin ? 'translateX(0)' : 'translateX(-50%)',
+              transition: 'transform 0.6s ease-in-out'
+            }}
+          >
+            {/* Left panel - Info when in login mode, form when in register mode */}
+            <LoginInfo 
+              position="left"
               sx={{ 
-                color: colors.secondaryText,
-                '&:hover': {
-                  color: colors.primaryText,
-                  backgroundColor: colors.hoverBg
-                }
+                flex: '0 0 340px',
+                order: isLogin ? 1 : 2
               }}
             >
-              <CloseIcon />
-            </IconButton>
-          </Box>
-          
-          <DialogTitle sx={{ textAlign: 'center', p: 0, mb: 4 }}>
-            <Typography 
-              variant="h4" 
-              component="h2" 
-              sx={{ 
-                fontWeight: 'bold',
-                background: `linear-gradient(135deg, ${colors.gradientStart}, ${colors.gradientEnd})`,
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent'
-              }}
-            >
-              {isLogin ? 'Welcome Back' : 'Create Account'}
-            </Typography>
-          </DialogTitle>
-          
-          {error && (
-            <Alert 
-              severity="error" 
-              sx={{ 
-                mb: 2,
-                backgroundColor: `${colors.lossRed}20`,
-                color: colors.sellRed,
-                border: `1px solid ${colors.sellRed}40`
-              }}
-            >
-              {error}
-            </Alert>
-          )}
-          
-          {isLogin ? (
-            <>
-              <StyledTextField 
-                label="Email" 
-                variant="outlined" 
-                fullWidth
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                InputProps={{
-                  sx: { borderRadius: '12px' }
-                }}
-              />
-              <StyledTextField 
-                label="Password" 
-                type="password" 
-                variant="outlined" 
-                fullWidth
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                InputProps={{
-                  sx: { borderRadius: '12px' }
-                }}
-              />
-              <AnimatedButton 
-                variant="contained" 
-                size="large" 
-                fullWidth 
-                sx={{ 
-                  py: 1.8, 
-                  mb: 3,
-                  mt: 1,
-                  backgroundColor: colors.buyGreen,
-                  borderRadius: '12px',
-                  textTransform: 'none',
-                  fontSize: '1rem',
-                  fontWeight: 'bold',
-                  letterSpacing: '0.5px',
-                  '&:hover': { 
-                    backgroundColor: colors.profitGreen,
-                    boxShadow: `0 6px 20px ${colors.buyGreen}40`
-                  },
-                  transition: 'all 0.3s ease'
-                }}
-                onClick={handleLogin}
-                disabled={loading}
-              >
-                {loading ? <CircularProgress size={24} /> : 'Sign In'}
-              </AnimatedButton>
+              <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', mb: 4 }}>
+                {isLogin ? 'Welcome to MarketPulse' : 'Join MarketPulse'}
+              </Typography>
+              <Typography sx={{ mb: 4, lineHeight: 1.7 }}>
+                {isLogin 
+                  ? 'Access your portfolio, track your investments, and get real-time market insights.'
+                  : 'Create an account to start your trading journey with advanced analytics and market forecasting.'}
+              </Typography>
               
-              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-                <Button 
-                  variant="text" 
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 4 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box sx={{ 
+                    width: 40, 
+                    height: 40, 
+                    borderRadius: '50%', 
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <Typography sx={{ fontWeight: 'bold' }}>1</Typography>
+                  </Box>
+                  <Typography>Real-time market analysis</Typography>
+                </Box>
+                
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box sx={{ 
+                    width: 40, 
+                    height: 40, 
+                    borderRadius: '50%', 
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <Typography sx={{ fontWeight: 'bold' }}>2</Typography>
+                  </Box>
+                  <Typography>Advanced technical indicators</Typography>
+                </Box>
+                
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box sx={{ 
+                    width: 40, 
+                    height: 40, 
+                    borderRadius: '50%', 
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <Typography sx={{ fontWeight: 'bold' }}>3</Typography>
+                  </Box>
+                  <Typography>AI-powered market predictions</Typography>
+                </Box>
+              </Box>
+            </LoginInfo>
+            
+            {/* Right panel - Form when in login mode, info when in register mode */}
+            <LoginForm 
+              position="right"
+              sx={{ 
+                flex: '0 0 400px',
+                order: isLogin ? 2 : 1,
+                position: 'relative'
+              }}
+            >
+              <Box sx={{ position: 'absolute', top: 16, right: 16, zIndex: 10 }}>
+                <IconButton
+                  onClick={onClose}
                   sx={{ 
-                    textTransform: 'none',
-                    color: colors.accentBlue,
+                    color: colors.secondaryText,
                     '&:hover': {
-                      backgroundColor: 'transparent',
-                      opacity: 0.8
+                      color: colors.primaryText,
+                      backgroundColor: colors.hoverBg
                     }
                   }}
                 >
-                  Forgot password?
-                </Button>
+                  <CloseIcon />
+                </IconButton>
               </Box>
               
-              <Divider sx={{ my: 2, color: colors.secondaryText, '&::before, &::after': { borderColor: colors.borderColor } }}>or</Divider>
+              <DialogTitle sx={{ textAlign: 'center', p: 0, mb: 4 }}>
+                <Typography 
+                  variant="h4" 
+                  component="h2" 
+                  sx={{ 
+                    fontWeight: 'bold',
+                    background: `linear-gradient(135deg, ${colors.gradientStart}, ${colors.gradientEnd})`,
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent'
+                  }}
+                >
+                  {isLogin ? 'Welcome Back' : 'Create Account'}
+                </Typography>
+              </DialogTitle>
               
-              <Box sx={{ display: 'flex', gap: 2, mb: 3, mt: 2 }}>
-                <SocialLoginButton fullWidth>
-                  Google
-                </SocialLoginButton>
-                <SocialLoginButton fullWidth>
-                  Apple
-                </SocialLoginButton>
-              </Box>
+              {error && (
+                <Alert 
+                  severity="error" 
+                  sx={{ 
+                    mb: 2,
+                    backgroundColor: `${colors.lossRed}20`,
+                    color: colors.sellRed,
+                    border: `1px solid ${colors.sellRed}40`,
+                    borderRadius: '10px'
+                  }}
+                >
+                  {error}
+                </Alert>
+              )}
+              
+              {isLogin ? (
+                <>
+                  <StyledTextField 
+                    label="Email" 
+                    variant="outlined" 
+                    fullWidth
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    InputProps={{
+                      sx: { borderRadius: '12px' }
+                    }}
+                  />
+                  <StyledTextField 
+                    label="Password" 
+                    type="password" 
+                    variant="outlined" 
+                    fullWidth
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    InputProps={{
+                      sx: { borderRadius: '12px' }
+                    }}
+                  />
+                  <AnimatedButton 
+                    variant="contained" 
+                    size="large" 
+                    fullWidth 
+                    sx={{ 
+                      py: 1.8, 
+                      mb: 3,
+                      mt: 2,
+                      backgroundColor: colors.buyGreen,
+                      borderRadius: '12px',
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      fontWeight: 'bold',
+                      letterSpacing: '0.5px',
+                      '&:hover': { 
+                        backgroundColor: colors.profitGreen,
+                        boxShadow: `0 6px 20px ${colors.buyGreen}40`
+                      },
+                      transition: 'all 0.3s ease'
+                    }}
+                    onClick={handleLogin}
+                    disabled={loading}
+                  >
+                    {loading ? <CircularProgress size={24} /> : 'Sign In'}
+                  </AnimatedButton>
+                  
+                  <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+                    <Button 
+                      variant="text" 
+                      sx={{ 
+                        textTransform: 'none',
+                        color: colors.accentBlue,
+                        '&:hover': {
+                          backgroundColor: 'transparent',
+                          opacity: 0.8
+                        }
+                      }}
+                    >
+                      Forgot password?
+                    </Button>
+                  </Box>
+                </>
+              ) : (
+                <>
+                  <StyledTextField 
+                    label="Full Name" 
+                    variant="outlined" 
+                    fullWidth
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    InputProps={{
+                      sx: { borderRadius: '12px' }
+                    }}
+                  />
+                  <StyledTextField 
+                    label="Email" 
+                    variant="outlined" 
+                    fullWidth
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    InputProps={{
+                      sx: { borderRadius: '12px' }
+                    }}
+                  />
+                  <StyledTextField 
+                    label="Password" 
+                    type="password" 
+                    variant="outlined" 
+                    fullWidth
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    InputProps={{
+                      sx: { borderRadius: '12px' }
+                    }}
+                  />
+                  <StyledTextField 
+                    label="Confirm Password" 
+                    type="password" 
+                    variant="outlined" 
+                    fullWidth
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    InputProps={{
+                      sx: { borderRadius: '12px' }
+                    }}
+                  />
+                  <AnimatedButton 
+                    variant="contained" 
+                    size="large" 
+                    fullWidth 
+                    sx={{ 
+                      py: 1.8, 
+                      mb: 3,
+                      mt: 2,
+                      backgroundColor: colors.buyGreen,
+                      borderRadius: '12px',
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      fontWeight: 'bold',
+                      letterSpacing: '0.5px',
+                      '&:hover': { 
+                        backgroundColor: colors.profitGreen,
+                        boxShadow: `0 6px 20px ${colors.buyGreen}40`
+                      },
+                      transition: 'all 0.3s ease'
+                    }}
+                    onClick={handleRegister}
+                    disabled={loading}
+                  >
+                    {loading ? <CircularProgress size={24} /> : 'Create Account'}
+                  </AnimatedButton>
+                </>
+              )}
               
               <Box sx={{ textAlign: 'center' }}>
                 <Typography sx={{ color: colors.secondaryText, display: 'inline-block', mr: 1 }}>
-                  Don't have an account?
+                  {isLogin ? "Don't have an account?" : "Already have an account?"}
                 </Typography>
                 <Button 
                   onClick={toggleForm} 
@@ -413,163 +558,13 @@ const LoginDialog = ({ open, onClose, isLogin, toggleForm }) => {
                     }
                   }}
                 >
-                  Register
+                  {isLogin ? "Register" : "Sign In"}
                 </Button>
               </Box>
-            </>
-          ) : (
-            <>
-              <StyledTextField 
-                label="Full Name" 
-                variant="outlined" 
-                fullWidth
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                InputProps={{
-                  sx: { borderRadius: '12px' }
-                }}
-              />
-              <StyledTextField 
-                label="Email" 
-                variant="outlined" 
-                fullWidth
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                InputProps={{
-                  sx: { borderRadius: '12px' }
-                }}
-              />
-              <StyledTextField 
-                label="Password" 
-                type="password" 
-                variant="outlined" 
-                fullWidth
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                InputProps={{
-                  sx: { borderRadius: '12px' }
-                }}
-              />
-              <StyledTextField 
-                label="Confirm Password" 
-                type="password" 
-                variant="outlined" 
-                fullWidth
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                InputProps={{
-                  sx: { borderRadius: '12px' }
-                }}
-              />
-              <AnimatedButton 
-                variant="contained" 
-                size="large" 
-                fullWidth 
-                sx={{ 
-                  py: 1.8, 
-                  mb: 3,
-                  mt: 1,
-                  backgroundColor: colors.buyGreen,
-                  borderRadius: '12px',
-                  textTransform: 'none',
-                  fontSize: '1rem',
-                  fontWeight: 'bold',
-                  letterSpacing: '0.5px',
-                  '&:hover': { 
-                    backgroundColor: colors.profitGreen,
-                    boxShadow: `0 6px 20px ${colors.buyGreen}40`
-                  },
-                  transition: 'all 0.3s ease'
-                }}
-                onClick={handleRegister}
-                disabled={loading}
-              >
-                {loading ? <CircularProgress size={24} /> : 'Create Account'}
-              </AnimatedButton>
-              
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography sx={{ color: colors.secondaryText, display: 'inline-block', mr: 1 }}>
-                  Already have an account?
-                </Typography>
-                <Button 
-                  onClick={toggleForm} 
-                  sx={{ 
-                    textTransform: 'none',
-                    color: colors.accentBlue,
-                    p: 0,
-                    minWidth: 'auto',
-                    fontWeight: 'bold',
-                    '&:hover': {
-                      backgroundColor: 'transparent',
-                      opacity: 0.8
-                    }
-                  }}
-                >
-                  Sign In
-                </Button>
-              </Box>
-            </>
-          )}
-        </LoginForm>
-        
-        <LoginInfo>
-          <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', mb: 4 }}>
-            {isLogin ? 'Welcome to MarketPulse' : 'Join MarketPulse'}
-          </Typography>
-          <Typography sx={{ mb: 4, lineHeight: 1.7 }}>
-            {isLogin 
-              ? 'Access your portfolio, track your investments, and get real-time market insights.'
-              : 'Create an account to start your trading journey with advanced analytics and market forecasting.'}
-          </Typography>
-          
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 4 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Box sx={{ 
-                width: 40, 
-                height: 40, 
-                borderRadius: '50%', 
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <Typography sx={{ fontWeight: 'bold' }}>1</Typography>
-              </Box>
-              <Typography>Real-time market analysis</Typography>
-            </Box>
-            
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Box sx={{ 
-                width: 40, 
-                height: 40, 
-                borderRadius: '50%', 
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <Typography sx={{ fontWeight: 'bold' }}>2</Typography>
-              </Box>
-              <Typography>Advanced technical indicators</Typography>
-            </Box>
-            
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Box sx={{ 
-                width: 40, 
-                height: 40, 
-                borderRadius: '50%', 
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <Typography sx={{ fontWeight: 'bold' }}>3</Typography>
-              </Box>
-              <Typography>AI-powered market predictions</Typography>
-            </Box>
+            </LoginForm>
           </Box>
-        </LoginInfo>
-      </LoginFormContainer>
+        </Box>
+      </Box>
     </Dialog>
   );
 };
