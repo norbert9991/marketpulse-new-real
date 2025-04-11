@@ -9,7 +9,8 @@ import {
   Box,
   CircularProgress,
   Alert,
-  IconButton
+  IconButton,
+  Divider
 } from '@mui/material';
 import { styled } from '@mui/system';
 import { API } from '../../axiosConfig';
@@ -40,59 +41,130 @@ const LoginFormContainer = styled('div')({
   display: 'flex',
   height: '600px',
   backgroundColor: colors.panelBg,
-  borderRadius: '12px',
-  overflow: 'hidden'
+  borderRadius: '16px',
+  overflow: 'hidden',
+  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+  border: `1px solid ${colors.borderColor}`,
+  position: 'relative'
 });
 
 const LoginForm = styled('div')({
-  padding: '40px',
+  padding: '50px 40px',
   width: '400px',
   display: 'flex',
   flexDirection: 'column',
   justifyContent: 'center',
   backgroundColor: colors.cardBg,
-  borderRight: `1px solid ${colors.borderColor}`
+  borderRight: `1px solid ${colors.borderColor}`,
+  position: 'relative',
+  zIndex: 1,
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    background: `radial-gradient(circle at 30% 107%, ${colors.panelBg} 0%, ${colors.cardBg} 90%)`,
+    opacity: 0.4,
+    zIndex: -1
+  }
 });
 
 const LoginInfo = styled('div')({
-  padding: '40px',
-  width: '300px',
+  padding: '50px 40px',
+  width: '340px',
   background: `linear-gradient(135deg, ${colors.gradientStart}, ${colors.gradientEnd})`,
   color: colors.primaryText,
   display: 'flex',
   flexDirection: 'column',
-  justifyContent: 'center'
+  justifyContent: 'center',
+  position: 'relative',
+  overflow: 'hidden',
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    background: 'url(https://www.transparenttextures.com/patterns/cubes.png)',
+    opacity: 0.1,
+    zIndex: 0
+  },
+  '& > *': {
+    position: 'relative',
+    zIndex: 1
+  }
 });
 
 const StyledTextField = styled(TextField)({
+  marginBottom: '20px',
   '& .MuiOutlinedInput-root': {
     '& fieldset': {
       borderColor: colors.borderColor,
+      borderWidth: '1px',
+      borderRadius: '12px',
+      transition: 'all 0.3s ease'
     },
     '&:hover fieldset': {
       borderColor: colors.accentBlue,
     },
     '&.Mui-focused fieldset': {
       borderColor: colors.accentBlue,
+      borderWidth: '2px',
+      boxShadow: `0 0 0 3px ${colors.accentBlue}20`,
     },
-    backgroundColor: colors.panelBg,
+    backgroundColor: `${colors.panelBg}90`,
     color: colors.primaryText,
+    borderRadius: '12px',
+    transition: 'all 0.3s ease',
+    padding: '2px 5px',
     '& input': {
       color: colors.primaryText,
+      padding: '16px 14px',
       '&::placeholder': {
         color: colors.secondaryText,
         opacity: 0.7
       }
-    },
-    '& label': {
-      color: colors.secondaryText,
-      '&.Mui-focused': {
-        color: colors.accentBlue
-      }
-    },
-    '&.Mui-focused label': {
-      color: colors.accentBlue
     }
+  },
+  '& .MuiInputLabel-root': {
+    color: colors.secondaryText,
+    fontSize: '0.9rem',
+    fontWeight: 500,
+    transition: 'all 0.3s ease',
+    transformOrigin: 'left top',
+    '&.Mui-focused': {
+      color: colors.accentBlue,
+    }
+  },
+  '& .MuiInputLabel-shrink': {
+    transform: 'translate(14px, -9px) scale(0.75)'
+  }
+});
+
+const AnimatedButton = styled(Button)({
+  transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+  '&:hover': {
+    transform: 'translateY(-3px)',
+  },
+  '&:active': {
+    transform: 'translateY(0)',
+  }
+});
+
+const SocialLoginButton = styled(Button)({
+  backgroundColor: 'transparent',
+  borderRadius: '12px',
+  color: colors.secondaryText,
+  border: `1px solid ${colors.borderColor}`,
+  padding: '10px 15px',
+  transition: 'all 0.3s ease',
+  '&:hover': {
+    backgroundColor: `${colors.accentBlue}10`,
+    borderColor: colors.accentBlue,
+    transform: 'translateY(-2px)',
   }
 });
 
@@ -252,159 +324,250 @@ const LoginDialog = ({ open, onClose, isLogin, toggleForm }) => {
               <StyledTextField 
                 label="Email" 
                 variant="outlined" 
-                fullWidth 
-                sx={{ mb: 3 }} 
+                fullWidth
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                InputProps={{
+                  sx: { borderRadius: '12px' }
+                }}
               />
               <StyledTextField 
                 label="Password" 
                 type="password" 
                 variant="outlined" 
-                fullWidth 
-                sx={{ mb: 2 }} 
+                fullWidth
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                InputProps={{
+                  sx: { borderRadius: '12px' }
+                }}
               />
-              <Button 
+              <AnimatedButton 
                 variant="contained" 
                 size="large" 
                 fullWidth 
                 sx={{ 
-                  py: 1.5, 
-                  mb: 2,
+                  py: 1.8, 
+                  mb: 3,
+                  mt: 1,
                   backgroundColor: colors.buyGreen,
+                  borderRadius: '12px',
+                  textTransform: 'none',
+                  fontSize: '1rem',
+                  fontWeight: 'bold',
+                  letterSpacing: '0.5px',
                   '&:hover': { 
                     backgroundColor: colors.profitGreen,
-                    transform: 'translateY(-2px)',
-                    boxShadow: `0 4px 12px ${colors.buyGreen}40`
+                    boxShadow: `0 6px 20px ${colors.buyGreen}40`
                   },
                   transition: 'all 0.3s ease'
                 }}
                 onClick={handleLogin}
                 disabled={loading}
               >
-                {loading ? <CircularProgress size={24} /> : 'Login'}
-              </Button>
-              <Typography align="center" sx={{ mb: 2, color: colors.secondaryText }}>
-                Forgot password?
-              </Typography>
-              <Typography align="center" sx={{ color: colors.secondaryText }}>
-                Don't have an account?{' '}
+                {loading ? <CircularProgress size={24} /> : 'Sign In'}
+              </AnimatedButton>
+              
+              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
                 <Button 
-                  onClick={toggleForm} 
+                  variant="text" 
                   sx={{ 
                     textTransform: 'none',
                     color: colors.accentBlue,
                     '&:hover': {
                       backgroundColor: 'transparent',
-                      color: colors.gradientEnd
+                      opacity: 0.8
+                    }
+                  }}
+                >
+                  Forgot password?
+                </Button>
+              </Box>
+              
+              <Divider sx={{ my: 2, color: colors.secondaryText, '&::before, &::after': { borderColor: colors.borderColor } }}>or</Divider>
+              
+              <Box sx={{ display: 'flex', gap: 2, mb: 3, mt: 2 }}>
+                <SocialLoginButton fullWidth>
+                  Google
+                </SocialLoginButton>
+                <SocialLoginButton fullWidth>
+                  Apple
+                </SocialLoginButton>
+              </Box>
+              
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography sx={{ color: colors.secondaryText, display: 'inline-block', mr: 1 }}>
+                  Don't have an account?
+                </Typography>
+                <Button 
+                  onClick={toggleForm} 
+                  sx={{ 
+                    textTransform: 'none',
+                    color: colors.accentBlue,
+                    p: 0,
+                    minWidth: 'auto',
+                    fontWeight: 'bold',
+                    '&:hover': {
+                      backgroundColor: 'transparent',
+                      opacity: 0.8
                     }
                   }}
                 >
                   Register
                 </Button>
-              </Typography>
+              </Box>
             </>
           ) : (
             <>
               <StyledTextField 
                 label="Full Name" 
                 variant="outlined" 
-                fullWidth 
-                sx={{ mb: 3 }} 
+                fullWidth
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
+                InputProps={{
+                  sx: { borderRadius: '12px' }
+                }}
               />
               <StyledTextField 
                 label="Email" 
                 variant="outlined" 
-                fullWidth 
-                sx={{ mb: 3 }} 
+                fullWidth
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                InputProps={{
+                  sx: { borderRadius: '12px' }
+                }}
               />
               <StyledTextField 
                 label="Password" 
                 type="password" 
                 variant="outlined" 
-                fullWidth 
-                sx={{ mb: 3 }} 
+                fullWidth
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                InputProps={{
+                  sx: { borderRadius: '12px' }
+                }}
               />
               <StyledTextField 
                 label="Confirm Password" 
                 type="password" 
                 variant="outlined" 
-                fullWidth 
-                sx={{ mb: 2 }} 
+                fullWidth
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                InputProps={{
+                  sx: { borderRadius: '12px' }
+                }}
               />
-              <Button 
+              <AnimatedButton 
                 variant="contained" 
                 size="large" 
                 fullWidth 
                 sx={{ 
-                  py: 1.5, 
-                  mb: 2,
+                  py: 1.8, 
+                  mb: 3,
+                  mt: 1,
                   backgroundColor: colors.buyGreen,
+                  borderRadius: '12px',
+                  textTransform: 'none',
+                  fontSize: '1rem',
+                  fontWeight: 'bold',
+                  letterSpacing: '0.5px',
                   '&:hover': { 
                     backgroundColor: colors.profitGreen,
-                    transform: 'translateY(-2px)',
-                    boxShadow: `0 4px 12px ${colors.buyGreen}40`
+                    boxShadow: `0 6px 20px ${colors.buyGreen}40`
                   },
                   transition: 'all 0.3s ease'
                 }}
                 onClick={handleRegister}
                 disabled={loading}
               >
-                {loading ? <CircularProgress size={24} /> : 'Register'}
-              </Button>
-              <Typography align="center" sx={{ color: colors.secondaryText }}>
-                Already have an account?{' '}
+                {loading ? <CircularProgress size={24} /> : 'Create Account'}
+              </AnimatedButton>
+              
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography sx={{ color: colors.secondaryText, display: 'inline-block', mr: 1 }}>
+                  Already have an account?
+                </Typography>
                 <Button 
                   onClick={toggleForm} 
                   sx={{ 
                     textTransform: 'none',
                     color: colors.accentBlue,
+                    p: 0,
+                    minWidth: 'auto',
+                    fontWeight: 'bold',
                     '&:hover': {
                       backgroundColor: 'transparent',
-                      color: colors.gradientEnd
+                      opacity: 0.8
                     }
                   }}
                 >
-                  Login
+                  Sign In
                 </Button>
-              </Typography>
+              </Box>
             </>
           )}
         </LoginForm>
         
         <LoginInfo>
-          <Typography variant="h5" component="h3" gutterBottom sx={{ fontWeight: 'bold' }}>
-            Start Trading Today
+          <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', mb: 4 }}>
+            {isLogin ? 'Welcome to MarketPulse' : 'Join MarketPulse'}
           </Typography>
-          <Typography paragraph sx={{ opacity: 0.9 }}>
-            Join thousands of traders who trust Markepulse for their forex trading needs.
+          <Typography sx={{ mb: 4, lineHeight: 1.7 }}>
+            {isLogin 
+              ? 'Access your portfolio, track your investments, and get real-time market insights.'
+              : 'Create an account to start your trading journey with advanced analytics and market forecasting.'}
           </Typography>
-          <Box component="ul" sx={{ 
-            paddingLeft: '20px', 
-            marginBottom: '30px',
-            '& li': {
-              marginBottom: '10px',
-              opacity: 0.9
-            }
-          }}>
-            <li>Real-time market data</li>
-            <li>Advanced charting tools</li>
-            <li>Risk management features</li>
-            <li>24/7 customer support</li>
+          
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 4 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ 
+                width: 40, 
+                height: 40, 
+                borderRadius: '50%', 
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Typography sx={{ fontWeight: 'bold' }}>1</Typography>
+              </Box>
+              <Typography>Real-time market analysis</Typography>
+            </Box>
+            
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ 
+                width: 40, 
+                height: 40, 
+                borderRadius: '50%', 
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Typography sx={{ fontWeight: 'bold' }}>2</Typography>
+              </Box>
+              <Typography>Advanced technical indicators</Typography>
+            </Box>
+            
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ 
+                width: 40, 
+                height: 40, 
+                borderRadius: '50%', 
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Typography sx={{ fontWeight: 'bold' }}>3</Typography>
+              </Box>
+              <Typography>AI-powered market predictions</Typography>
+            </Box>
           </Box>
-          <Typography variant="body2" sx={{ opacity: 0.8 }}>
-            By creating an account, you agree to our Terms of Service and Privacy Policy.
-          </Typography>
         </LoginInfo>
       </LoginFormContainer>
     </Dialog>

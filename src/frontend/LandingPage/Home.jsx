@@ -57,7 +57,7 @@ const colors = {
 // Styled components with trading theme
 const HeroSection = styled('div')({
   height: '100vh',
-  background: `linear-gradient(rgba(10, 12, 20, 0.95), rgba(10, 12, 20, 0.95)), url(https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80)`,
+  background: `linear-gradient(rgba(10, 12, 20, 0.9), rgba(10, 12, 20, 0.98)), url(https://images.unsplash.com/photo-1640340434855-6084b1f4901c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80)`,
   backgroundSize: 'cover',
   backgroundPosition: 'center',
   display: 'flex',
@@ -66,24 +66,111 @@ const HeroSection = styled('div')({
   alignItems: 'center',
   color: colors.primaryText,
   textAlign: 'center',
-  padding: '0 20px'
+  padding: '0 20px',
+  position: 'relative',
+  overflow: 'hidden',
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: `radial-gradient(circle at center, ${colors.accentBlue}10 0%, transparent 70%)`,
+    opacity: 0.4,
+    zIndex: 1
+  },
+  '& > *': {
+    position: 'relative',
+    zIndex: 2
+  }
 });
 
 const FeatureCard = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(4),
+  padding: theme.spacing(5),
   textAlign: 'center',
   color: colors.primaryText,
   backgroundColor: colors.cardBg,
   height: '100%',
-  borderRadius: '12px',
-  transition: 'all 0.3s ease',
+  borderRadius: '16px',
+  transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
   border: `1px solid ${colors.borderColor}`,
+  position: 'relative',
+  overflow: 'hidden',
+  '&::after': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '4px',
+    background: `linear-gradient(90deg, ${colors.accentBlue}, ${colors.buyGreen})`,
+    transform: 'scaleX(0)',
+    transformOrigin: 'left',
+    transition: 'transform 0.3s ease',
+  },
   '&:hover': {
-    transform: 'translateY(-5px)',
-    boxShadow: `0 10px 20px ${colors.shadowColor}`,
-    borderColor: colors.accentBlue
+    transform: 'translateY(-8px)',
+    boxShadow: `0 15px 30px ${colors.shadowColor}`,
+    borderColor: colors.accentBlue,
+    '&::after': {
+      transform: 'scaleX(1)',
+    }
   }
 }));
+
+const AnimatedGradientText = styled(Typography)({
+  background: `linear-gradient(135deg, ${colors.gradientStart}, ${colors.gradientEnd})`,
+  WebkitBackgroundClip: 'text',
+  WebkitTextFillColor: 'transparent',
+  backgroundSize: '200% 200%',
+  animation: 'gradient 8s ease infinite',
+  '@keyframes gradient': {
+    '0%': { backgroundPosition: '0% 50%' },
+    '50%': { backgroundPosition: '100% 50%' },
+    '100%': { backgroundPosition: '0% 50%' }
+  }
+});
+
+const PulsingButton = styled(Button)({
+  position: 'relative',
+  overflow: 'hidden',
+  '&::after': {
+    content: '""',
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    width: '5px',
+    height: '5px',
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    opacity: 0,
+    borderRadius: '100%',
+    transform: 'scale(1, 1) translate(-50%, -50%)',
+    transformOrigin: '50% 50%',
+  },
+  '&:hover::after': {
+    animation: 'ripple 1s ease-out',
+  },
+  '@keyframes ripple': {
+    '0%': {
+      transform: 'scale(0, 0) translate(-50%, -50%)',
+      opacity: 0.5,
+    },
+    '100%': {
+      transform: 'scale(20, 20) translate(-50%, -50%)',
+      opacity: 0,
+    },
+  }
+});
+
+const FloatingCard = styled(Box)({
+  animation: 'float 6s ease-in-out infinite',
+  '@keyframes float': {
+    '0%': { transform: 'translateY(0px)' },
+    '50%': { transform: 'translateY(-15px)' },
+    '100%': { transform: 'translateY(0px)' }
+  }
+});
 
 const Home = () => {
   const [openLogin, setOpenLogin] = useState(false);
@@ -346,15 +433,14 @@ const Home = () => {
       <HeroSection>
         <Toolbar /> {/* For spacing under fixed appbar */}
         <Container maxWidth="md">
-          <Typography variant="h2" component="h1" gutterBottom sx={{ 
-            fontWeight: 'bold', 
+          <AnimatedGradientText variant="h2" component="h1" gutterBottom sx={{ 
+            fontWeight: 900, 
             mb: 4,
-            background: `linear-gradient(135deg, ${colors.gradientStart}, ${colors.gradientEnd})`,
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent'
+            letterSpacing: '0.5px',
+            textShadow: '0 5px 15px rgba(0,0,0,0.3)'
           }}>
             Advanced Market Analytics & Forecasting
-          </Typography>
+          </AnimatedGradientText>
           <Typography variant="h5" component="p" sx={{ 
             maxWidth: '800px', 
             mb: 6,
@@ -364,39 +450,52 @@ const Home = () => {
             Marketpulse provides institutional-grade market analysis, predictive modeling, and real-time forecasting to help you make data-driven investment decisions.
           </Typography>
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
-            <Button 
+            <PulsingButton 
               variant="contained" 
               size="large" 
               sx={{ 
-                px: 4, 
-                py: 1.5, 
+                px: 5, 
+                py: 1.8, 
                 fontSize: '1.1rem',
                 backgroundColor: colors.buyGreen,
-                '&:hover': { backgroundColor: colors.profitGreen },
-                fontWeight: 'bold'
+                '&:hover': { 
+                  backgroundColor: colors.profitGreen,
+                  transform: 'translateY(-3px)',
+                  boxShadow: `0 7px 14px rgba(0, 230, 118, 0.4)`,
+                },
+                borderRadius: '30px',
+                fontWeight: 'bold',
+                transition: 'all 0.3s ease',
+                textTransform: 'none'
               }}
               onClick={handleOpenRegister}
             >
               Get Started
-            </Button>
-            <Button 
+            </PulsingButton>
+            <PulsingButton 
               variant="outlined" 
               size="large" 
               sx={{ 
-                px: 4, 
-                py: 1.5, 
+                px: 5, 
+                py: 1.8, 
                 fontSize: '1.1rem',
                 color: colors.accentBlue,
                 borderColor: colors.accentBlue,
+                borderRadius: '30px',
+                fontWeight: 'bold',
+                textTransform: 'none',
+                transition: 'all 0.3s ease',
                 '&:hover': { 
                   backgroundColor: `${colors.accentBlue}20`,
-                  borderColor: colors.accentBlue
+                  borderColor: colors.accentBlue,
+                  transform: 'translateY(-3px)',
+                  boxShadow: `0 7px 14px rgba(33, 150, 243, 0.4)`,
                 }
               }}
               onClick={handleOpenLogin}
             >
               Explore Analytics
-            </Button>
+            </PulsingButton>
           </Box>
         </Container>
       </HeroSection>
@@ -447,41 +546,37 @@ const Home = () => {
               }
             ].map((feature, index) => (
               <Box key={index} sx={{ flex: { xs: '1 1 100%', md: '1 1 calc(33.333% - 32px)' } }}>
-                <FeatureCard>
-                  <Box sx={{
-                    width: '60px',
-                    height: '60px',
-                    backgroundColor: `${colors.accentBlue}20`,
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 auto 20px',
-                    color: colors.accentBlue
-                  }}>
-                    {index === 0 && (
-                      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="currentColor"/>
-                      </svg>
-                    )}
-                    {index === 1 && (
-                      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M3 3V19H21V21H3C1.89543 21 1 20.1046 1 19V3H3ZM22 3H6C5.44772 3 5 3.44772 5 4V16C5 16.5523 5.44772 17 6 17H22C22.5523 17 23 16.5523 23 16V4C23 3.44772 22.5523 3 22 3ZM8 5H12V7H8V5ZM8 9H20V11H8V9ZM8 13H14V15H8V13Z" fill="currentColor"/>
-                      </svg>
-                    )}
-                    {index === 2 && (
-                      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 1L15 7H21L16.5 11.25L18.5 17L12 14.25L5.5 17L7.5 11.25L3 7H9L12 1ZM12 6C11.4477 6 11 6.44772 11 7C11 7.55228 11.4477 8 12 8C12.5523 8 13 7.55228 13 7C13 6.44772 12.5523 6 12 6ZM8 9C7.44772 9 7 9.44772 7 10C7 10.5523 7.44772 11 8 11C8.55228 11 9 10.5523 9 10C9 9.44772 8.55228 9 8 9ZM16 9C15.4477 9 15 9.44772 15 10C15 10.5523 15.4477 11 16 11C16.5523 11 17 10.5523 17 10C17 9.44772 16.5523 9 16 9ZM12 12C11.4477 12 11 12.4477 11 13C11 13.5523 11.4477 14 12 14C12.5523 14 13 13.5523 13 13C13 12.4477 12.5523 12 12 12Z" fill="currentColor"/>
-                      </svg>
-                    )}
-                  </Box>
-                  <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', color: colors.primaryText }}>
-                    {feature.title}
-                  </Typography>
-                  <Typography sx={{ color: colors.secondaryText }}>
-                    {feature.description}
-                  </Typography>
-                </FeatureCard>
+                <FloatingCard sx={{ height: '100%', animationDelay: `${index * 0.2}s` }}>
+                  <FeatureCard elevation={0}>
+                    <Box sx={{ mb: 3, height: 60, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Box sx={{ 
+                        width: 60, 
+                        height: 60, 
+                        borderRadius: '50%', 
+                        background: `linear-gradient(135deg, ${colors.gradientStart}20, ${colors.gradientEnd}20)`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        {index === 0 && <ShowChartIcon sx={{ fontSize: 30, color: colors.accentBlue }} />}
+                        {index === 1 && <ShowChartIcon sx={{ fontSize: 30, color: colors.buyGreen }} />}
+                        {index === 2 && <ShowChartIcon sx={{ fontSize: 30, color: colors.warningOrange }} />}
+                      </Box>
+                    </Box>
+                    <Typography variant="h5" component="h3" gutterBottom sx={{ 
+                      fontWeight: 'bold',
+                      background: `linear-gradient(135deg, ${colors.gradientStart}, ${colors.gradientEnd})`,
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      mb: 2
+                    }}>
+                      {feature.title}
+                    </Typography>
+                    <Typography sx={{ color: colors.secondaryText, lineHeight: 1.7 }}>
+                      {feature.description}
+                    </Typography>
+                  </FeatureCard>
+                </FloatingCard>
               </Box>
             ))}
           </Box>
