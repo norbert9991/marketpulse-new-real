@@ -21,15 +21,15 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fb4f4f255fb38f23a4d7379
 # Configure CORS to allow requests from any origin to ensure maximum compatibility
 CORS(app, 
      origins=["*"],
-     allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Origin", "X-Requested-With"],
+     allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-     supports_credentials=True,
-     expose_headers=["Content-Type", "Authorization"])
+     supports_credentials=True)
 
 # Additional CORS headers added to all responses
 @app.after_request
 def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
+    # Don't add Access-Control-Allow-Origin since flask-cors is already adding it
+    # response.headers.add('Access-Control-Allow-Origin', '*')
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
     response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
     return response

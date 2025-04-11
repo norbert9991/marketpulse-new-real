@@ -144,7 +144,7 @@ def check_favorite(current_user, symbol):
             'message': f'Error checking favorite: {str(e)}'
         }), 500
 
-@dashboard_bp.route('/api/admin/favorite-symbols', methods=['GET'])
+@dashboard_bp.route('/admin/favorite-symbols', methods=['GET'])
 @token_required
 def get_favorite_symbols(current_user):
     conn = None
