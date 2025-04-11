@@ -180,15 +180,15 @@ const AdminDashboard = () => {
         
         // Get user growth stats
         const growthResponse = await API.admin.getUserGrowth();
-        setUserGrowthData(growthResponse.data);
+        setUserGrowthData(growthResponse.data?.data || []);
         
         // Get popular symbols/pairs
         const symbolsResponse = await API.admin.getFavoriteSymbols();
-        setFavoriteSymbolsData(symbolsResponse.data.data);
+        setFavoriteSymbolsData(symbolsResponse.data?.data || []);
         
         // Get current market trends
         const trendsResponse = await API.admin.getMarketTrends();
-        setMarketTrendsData(trendsResponse.data.data);
+        setMarketTrendsData(trendsResponse.data?.data || null);
         
         setLoading(false);
       } catch (error) {
@@ -597,14 +597,16 @@ const AdminDashboard = () => {
                     <LineChart
                       series={[
                         {
-                          data: userGrowthData.map(item => item.count),
+                          data: userGrowthData && Array.isArray(userGrowthData) && userGrowthData.length > 0 ? 
+                            userGrowthData.map(item => (item?.users || 0)) : [0],
                           color: colors.primary,
                           area: true,
                           showMark: false
                         }
                       ]}
                       xAxis={[{ 
-                        data: userGrowthData.map(item => item.date),
+                        data: userGrowthData && Array.isArray(userGrowthData) && userGrowthData.length > 0 ? 
+                          userGrowthData.map(item => (item?.month || '')) : ['No Data'],
                         scaleType: 'point',
                         tickLabelStyle: {
                           fill: colors.secondaryText,

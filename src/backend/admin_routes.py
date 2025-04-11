@@ -82,18 +82,23 @@ def get_user_growth(current_user):
         start_date = end_date - timedelta(days=30*months)  # Approximate months
         
         # Query to get user count by month
-        query = """
-            SELECT 
-                DATE_FORMAT(created_at, '%Y-%m') AS month,
-                COUNT(*) AS user_count
-            FROM login
-            WHERE created_at BETWEEN %s AND %s
-            GROUP BY DATE_FORMAT(created_at, '%Y-%m')
-            ORDER BY month
-        """
-        
-        cursor.execute(query, (start_date, end_date))
-        results = cursor.fetchall()
+        try:
+            query = """
+                SELECT 
+                    DATE_FORMAT(created_at, '%Y-%m') AS month,
+                    COUNT(*) AS user_count
+                FROM login
+                WHERE created_at BETWEEN %s AND %s
+                GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+                ORDER BY month
+            """
+            
+            cursor.execute(query, (start_date, end_date))
+            results = cursor.fetchall()
+        except Exception as query_error:
+            print(f"Error executing user growth query: {query_error}")
+            # Fallback - try a simpler query or return empty data
+            results = []
         
         # Format data for chart and fill in missing months
         chart_data = []
@@ -107,7 +112,8 @@ def get_user_growth(current_user):
             # Since results are now tuples, find month data differently
             found_count = 0
             for result in results:
-                if result[0] == month_str:  # month is at index 0
+                # Handle case where result might not have expected number of elements
+                if len(result) >= 2 and result[0] == month_str:
                     found_count = result[1]  # user_count is at index 1
                     break
             
@@ -125,6 +131,9 @@ def get_user_growth(current_user):
             else:
                 current_month = current_month.replace(month=current_month.month + 1)
         
+        cursor.close()
+        db_manager.release_connection(conn)
+        
         return jsonify({
             'success': True,
             'data': chart_data,
@@ -137,7 +146,10 @@ def get_user_growth(current_user):
         
     except Exception as e:
         print(f"Error in user growth endpoint: {e}")
+        if conn:
+            db_manager.release_connection(conn)
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': str(e),
+            'data': []  # Return empty data to prevent frontend errors
         }), 500
