@@ -20,10 +20,19 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fb4f4f255fb38f23a4d7379
 
 # Configure CORS to allow requests from any origin to ensure maximum compatibility
 CORS(app, 
-     resources={r"/*": {"origins": "*"}}, 
+     origins=["*"],
+     allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Origin", "X-Requested-With"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
      supports_credentials=True,
-     allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Origin"],
-     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+     expose_headers=["Content-Type", "Authorization"])
+
+# Additional CORS headers added to all responses
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    return response
 
 # Register blueprints
 app.register_blueprint(auth_bp)

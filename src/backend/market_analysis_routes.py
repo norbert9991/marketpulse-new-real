@@ -271,51 +271,70 @@ def get_market_trends():
         conn = db_manager.get_connection()
         cursor = conn.cursor()
         
-        # Get all symbols from market_data
-        cursor.execute("""
-            SELECT symbol, trend
-            FROM market_data
-        """)
-        market_rows = cursor.fetchall()
-        
-        if not market_rows:
-            cursor.close()
-            db_manager.release_connection(conn)
-            return jsonify({
-                "message": "No market data available"
-            }), 404
-        
-        # Convert tuples to dictionaries
-        market_data = []
-        for row in market_rows:
-            market_data.append({
-                'symbol': row[0],
-                'trend': row[1]
-            })
-        
-        # Count bullish and bearish symbols
-        bullish_count = sum(1 for item in market_data if item['trend'] == 'Bullish')
-        bearish_count = sum(1 for item in market_data if item['trend'] == 'Bearish')
-        neutral_count = sum(1 for item in market_data if item['trend'] == 'Neutral')
-        
-        # Calculate overall trend
-        total_symbols = len(market_data)
-        bullish_percentage = (bullish_count / total_symbols) * 100 if total_symbols > 0 else 0
-        bearish_percentage = (bearish_count / total_symbols) * 100 if total_symbols > 0 else 0
-        neutral_percentage = (neutral_count / total_symbols) * 100 if total_symbols > 0 else 0
-        
-        # Determine overall market sentiment
-        if bullish_percentage > bearish_percentage and bullish_percentage > 50:
-            overall_trend = "bullish"
-        elif bearish_percentage > bullish_percentage and bearish_percentage > 50:
-            overall_trend = "bearish"
-        else:
+        try:
+            # Get all symbols from market_data
+            cursor.execute("""
+                SELECT symbol, trend
+                FROM market_data
+            """)
+            market_rows = cursor.fetchall()
+            
+            if not market_rows:
+                # Return default data if no market data available
+                cursor.close()
+                db_manager.release_connection(conn)
+                return jsonify({
+                    "success": True,
+                    "data": {
+                        "overall_trend": "neutral",
+                        "bullish_percentage": 0,
+                        "bearish_percentage": 0,
+                        "neutral_percentage": 100,
+                        "total_symbols": 0
+                    }
+                }), 200
+            
+            # Convert tuples to dictionaries
+            market_data = []
+            for row in market_rows:
+                if len(row) >= 2:  # Ensure row has enough elements
+                    market_data.append({
+                        'symbol': row[0],
+                        'trend': row[1]
+                    })
+            
+            # Count bullish and bearish symbols
+            bullish_count = sum(1 for item in market_data if item['trend'] == 'Bullish')
+            bearish_count = sum(1 for item in market_data if item['trend'] == 'Bearish')
+            neutral_count = sum(1 for item in market_data if item['trend'] == 'Neutral')
+            
+            # Calculate overall trend
+            total_symbols = len(market_data)
+            bullish_percentage = (bullish_count / total_symbols) * 100 if total_symbols > 0 else 0
+            bearish_percentage = (bearish_count / total_symbols) * 100 if total_symbols > 0 else 0
+            neutral_percentage = (neutral_count / total_symbols) * 100 if total_symbols > 0 else 0
+            
+            # Determine overall market sentiment
+            if bullish_percentage > bearish_percentage and bullish_percentage > 50:
+                overall_trend = "bullish"
+            elif bearish_percentage > bullish_percentage and bearish_percentage > 50:
+                overall_trend = "bearish"
+            else:
+                overall_trend = "neutral"
+        except Exception as query_error:
+            logger.error(f"Error executing market trends query: {str(query_error)}")
+            # Return default data on query error
             overall_trend = "neutral"
+            bullish_percentage = 0
+            bearish_percentage = 0
+            neutral_percentage = 100
+            total_symbols = 0
         
         cursor.close()
         db_manager.release_connection(conn)
         
         return jsonify({
+            "success": True,
             "data": {
                 "overall_trend": overall_trend,
                 "bullish_percentage": round(bullish_percentage, 2),
@@ -331,5 +350,13 @@ def get_market_trends():
         if conn:
             db_manager.release_connection(conn)
         return jsonify({
-            "message": f"Error fetching market trends: {str(e)}"
+            "success": False,
+            "error": f"Error fetching market trends: {str(e)}",
+            "data": {
+                "overall_trend": "neutral",
+                "bullish_percentage": 0,
+                "bearish_percentage": 0,
+                "neutral_percentage": 100,
+                "total_symbols": 0
+            }
         }), 500 

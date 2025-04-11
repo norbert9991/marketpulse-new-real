@@ -81,48 +81,40 @@ def get_user_growth(current_user):
         end_date = datetime.now()
         start_date = end_date - timedelta(days=30*months)  # Approximate months
         
-        # Query to get user count by month
-        try:
-            query = """
-                SELECT 
-                    DATE_FORMAT(created_at, '%Y-%m') AS month,
-                    COUNT(*) AS user_count
-                FROM login
-                WHERE created_at BETWEEN %s AND %s
-                GROUP BY DATE_FORMAT(created_at, '%Y-%m')
-                ORDER BY month
-            """
-            
-            cursor.execute(query, (start_date, end_date))
-            results = cursor.fetchall()
-        except Exception as query_error:
-            print(f"Error executing user growth query: {query_error}")
-            # Fallback - try a simpler query or return empty data
-            results = []
-        
-        # Format data for chart and fill in missing months
+        # Generate chart data for each month without relying on complex SQL functions
         chart_data = []
         current_month = start_date.replace(day=1)  # Start from first day of month
         
         while current_month <= end_date:
-            month_str = current_month.strftime('%Y-%m')
+            # Create month start and end dates
+            month_start = current_month.replace(day=1)
+            if current_month.month == 12:
+                next_month = current_month.replace(year=current_month.year + 1, month=1)
+            else:
+                next_month = current_month.replace(month=current_month.month + 1)
+            month_end = next_month - timedelta(days=1)
+            
+            # Simple query to count users created in this month period
+            try:
+                cursor.execute(
+                    "SELECT COUNT(*) FROM login WHERE created_at >= %s AND created_at <= %s",
+                    (month_start, month_end)
+                )
+                result = cursor.fetchone()
+                user_count = result[0] if result else 0
+            except Exception as query_error:
+                print(f"Error executing user count query for {month_start} to {month_end}: {query_error}")
+                user_count = 0
+            
+            # Format month name
             month_name = current_month.strftime('%b')  # Short month name
             year = current_month.strftime('%Y')
-            
-            # Since results are now tuples, find month data differently
-            found_count = 0
-            for result in results:
-                # Handle case where result might not have expected number of elements
-                if len(result) >= 2 and result[0] == month_str:
-                    found_count = result[1]  # user_count is at index 1
-                    break
-            
-            # Format label differently for January to show year
             label = month_name if current_month.month != 1 else f"Jan '{year[2:]}"
             
+            # Add to chart data
             chart_data.append({
                 'month': label,
-                'users': found_count
+                'users': user_count
             })
             
             # Move to next month
@@ -146,7 +138,7 @@ def get_user_growth(current_user):
         
     except Exception as e:
         print(f"Error in user growth endpoint: {e}")
-        if conn:
+        if 'conn' in locals() and conn:
             db_manager.release_connection(conn)
         return jsonify({
             'success': False,

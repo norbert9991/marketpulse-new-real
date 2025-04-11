@@ -158,32 +158,39 @@ def get_favorite_symbols(current_user):
         conn = db_manager.get_connection()
         cursor = conn.cursor()
         
-        # Get count of favorites for each symbol
-        cursor.execute("""
-            SELECT f.symbol, f.pair_name, COUNT(*) as count
-            FROM favorites f
-            GROUP BY f.symbol, f.pair_name
-            ORDER BY count DESC
-            LIMIT 10
-        """)
-        
-        favorite_symbols_rows = cursor.fetchall()
-        
-        # Convert tuple rows to dictionaries
-        favorite_symbols = []
-        for row in favorite_symbols_rows:
-            favorite_symbols.append({
-                'symbol': row[0],
-                'pair_name': row[1],
-                'count': row[2]
-            })
+        try:
+            # Get count of favorites for each symbol
+            cursor.execute("""
+                SELECT f.symbol, f.pair_name, COUNT(*) as count
+                FROM favorites f
+                GROUP BY f.symbol, f.pair_name
+                ORDER BY count DESC
+                LIMIT 10
+            """)
+            
+            favorite_symbols_rows = cursor.fetchall()
+            
+            # Convert tuple rows to dictionaries
+            favorite_symbols = []
+            for row in favorite_symbols_rows:
+                favorite_symbols.append({
+                    'symbol': row[0] if len(row) > 0 else '',
+                    'pair_name': row[1] if len(row) > 1 else '',
+                    'count': row[2] if len(row) > 2 else 0
+                })
+        except Exception as query_error:
+            # If there's an error with the query, log it and return empty data
+            logger.error(f"Error executing favorite symbols query: {query_error}")
+            favorite_symbols = []
             
         cursor.close()
         db_manager.release_connection(conn)
         
         logger.info(f"Fetched favorite symbols data: {favorite_symbols}")
         
+        # Return empty array if no favorites found
         return jsonify({
+            'success': True,
             'data': favorite_symbols
         }), 200
     except Exception as e:
@@ -191,5 +198,7 @@ def get_favorite_symbols(current_user):
         if conn:
             db_manager.release_connection(conn)
         return jsonify({
-            'message': f'Error fetching favorite symbols: {str(e)}'
+            'success': False,
+            'error': str(e),
+            'data': []  # Return empty data to prevent frontend errors
         }), 500 
