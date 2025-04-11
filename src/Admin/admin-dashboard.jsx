@@ -184,11 +184,11 @@ const AdminDashboard = () => {
         
         // Get popular symbols/pairs
         const symbolsResponse = await API.admin.getFavoriteSymbols();
-        setFavoriteSymbolsData(symbolsResponse.data.symbols);
+        setFavoriteSymbolsData(symbolsResponse.data.data);
         
         // Get current market trends
         const trendsResponse = await API.admin.getMarketTrends();
-        setMarketTrendsData(trendsResponse.data.trends);
+        setMarketTrendsData(trendsResponse.data.data);
         
         setLoading(false);
       } catch (error) {
@@ -278,9 +278,13 @@ const AdminDashboard = () => {
     },
     { 
       title: "Market Trends", 
-      value: marketTrendsData ? `${marketTrendsData.overall_trend.charAt(0).toUpperCase() + marketTrendsData.overall_trend.slice(1)}` : "Loading...",
+      value: marketTrendsData && marketTrendsData.overall_trend ? 
+        `${marketTrendsData.overall_trend.charAt(0).toUpperCase() + marketTrendsData.overall_trend.slice(1)}` : 
+        "Loading...",
       period: "Overall market sentiment",
-      icon: marketTrendsData ? getTrendIcon(marketTrendsData.overall_trend) : <TrendingFlatIcon sx={{ color: colors.secondaryText }} />,
+      icon: marketTrendsData && marketTrendsData.overall_trend ? 
+        getTrendIcon(marketTrendsData.overall_trend) : 
+        <TrendingFlatIcon sx={{ color: colors.secondaryText }} />,
       chart: true,
       chartType: 'trend'
     }

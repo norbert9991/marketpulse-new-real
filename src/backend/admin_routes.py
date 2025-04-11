@@ -9,16 +9,30 @@ admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 @admin_bp.route('/users', methods=['GET'])
 @token_required
 def get_all_users(current_user):
-    if current_user['role'] != 'admin':
+    if current_user[4] != 'admin':
         return jsonify({'message': 'Admin access required'}), 403
     
     try:
         conn = db_manager.get_connection()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
         cursor.execute("SELECT user_id, username, email, role, last_login, account_status, created_at FROM login")
         users = cursor.fetchall()
+        
+        # Convert tuple results to dictionaries for JSON response
+        formatted_users = []
+        for user in users:
+            formatted_users.append({
+                'user_id': user[0],
+                'username': user[1],
+                'email': user[2],
+                'role': user[3],
+                'last_login': user[4].isoformat() if user[4] else None,
+                'account_status': user[5],
+                'created_at': user[6].isoformat() if user[6] else None
+            })
+            
         cursor.close()
-        return jsonify({'users': users})
+        return jsonify({'users': formatted_users})
     except Exception as e:
         print(f"Database error: {e}")
         return jsonify({'message': 'Database error occurred'}), 500
@@ -26,7 +40,7 @@ def get_all_users(current_user):
 @admin_bp.route('/users/<int:user_id>/status', methods=['PUT'])
 @token_required
 def update_user_status(current_user, user_id):
-    if current_user['role'] != 'admin':
+    if current_user[4] != 'admin':
         return jsonify({'message': 'Admin access required'}), 403
     
     data = request.get_json()
@@ -52,7 +66,7 @@ def update_user_status(current_user, user_id):
 @admin_bp.route('/user-growth', methods=['GET'])
 @token_required
 def get_user_growth(current_user):
-    if current_user['role'] != 'admin':
+    if current_user[4] != 'admin':
         return jsonify({'message': 'Admin access required'}), 403
     
     try:
@@ -61,7 +75,7 @@ def get_user_growth(current_user):
         
         # Connect to database
         conn = db_manager.get_connection()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
         
         # Calculate date range
         end_date = datetime.now()
@@ -90,14 +104,19 @@ def get_user_growth(current_user):
             month_name = current_month.strftime('%b')  # Short month name
             year = current_month.strftime('%Y')
             
-            found = next((item for item in results if item['month'] == month_str), None)
+            # Since results are now tuples, find month data differently
+            found_count = 0
+            for result in results:
+                if result[0] == month_str:  # month is at index 0
+                    found_count = result[1]  # user_count is at index 1
+                    break
             
             # Format label differently for January to show year
             label = month_name if current_month.month != 1 else f"Jan '{year[2:]}"
             
             chart_data.append({
                 'month': label,
-                'users': found['user_count'] if found else 0
+                'users': found_count
             })
             
             # Move to next month

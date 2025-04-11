@@ -4,55 +4,32 @@ import jwt
 import datetime
 from functools import wraps
 from db_connection import db_manager
+from auth import token_required  # Import the token_required decorator from auth.py
 
 admin_settings_bp = Blueprint('admin_settings', __name__)
 
-# Token verification decorator
-def token_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        auth_header = request.headers.get('Authorization')
-        
-        if not auth_header:
-            return jsonify({'message': 'Token is missing!'}), 401
-            
-        try:
-            # Extract token from Bearer format
-            token = auth_header.split(' ')[1] if ' ' in auth_header else auth_header
-            data = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
-            conn = db_manager.get_connection()
-            cursor = conn.cursor(dictionary=True)
-            cursor.execute("SELECT * FROM login WHERE user_id = %s", (data['user_id'],))
-            current_user = cursor.fetchone()
-            cursor.close()
-            
-            if not current_user:
-                return jsonify({'message': 'Invalid token'}), 401
-                
-            # Check if user is an admin
-            if current_user['role'] != 'admin':
-                return jsonify({'message': 'Unauthorized access'}), 403
-                
-        except Exception as e:
-            print(f"Error: {e}")
-            return jsonify({'message': 'Token is invalid!'}), 401
-            
-        return f(current_user, *args, **kwargs)
-        
-    return decorated
+# Now using the token_required decorator from auth.py which returns current_user as a tuple
+# Removing the local token_required decorator
 
 # Get current admin profile
 @admin_settings_bp.route('/api/admin/profile', methods=['GET'])
 @token_required
 def get_admin_profile(current_user):
     try:
-        # Remove password from response
-        if 'pass' in current_user:
-            del current_user['pass']
+        # Convert tuple to dictionary for the response
+        user_data = {
+            'user_id': current_user[0],
+            'username': current_user[1],
+            'email': current_user[2],
+            'role': current_user[4],
+            'last_login': current_user[5].isoformat() if current_user[5] else None,
+            'account_status': current_user[6],
+            'created_at': current_user[7].isoformat() if current_user[7] else None
+        }
             
         return jsonify({
             'status': 'success',
-            'user': current_user
+            'user': user_data
         }), 200
     except Exception as e:
         return jsonify({'message': str(e)}), 500
@@ -76,11 +53,11 @@ def update_admin_profile(current_user):
             return jsonify({'message': 'Username and email are required'}), 400
             
         conn = db_manager.get_connection()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
         
         # Check if username or email already exists (excluding current user)
         cursor.execute('SELECT * FROM login WHERE (username = %s OR email = %s) AND user_id != %s', 
-                      (username, email, current_user['user_id']))
+                      (username, email, current_user[0]))  # user_id is at index 0
         existing_user = cursor.fetchone()
         
         if existing_user:
@@ -94,21 +71,21 @@ def update_admin_profile(current_user):
                 return jsonify({'message': 'Current password is required to change password'}), 400
                 
             # Verify current password
-            cursor.execute('SELECT pass FROM login WHERE user_id = %s', (current_user['user_id'],))
+            cursor.execute('SELECT pass FROM login WHERE user_id = %s', (current_user[0],))  # user_id is at index 0
             user = cursor.fetchone()
             
-            if not check_password_hash(user['pass'], current_password):
+            if not check_password_hash(user[0], current_password):  # password hash is the first column in the result
                 cursor.close()
                 return jsonify({'message': 'Current password is incorrect'}), 400
                 
             # Update with new password
             hashed_password = generate_password_hash(new_password)
             cursor.execute('UPDATE login SET username = %s, email = %s, pass = %s WHERE user_id = %s',
-                          (username, email, hashed_password, current_user['user_id']))
+                          (username, email, hashed_password, current_user[0]))  # user_id is at index 0
         else:
             # Update without changing password
             cursor.execute('UPDATE login SET username = %s, email = %s WHERE user_id = %s',
-                          (username, email, current_user['user_id']))
+                          (username, email, current_user[0]))  # user_id is at index 0
             
         conn.commit()
         cursor.close()
@@ -124,13 +101,27 @@ def update_admin_profile(current_user):
 @admin_settings_bp.route('/api/admin/admins', methods=['GET'])
 @token_required
 def get_all_admins(current_user):
+    if current_user[4] != 'admin':  # Check if user is admin using index 4 (role)
+        return jsonify({'message': 'Admin access required'}), 403
+    
     try:
         conn = db_manager.get_connection()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
         
         # Get all admin users
         cursor.execute('SELECT user_id, username, email, role, account_status FROM login WHERE role = "admin"')
-        admins = cursor.fetchall()
+        admin_tuples = cursor.fetchall()
+        
+        # Convert tuples to dictionaries for the response
+        admins = []
+        for admin in admin_tuples:
+            admins.append({
+                'user_id': admin[0],
+                'username': admin[1],
+                'email': admin[2],
+                'role': admin[3],
+                'account_status': admin[4]
+            })
         
         cursor.close()
         
@@ -145,6 +136,9 @@ def get_all_admins(current_user):
 @admin_settings_bp.route('/api/admin/add-admin', methods=['POST'])
 @token_required
 def add_admin(current_user):
+    if current_user[4] != 'admin':  # Check if user is admin using index 4 (role)
+        return jsonify({'message': 'Admin access required'}), 403
+    
     try:
         data = request.get_json()
         
@@ -159,7 +153,7 @@ def add_admin(current_user):
             return jsonify({'message': 'Username, email and password are required'}), 400
             
         conn = db_manager.get_connection()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
         
         # Check if username or email already exists
         cursor.execute('SELECT * FROM login WHERE username = %s OR email = %s', (username, email))
@@ -190,13 +184,16 @@ def add_admin(current_user):
 @admin_settings_bp.route('/api/admin/delete-admin/<int:admin_id>', methods=['DELETE'])
 @token_required
 def delete_admin(current_user, admin_id):
+    if current_user[4] != 'admin':  # Check if user is admin using index 4 (role)
+        return jsonify({'message': 'Admin access required'}), 403
+    
     try:
         # Prevent self-deletion
-        if admin_id == current_user['user_id']:
+        if admin_id == current_user[0]:  # user_id is at index 0
             return jsonify({'message': 'Cannot delete your own account'}), 400
             
         conn = db_manager.get_connection()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
         
         # Check if admin exists
         cursor.execute('SELECT * FROM login WHERE user_id = %s AND role = "admin"', (admin_id,))
