@@ -412,11 +412,14 @@ export const API = {
         // Get the original symbol
         const originalSymbol = data.symbol;
         let formattedSymbol = data.symbol;
+        const forceRefresh = data.force_refresh === true;
         
         if (typeof data.symbol === 'string') {
-          // Format for Yahoo Finance - change "-X" to "=X"
+          // Format for API - keep both "-X" and "=X" formats as our backend handles both
           if (data.symbol.includes('-X')) {
-            formattedSymbol = data.symbol.replace('-X', '=X');
+            formattedSymbol = data.symbol;
+          } else if (data.symbol.includes('=X')) {
+            formattedSymbol = data.symbol;
           }
           
           // Safety check: Make sure we don't send an empty string
@@ -425,124 +428,37 @@ export const API = {
           }
         }
         
-        // Check if this is one of the problematic pairs
-        const isGbpUsd = formattedSymbol === 'GBPUSD=X' || originalSymbol === 'GBPUSD-X';
-        const isUsdJpy = formattedSymbol === 'USDJPY=X' || originalSymbol === 'USDJPY-X';
-        const isUsdCad = formattedSymbol === 'USDCAD=X' || originalSymbol === 'USDCAD-X';
-        const needsSyntheticData = isGbpUsd || isUsdJpy || isUsdCad;
-        
-        // Extensive debug logging
+        // Debug logging
         console.log('[API] analyze - Original Symbol:', originalSymbol);
         console.log('[API] analyze - Formatted Symbol:', formattedSymbol);
-        console.log('[API] analyze - Needs synthetic data:', needsSyntheticData);
-        console.log('[API] analyze - Full URL:', `${API_URL}/api/market-analysis/${formattedSymbol}`);
+        console.log('[API] analyze - Force Refresh:', forceRefresh);
         
-        // If it's a problematic pair, return synthetic data immediately to avoid API call
-        if (needsSyntheticData) {
-          console.log(`[API] Using synthetic data for ${formattedSymbol} due to known API issues`);
-          
-          // Set appropriate synthetic price based on currency pair
-          let syntheticPrice, supportLevels, resistanceLevels;
-          
-          if (isGbpUsd) {
-            syntheticPrice = 1.26734;
-            supportLevels = [1.2625, 1.2590, 1.2550];
-            resistanceLevels = [1.2710, 1.2750, 1.2800];
-          } else if (isUsdJpy) {
-            syntheticPrice = 151.68;
-            supportLevels = [150.85, 150.20, 149.50];
-            resistanceLevels = [152.50, 153.25, 154.00];
-          } else if (isUsdCad) {
-            syntheticPrice = 1.3642;
-            supportLevels = [1.3580, 1.3520, 1.3450];
-            resistanceLevels = [1.3700, 1.3750, 1.3820];
-          }
-          
-          // Generate technical indicators based on the current price
-          const rsi = 45 + Math.floor(Math.random() * 20); // 45-65 range
-          const macd = Number((Math.random() * 0.004 - 0.002).toFixed(5));
-          const macdSignal = Number((Math.random() * 0.004 - 0.002).toFixed(5));
-          const macdHist = Number((macd - macdSignal).toFixed(5));
-          
-          // Generate sma values with slight variations from price
-          const sma20 = Number((syntheticPrice * (1 + (Math.random() * 0.01 - 0.005))).toFixed(5));
-          const sma50 = Number((syntheticPrice * (1 + (Math.random() * 0.015 - 0.0075))).toFixed(5));
-          const sma200 = Number((syntheticPrice * (1 + (Math.random() * 0.02 - 0.01))).toFixed(5));
-          
-          // Generate predictions
-          const predictions = [];
-          const predictionDates = [];
-          const today = new Date();
-          
-          for (let i = 1; i <= 5; i++) {
-            const futureDate = new Date(today);
-            futureDate.setDate(today.getDate() + i);
-            const dateStr = futureDate.toISOString().split('T')[0];
-            
-            // Small random fluctuation for predictions
-            const randomChange = (Math.random() * 0.02 - 0.01);
-            const prediction = Number((syntheticPrice * (1 + randomChange)).toFixed(4));
-            
-            predictions.push(prediction);
-            predictionDates.push(dateStr);
-          }
-          
-          return {
-            data: {
-              symbol: originalSymbol,
-              current_price: syntheticPrice,
-              trend: Math.random() > 0.5 ? 'Bullish' : 'Bearish',
-              technical_indicators: {
-                rsi: rsi,
-                macd: macd,
-                macd_signal: macdSignal,
-                macd_hist: macdHist,
-                sma20: sma20,
-                sma50: sma50,
-                sma200: sma200
-              },
-              support_resistance: {
-                support: supportLevels,
-                resistance: resistanceLevels
-              },
-              sentiment: {
-                overall: Math.random() > 0.5 ? 'Bullish' : 'Bearish',
-                confidence: Math.floor(Math.random() * 30) + 50,
-                news_sentiment: Number((Math.random() * 0.6 - 0.3).toFixed(2)),
-                social_sentiment: Number((Math.random() * 0.6 - 0.3).toFixed(2)),
-                market_mood: Math.random() > 0.5 ? 'Positive' : 'Negative',
-                news_count: Math.floor(Math.random() * 50) + 10,
-                social_count: Math.floor(Math.random() * 200) + 50
-              },
-              predictions: predictions,
-              prediction_dates: predictionDates,
-              last_updated: new Date().toISOString()
-            }
-          };
-        }
+        // Build the URL with optional force_refresh parameter
+        const url = `/api/market-analysis/${formattedSymbol}${forceRefresh ? '?force_refresh=true' : ''}`;
+        console.log('[API] analyze - Full URL:', `${API_URL}${url}`);
         
-        return axiosInstance.get(`/api/market-analysis/${formattedSymbol}`)
+        return axiosInstance.get(url)
           .catch(error => {
             // Handle 404 errors gracefully
             if (error.response && error.response.status === 404) {
-              console.log(`[API] No analysis data found for ${formattedSymbol}, returning synthetic data`);
+              console.log(`[API] No analysis data found for ${formattedSymbol}, returning default data`);
               // Generate a default price for the symbol
-              const syntheticPrice = 1.0;
+              const defaultPrice = 1.0;
               
-              // Return basic synthetic data structure
+              // Return basic data structure
               return {
                 data: {
                   symbol: originalSymbol,
-                  current_price: syntheticPrice,
+                  current_price: defaultPrice,
                   trend: 'Neutral',
                   technical_indicators: {
                     rsi: 50,
                     macd: 0,
                     macd_signal: 0,
                     macd_hist: 0,
-                    sma20: syntheticPrice,
-                    sma50: syntheticPrice,
-                    sma200: syntheticPrice
+                    sma20: defaultPrice,
+                    sma50: defaultPrice,
+                    sma200: defaultPrice
                   },
                   support_resistance: {
                     support: [],
@@ -552,7 +468,7 @@ export const API = {
                     overall: 'Neutral',
                     confidence: 50
                   },
-                  predictions: [syntheticPrice, syntheticPrice, syntheticPrice, syntheticPrice, syntheticPrice],
+                  predictions: [defaultPrice, defaultPrice, defaultPrice, defaultPrice, defaultPrice],
                   prediction_dates: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5'],
                   last_updated: new Date().toISOString()
                 }
@@ -566,91 +482,51 @@ export const API = {
         return Promise.reject(error);
       }
     },
-    getHistory: (symbol) => {
+    getHistory: (symbol, options = {}) => {
       try {
+        // Get options with defaults
+        const days = options.days || 30;
+        const forceRefresh = options.force_refresh === true;
+        
         // Carefully clean the symbol by removing the "-X" suffix if present
         const originalSymbol = symbol;
-        let cleanSymbol = symbol;
+        let formattedSymbol = symbol;
         
         if (typeof symbol === 'string') {
-          // First method: Split at -X and take first part
-          if (symbol.includes('-X')) {
-            cleanSymbol = symbol.split('-X')[0];
-          }
+          // We'll pass the symbol as-is since our backend can handle both formats
+          formattedSymbol = symbol;
           
           // Safety check: Make sure we don't send an empty string
-          if (!cleanSymbol) {
-            cleanSymbol = originalSymbol;
+          if (!formattedSymbol) {
+            formattedSymbol = originalSymbol;
           }
         }
         
-        // Check if this is one of the problematic pairs
-        const isGbpUsd = cleanSymbol === 'GBPUSD' || originalSymbol === 'GBPUSD=X' || originalSymbol === 'GBPUSD-X';
-        const isUsdJpy = cleanSymbol === 'USDJPY' || originalSymbol === 'USDJPY=X' || originalSymbol === 'USDJPY-X';
-        const isUsdCad = cleanSymbol === 'USDCAD' || originalSymbol === 'USDCAD=X' || originalSymbol === 'USDCAD-X';
-        const needsSyntheticData = isGbpUsd || isUsdJpy || isUsdCad;
-        
-        // Extensive debug logging
+        // Debug logging
         console.log('[API] getHistory - Original Symbol:', originalSymbol);
-        console.log('[API] getHistory - Cleaned Symbol:', cleanSymbol);
-        console.log('[API] getHistory - Needs synthetic data:', needsSyntheticData);
-        console.log('[API] getHistory - Full URL:', `${API_URL}/api/market-analysis/${cleanSymbol}/history`);
+        console.log('[API] getHistory - Formatted Symbol:', formattedSymbol);
+        console.log('[API] getHistory - Days:', days);
+        console.log('[API] getHistory - Force Refresh:', forceRefresh);
         
-        // If it's a problematic pair, return synthetic data immediately
-        if (needsSyntheticData) {
-          console.log(`[API] Using synthetic history data for ${cleanSymbol} due to known API issues`);
-          
-          // Set appropriate base price based on currency pair
-          let basePrice;
-          if (isGbpUsd) {
-            basePrice = 1.267;
-          } else if (isUsdJpy) {
-            basePrice = 151.5;
-          } else if (isUsdCad) {
-            basePrice = 1.364;
-          }
-          
-          // Generate synthetic history data
-          const history = [];
-          const today = new Date();
-          
-          // Generate 30 days of history
-          for (let i = 29; i >= 0; i--) {
-            const date = new Date(today);
-            date.setDate(today.getDate() - i);
-            const dateString = date.toISOString().split('T')[0];
-            
-            // Base price with some variation
-            const variation = (Math.sin(i * 0.3) * 0.015) + (Math.random() * 0.006 - 0.003);
-            const close = basePrice + variation * (isUsdJpy ? 10 : 1); // Larger variations for JPY
-            
-            history.push({
-              date: dateString,
-              open: close - (Math.random() * 0.005 * (isUsdJpy ? 10 : 1)),
-              high: close + (Math.random() * 0.008 * (isUsdJpy ? 10 : 1)),
-              low: close - (Math.random() * 0.008 * (isUsdJpy ? 10 : 1)),
-              close: close,
-              volume: Math.floor(Math.random() * 10000) + 5000
-            });
-          }
-          
-          return {
-            data: {
-              symbol: cleanSymbol,
-              history: history
-            }
-          };
-        }
+        // Build URL with query parameters
+        const params = new URLSearchParams();
+        if (days !== 30) params.append('days', days);
+        if (forceRefresh) params.append('force_refresh', 'true');
         
-        return axiosInstance.get(`/api/market-analysis/${cleanSymbol}/history`)
+        const queryString = params.toString();
+        const url = `/api/market-analysis/${formattedSymbol}/history${queryString ? `?${queryString}` : ''}`;
+        
+        console.log('[API] getHistory - Full URL:', `${API_URL}${url}`);
+        
+        return axiosInstance.get(url)
           .catch(error => {
             // Handle 404 errors gracefully
             if (error.response && error.response.status === 404) {
-              console.log(`[API] No history found for ${cleanSymbol}, returning empty data`);
-              // Return empty data structure instead of rejecting
+              console.log(`[API] No history data found for ${formattedSymbol}, returning empty data`);
+              // Return empty data structure for better UI handling
               return {
                 data: {
-                  symbol: cleanSymbol,
+                  symbol: originalSymbol,
                   history: []
                 }
               };

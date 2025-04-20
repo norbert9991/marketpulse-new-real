@@ -27,6 +27,12 @@ services:
         value: 5432
       - key: FRONTEND_URL
         value: https://marketpulse-new-real-static-2-0.onrender.com
+      - key: ALPHA_VANTAGE_API_KEY
+        value: PEL1JCWMOI366VAN
+    disk:
+      name: cache
+      mountPath: /opt/render/project/src/cache
+      sizeGB: 1
   
   - type: web
     name: marketpulse-frontend

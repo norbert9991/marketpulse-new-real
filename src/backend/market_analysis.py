@@ -1,12 +1,13 @@
 import numpy as np
 from sklearn.linear_model import LinearRegression
-import yfinance as yf
 from datetime import datetime, timedelta
 import pandas as pd
 from sentiment_analysis import analyze_sentiment
 from db_connection import db_manager
+from alpha_vantage_api import alpha_vantage
 import json
 import os
+import re
 
 def store_price_data(symbol, historical_data):
     """Store price data in MySQL database"""
@@ -121,25 +122,58 @@ def store_price_data(symbol, historical_data):
             db_manager.release_connection(conn)
         return False
 
-def analyze_stock(symbol):
+def analyze_stock(symbol, force_refresh=False):
+    """
+    Analyze stock or forex data using Alpha Vantage API with caching
+    
+    Args:
+        symbol: Stock or forex symbol
+        force_refresh: Whether to force a refresh of data from the API
+        
+    Returns:
+        Dictionary with analysis results
+    """
     try:
         # Add debug logging
         print(f"Starting analysis for symbol: {symbol}")
         
-        # Get historical data for the last 30 days
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=30)
+        # Check if it's a forex pair (format like "EURUSD-X" or "EURUSD=X")
+        is_forex = '-X' in symbol or '=X' in symbol
         
-        # Fetch data from Yahoo Finance
-        print(f"Fetching data from Yahoo Finance for {symbol}")
-        stock = yf.Ticker(symbol)
-        hist = stock.history(start=start_date, end=end_date)
+        # Clean symbol for API calls
+        clean_symbol = symbol.replace('-X', '').replace('=X', '')
+        
+        # For forex pairs, extract the currency codes
+        if is_forex and len(clean_symbol) == 6:
+            from_currency = clean_symbol[:3]
+            to_currency = clean_symbol[3:6]
+            print(f"Forex pair detected: {from_currency}/{to_currency}")
+            
+            # Get historical data from Alpha Vantage with caching
+            hist = alpha_vantage.get_forex_data(from_currency, to_currency, days=30, force_refresh=force_refresh)
+        else:
+            # Get historical data from Alpha Vantage with caching
+            hist = alpha_vantage.get_daily_data(clean_symbol, days=30, force_refresh=force_refresh)
         
         if hist.empty:
-            print(f"No data available from Yahoo Finance for symbol: {symbol}")
+            print(f"No data available for symbol: {symbol}")
             return {"error": f"No data available for this symbol: {symbol}"}
             
         print(f"Successfully fetched data for {symbol}, {len(hist)} data points")
+        
+        # Rename columns if necessary to match our expected format
+        column_mapping = {
+            'open': 'Open',
+            'high': 'High',
+            'low': 'Low', 
+            'close': 'Close',
+            'volume': 'Volume'
+        }
+        
+        # Apply mapping where needed
+        for old_col, new_col in column_mapping.items():
+            if old_col in hist.columns and new_col not in hist.columns:
+                hist[new_col] = hist[old_col]
         
         # Prepare data for linear regression
         X = np.array(range(len(hist))).reshape(-1, 1)
@@ -195,7 +229,7 @@ def analyze_stock(symbol):
             return [safe_float(v) for v in values]
         
         # Generate prediction dates
-        prediction_dates = [(end_date + timedelta(days=i+1)).strftime('%Y-%m-%d') for i in range(len(predictions))]
+        prediction_dates = [(datetime.now() + timedelta(days=i+1)).strftime('%Y-%m-%d') for i in range(len(predictions))]
         print(f"Generated prediction dates: {prediction_dates}")
         
         # Prepare response with safe value handling
@@ -205,7 +239,7 @@ def analyze_stock(symbol):
             "trend": trend,
             "slope": safe_float(slope),
             "predictions": safe_list(predictions),
-            "prediction_dates": prediction_dates,  # Explicitly add prediction_dates
+            "prediction_dates": prediction_dates,
             "historical_data": {
                 "dates": hist.index.strftime('%Y-%m-%d').tolist(),
                 "prices": safe_list(hist['Close'].tolist()),
@@ -250,30 +284,109 @@ def analyze_stock(symbol):
             if existing:
                 # Update existing record
                 cursor.execute("""
-                    UPDATE market_data SET 
-                        current_price = %s,
-                        change_percentage = %s,
-                        trend = %s,
-                        updated_at = NOW()
+                    UPDATE market_data 
+                    SET current_price = %s, trend = %s, rsi = %s, macd = %s, macd_signal = %s, 
+                        macd_hist = %s, sma20 = %s, sma50 = %s, sma200 = %s, last_updated = NOW()
                     WHERE symbol = %s
-                """, (response['current_price'], response['slope'], response['trend'], symbol))
+                """, (
+                    response["current_price"],
+                    response["trend"],
+                    response["technical_indicators"]["rsi"],
+                    response["technical_indicators"]["macd"],
+                    response["technical_indicators"]["macd_signal"],
+                    response["technical_indicators"]["macd_hist"],
+                    response["technical_indicators"]["sma20"],
+                    response["technical_indicators"]["sma50"],
+                    response["technical_indicators"]["sma200"],
+                    symbol
+                ))
             else:
                 # Insert new record
                 cursor.execute("""
-                    INSERT INTO market_data (symbol, current_price, change_percentage, trend, updated_at) 
-                    VALUES (%s, %s, %s, %s, NOW())
-                """, (symbol, response['current_price'], response['slope'], response['trend']))
-            
+                    INSERT INTO market_data 
+                    (symbol, current_price, trend, rsi, macd, macd_signal, macd_hist, sma20, sma50, sma200, last_updated)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                """, (
+                    symbol,
+                    response["current_price"],
+                    response["trend"],
+                    response["technical_indicators"]["rsi"],
+                    response["technical_indicators"]["macd"],
+                    response["technical_indicators"]["macd_signal"],
+                    response["technical_indicators"]["macd_hist"],
+                    response["technical_indicators"]["sma20"],
+                    response["technical_indicators"]["sma50"],
+                    response["technical_indicators"]["sma200"]
+                ))
+                
             conn.commit()
-            cursor.close()
-            db_manager.release_connection(conn)
+            print(f"Successfully updated market_data for {symbol}")
         except Exception as e:
-            print(f"Database error in analyze_stock: {e}")
+            print(f"Error updating market_data: {e}")
+            try:
+                conn.rollback()
+            except:
+                pass
+        finally:
             cursor.close()
             db_manager.release_connection(conn)
-            # Continue processing - we don't want to fail the entire analysis if DB storage fails
         
         return response
-        
     except Exception as e:
+        print(f"Error analyzing stock: {e}")
+        return {"error": str(e)}
+
+def get_historical_prices(symbol, days=30, force_refresh=False):
+    """
+    Get historical price data for a symbol
+    
+    Args:
+        symbol: Stock or forex symbol
+        days: Number of days of history to return
+        force_refresh: Whether to force a refresh of data from the API
+        
+    Returns:
+        Dictionary with historical price data
+    """
+    try:
+        # Check if it's a forex pair (format like "EURUSD-X" or "EURUSD=X")
+        is_forex = '-X' in symbol or '=X' in symbol
+        
+        # Clean symbol for API calls
+        clean_symbol = symbol.replace('-X', '').replace('=X', '')
+        
+        # For forex pairs, extract the currency codes
+        if is_forex and len(clean_symbol) == 6:
+            from_currency = clean_symbol[:3]
+            to_currency = clean_symbol[3:6]
+            print(f"Forex pair detected for history: {from_currency}/{to_currency}")
+            
+            # Get historical data from Alpha Vantage with caching
+            hist = alpha_vantage.get_forex_data(from_currency, to_currency, days=days, force_refresh=force_refresh)
+        else:
+            # Get historical data from Alpha Vantage with caching
+            hist = alpha_vantage.get_daily_data(clean_symbol, days=days, force_refresh=force_refresh)
+        
+        if hist.empty:
+            return {"error": f"No historical data available for {symbol}"}
+        
+        # Format the data for response
+        history_data = []
+        for date, row in hist.iterrows():
+            history_data.append({
+                "date": date.strftime('%Y-%m-%d'),
+                "open": float(row.get('Open', row.get('open', 0))),
+                "high": float(row.get('High', row.get('high', 0))),
+                "low": float(row.get('Low', row.get('low', 0))),
+                "close": float(row.get('Close', row.get('close', 0))),
+                "volume": float(row.get('Volume', row.get('volume', 0))) if 'Volume' in row or 'volume' in row else 0
+            })
+        
+        return {
+            "symbol": symbol,
+            "history": history_data
+        }
+    
+    except Exception as e:
+        print(f"Error getting historical prices: {e}")
         return {"error": str(e)} 

@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from db_connection import db_manager
-from market_analysis import analyze_stock
+from market_analysis import analyze_stock, get_historical_prices
 import json
 import logging
 
@@ -16,11 +16,21 @@ def get_market_analysis(symbol):
     conn = None
     cursor = None
     try:
+        # Check if we should force refresh (bypass cache)
+        force_refresh = request.args.get('force_refresh', 'false').lower() == 'true'
+        
         # Clean the symbol by removing -X suffix if present
         clean_symbol = symbol.split('-X')[0] if '-X' in symbol else symbol
+        clean_symbol = clean_symbol.split('=X')[0] if '=X' in clean_symbol else clean_symbol
         
-        logger.info(f"Fetching market analysis for symbol: {symbol}, clean_symbol: {clean_symbol}")
+        logger.info(f"Fetching market analysis for symbol: {symbol}, clean_symbol: {clean_symbol}, force_refresh: {force_refresh}")
         
+        # If force refresh, skip database lookup and go straight to analysis
+        if force_refresh:
+            logger.info(f"Force refresh requested for {symbol}, performing new analysis")
+            analysis_result = analyze_stock(symbol, force_refresh=True)
+            return jsonify(analysis_result), 200
+            
         conn = db_manager.get_connection()
         cursor = conn.cursor()
         
@@ -35,7 +45,8 @@ def get_market_analysis(symbol):
                 ti.macd_hist, 
                 ti.sma20, 
                 ti.sma50, 
-                ti.sma200
+                ti.sma200,
+                md.last_updated
             FROM market_data md
             LEFT JOIN technical_indicators ti ON md.symbol = ti.symbol
             WHERE md.symbol = %s
@@ -56,7 +67,8 @@ def get_market_analysis(symbol):
                     ti.macd_hist, 
                     ti.sma20, 
                     ti.sma50, 
-                    ti.sma200
+                    ti.sma200,
+                    md.last_updated
                 FROM market_data md
                 LEFT JOIN technical_indicators ti ON md.symbol = ti.symbol
                 WHERE md.symbol = %s
@@ -116,7 +128,8 @@ def get_market_analysis(symbol):
                 "resistance": []
             },
             "predictions": [],
-            "prediction_dates": []
+            "prediction_dates": [],
+            "last_updated": market_row[9].isoformat() if market_row[9] else None
         }
         
         # Process support and resistance levels
@@ -152,11 +165,12 @@ def refresh_market_analysis(symbol):
     try:
         # Clean the symbol by removing -X suffix if present
         clean_symbol = symbol.split('-X')[0] if '-X' in symbol else symbol
+        clean_symbol = clean_symbol.split('=X')[0] if '=X' in clean_symbol else clean_symbol
         
         logger.info(f"Refreshing market analysis for symbol: {symbol}, clean_symbol: {clean_symbol}")
         
-        # Use the clean symbol for analysis
-        analysis_result = analyze_stock(clean_symbol)
+        # Force refresh of data from API (bypass cache)
+        analysis_result = analyze_stock(symbol, force_refresh=True)
         
         if "error" in analysis_result:
             return jsonify({"error": analysis_result["error"]}), 400
@@ -169,99 +183,28 @@ def refresh_market_analysis(symbol):
 
 @market_analysis_bp.route('/api/market-analysis/<symbol>/history', methods=['GET'])
 def get_symbol_history(symbol):
-    conn = None
-    cursor = None
+    """Get historical price data for a specific symbol"""
     try:
+        # Check if we should force refresh (bypass cache)
+        force_refresh = request.args.get('force_refresh', 'false').lower() == 'true'
+        
+        # Get number of days requested (default to 30)
+        days = int(request.args.get('days', 30))
+        
         # Clean the symbol by removing -X suffix if present
         clean_symbol = symbol.split('-X')[0] if '-X' in symbol else symbol
+        clean_symbol = clean_symbol.split('=X')[0] if '=X' in clean_symbol else clean_symbol
         
-        logger.info(f"Fetching price history for symbol: {symbol}, clean_symbol: {clean_symbol}")
+        logger.info(f"Fetching price history for symbol: {symbol}, days: {days}, force_refresh: {force_refresh}")
         
-        conn = db_manager.get_connection()
-        cursor = conn.cursor()
+        # Get historical prices from Alpha Vantage (with caching)
+        history_data = get_historical_prices(symbol, days=days, force_refresh=force_refresh)
         
-        # First try with the original symbol
-        cursor.execute("""
-            SELECT 
-                open_price,
-                high_price,
-                low_price,
-                close_price,
-                timestamp
-            FROM price_history
-            WHERE symbol = %s
-            ORDER BY timestamp DESC
-            LIMIT 30
-        """, (symbol,))
-        
-        rows = cursor.fetchall()
-        
-        # If no results with original symbol and it differs from clean_symbol, try with clean_symbol
-        if len(rows) == 0 and symbol != clean_symbol:
-            logger.info(f"No data found for {symbol}, trying with clean symbol: {clean_symbol}")
-            cursor.execute("""
-                SELECT 
-                    open_price,
-                    high_price,
-                    low_price,
-                    close_price,
-                    timestamp
-                FROM price_history
-                WHERE symbol = %s
-                ORDER BY timestamp DESC
-                LIMIT 30
-            """, (clean_symbol,))
-            
-            rows = cursor.fetchall()
-            
-            # If we found data with the clean symbol, use that as the symbol in the response
-            if len(rows) > 0:
-                symbol = clean_symbol
-        
-        # If still no data, return appropriate message
-        if len(rows) == 0:
-            logger.warning(f"No price history data found for symbol: {symbol} or {clean_symbol}")
-            cursor.close()
-            db_manager.release_connection(conn)
-            return jsonify({
-                "message": "No historical data available",
-                "symbol": symbol,
-                "history": []
-            }), 404
-        
-        # Convert rows to dictionaries
-        history = []
-        for row in rows:
-            history.append({
-                'open': float(row[0]),
-                'high': float(row[1]),
-                'low': float(row[2]),
-                'close': float(row[3]),
-                'date': row[4].strftime('%Y-%m-%d')
-            })
-        
-        # Sort by date ascending for better charting
-        history.sort(key=lambda x: x['date'])
-        
-        cursor.close()
-        db_manager.release_connection(conn)
-        
-        return jsonify({
-            "symbol": symbol,
-            "history": history
-        }), 200
+        return jsonify(history_data), 200
         
     except Exception as e:
-        logger.error(f"Error fetching price history for {symbol}: {str(e)}")
-        if 'cursor' in locals() and cursor:
-            cursor.close()
-        if conn:
-            db_manager.release_connection(conn)
-        return jsonify({
-            "message": f"Error fetching price history: {str(e)}",
-            "symbol": symbol,
-            "history": []
-        }), 500
+        logger.error(f"Error retrieving price history for {symbol}: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 @market_analysis_bp.route('/api/market-trends', methods=['GET'])
 def get_market_trends():
