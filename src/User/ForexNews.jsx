@@ -68,6 +68,12 @@ const newsCategories = [
 const ForexNews = () => {
   const navigate = useNavigate();
   
+  // Get API URL from environment or default to localhost
+  const API_URL = 
+    process.env.NODE_ENV === 'production' 
+      ? 'https://marketpulse-new-real-2-0.onrender.com'
+      : (process.env.REACT_APP_API_URL || 'http://localhost:5000');
+  
   // State variables
   const [newsData, setNewsData] = useState([]);
   const [savedArticles, setSavedArticles] = useState([]);
@@ -281,12 +287,6 @@ const ForexNews = () => {
       alert(`Sharing article: ${article.title}`);
     }
   };
-
-  // Get API URL from environment or default to localhost
-  const API_URL = 
-    process.env.NODE_ENV === 'production' 
-      ? 'https://marketpulse-new-real-2-0.onrender.com'
-      : (process.env.REACT_APP_API_URL || 'http://localhost:5000');
 
   return (
     <Box sx={{ display: 'flex', bgcolor: colors.darkBg, height: '100vh', overflow: 'hidden' }}>
