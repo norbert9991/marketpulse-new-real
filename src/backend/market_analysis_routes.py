@@ -158,6 +158,35 @@ def refresh_market_analysis(symbol):
         
         logger.info(f"Refreshing market analysis for symbol: {symbol}, clean_symbol: {clean_symbol}")
         
+        # First clear the cache for this symbol
+        clear_cache_for_symbol(clean_symbol)
+        
+        # Also try to clear cache for variations of the symbol
+        if clean_symbol != symbol:
+            clear_cache_for_symbol(symbol)
+        
+        # Clear database entries for this symbol
+        conn = db_manager.get_connection()
+        cursor = conn.cursor()
+        
+        try:
+            # Delete existing entries for both original and clean symbol
+            for sym in [symbol, clean_symbol]:
+                cursor.execute("DELETE FROM market_data WHERE symbol = %s", (sym,))
+                cursor.execute("DELETE FROM technical_indicators WHERE symbol = %s", (sym,))
+                cursor.execute("DELETE FROM support_resistance WHERE symbol = %s", (sym,))
+                cursor.execute("DELETE FROM price_predictions WHERE symbol = %s", (sym,))
+                cursor.execute("DELETE FROM price_history WHERE symbol = %s", (sym,))
+            
+            conn.commit()
+            logger.info(f"Cleared database entries for symbols: {symbol}, {clean_symbol}")
+        except Exception as db_error:
+            logger.error(f"Error clearing database entries: {db_error}")
+            conn.rollback()
+        finally:
+            cursor.close()
+            db_manager.release_connection(conn)
+        
         # Use the clean symbol for analysis
         analysis_result = analyze_stock(clean_symbol)
         

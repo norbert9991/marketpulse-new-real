@@ -619,11 +619,11 @@ def analyze_stock(symbol):
     try:
         logger.info(f"Starting analysis for symbol: {symbol}")
         
-        # Define problematic symbols that need synthetic data
+        # Define problematic symbols that need synthetic data - be more specific
         problematic_symbols = [
-            'GBPUSD', 'GBPUSD-X', 'GBPUSD=X',
-            'USDJPY', 'USDJPY-X', 'USDJPY=X',
-            'USDCAD', 'USDCAD-X', 'USDCAD=X'
+            'GBPUSD=X', 'GBP-USD', 'GBPUSD-X',  # GBP/USD variations
+            'USDJPY=X', 'USD-JPY', 'USDJPY-X',  # USD/JPY variations
+            'USDCAD=X', 'USD-CAD', 'USDCAD-X'   # USD/CAD variations
         ]
         
         # Check if we need to use synthetic data
@@ -649,6 +649,11 @@ def analyze_stock(symbol):
             
         logger.info(f"Processing data for {symbol}, {len(hist)} data points")
         
+        # Ensure we have enough data points for technical analysis
+        if len(hist) < 20:
+            logger.warning(f"Insufficient data points for {symbol}, using synthetic data")
+            return generate_synthetic_data(symbol)
+        
         # Prepare data for linear regression
         X = np.array(range(len(hist))).reshape(-1, 1)
         y = hist['Close'].values
@@ -666,29 +671,36 @@ def analyze_stock(symbol):
         trend = "Bullish" if slope > 0 else "Bearish"
         
         # Calculate technical indicators
-        # RSI
-        delta = hist['Close'].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-        rs = gain / loss
-        rsi = 100 - (100 / (1 + rs))
-        
-        # Moving Averages
-        sma20 = hist['Close'].rolling(window=20).mean()
-        sma50 = hist['Close'].rolling(window=50).mean()
-        sma200 = hist['Close'].rolling(window=200).mean()
-        
-        # MACD
-        exp1 = hist['Close'].ewm(span=12, adjust=False).mean()
-        exp2 = hist['Close'].ewm(span=26, adjust=False).mean()
-        macd = exp1 - exp2
-        signal = macd.ewm(span=9, adjust=False).mean()
-        macd_hist = macd - signal
-        
-        # Support and Resistance levels
-        recent_data = hist['Close'].tail(20)
-        support_levels = recent_data.nsmallest(3).tolist()
-        resistance_levels = recent_data.nlargest(3).tolist()
+        try:
+            # RSI calculation
+            delta = hist['Close'].diff()
+            gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+            rs = gain / loss
+            rsi = 100 - (100 / (1 + rs))
+            
+            # Moving Averages
+            sma20 = hist['Close'].rolling(window=20).mean()
+            sma50 = hist['Close'].rolling(window=50).mean()
+            sma200 = hist['Close'].rolling(window=200).mean()
+            
+            # MACD
+            exp1 = hist['Close'].ewm(span=12, adjust=False).mean()
+            exp2 = hist['Close'].ewm(span=26, adjust=False).mean()
+            macd = exp1 - exp2
+            signal = macd.ewm(span=9, adjust=False).mean()
+            macd_hist = macd - signal
+            
+            # Support and Resistance levels using recent data
+            recent_data = hist['Close'].tail(20)
+            support_levels = recent_data.nsmallest(3).tolist()
+            resistance_levels = recent_data.nlargest(3).tolist()
+            
+            logger.info(f"Successfully calculated technical indicators for {symbol}")
+        except Exception as e:
+            logger.error(f"Error calculating technical indicators for {symbol}: {e}")
+            # If technical calculation fails, use synthetic data
+            return generate_synthetic_data(symbol)
         
         # Get sentiment analysis
         sentiment_data = analyze_sentiment(symbol)
@@ -704,7 +716,6 @@ def analyze_stock(symbol):
         
         # Generate prediction dates
         prediction_dates = [(end_date + timedelta(days=i+1)).strftime('%Y-%m-%d') for i in range(len(predictions))]
-        logger.info(f"Generated prediction dates: {prediction_dates}")
         
         # Prepare response with safe value handling
         response = {
@@ -779,7 +790,6 @@ def analyze_stock(symbol):
             logger.error(f"Database error in analyze_stock: {e}")
             cursor.close()
             db_manager.release_connection(conn)
-            # Continue processing - we don't want to fail the entire analysis if DB storage fails
         
         return response
         
