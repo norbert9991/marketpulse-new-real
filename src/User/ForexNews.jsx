@@ -204,11 +204,47 @@ const ForexNews = () => {
     handleMenuClose();
     setLoading(true);
     
-    // Clear the cache first
-    localStorage.removeItem(`forex_news_${currentCategory}`);
+    // Remember current position to maintain scroll position after refresh
+    const scrollPosition = window.pageYOffset;
     
-    // Then fetch fresh data by incrementing the refresh counter
-    setRefreshCount(prev => prev + 1);
+    // Call API with force=true to bypass cache
+    fetch(`${API_URL}/api/news/forex?category=${currentCategory}&force=true`)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`API returned status ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (data && data.articles) {
+          setNewsData(data.articles);
+          setApiSource(data.source || 'API (Force Refresh)');
+          setError(null);
+          
+          // Restore scroll position after refresh
+          setTimeout(() => window.scrollTo(0, scrollPosition), 100);
+        } else {
+          throw new Error('Invalid data format returned from API');
+        }
+      })
+      .catch(error => {
+        console.error('Error force refreshing news data:', error);
+        setError('Failed to force refresh forex news. Please try again later.');
+        
+        // Try using the in-component fallback
+        try {
+          const fallbackResponse = API.news.getForexNews({ category: currentCategory });
+          if (fallbackResponse && fallbackResponse.data && fallbackResponse.data.articles) {
+            setNewsData(fallbackResponse.data.articles);
+            setApiSource('Local Cache (Fallback after Force Refresh Failed)');
+          }
+        } catch (fallbackError) {
+          console.error('Failed to get fallback news data after force refresh failed:', fallbackError);
+        }
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   };
 
   // Handle standard refresh with optimistic UI update
@@ -373,7 +409,17 @@ const ForexNews = () => {
                 }
               }}
             >
-              Data source: {apiSource}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                <Typography variant="body2">
+                  Data source: <b>{apiSource}</b> 
+                  {newsData.length > 0 && ` (${newsData.length} articles)`}
+                </Typography>
+                {newsData.length > 0 && (
+                  <Typography variant="caption" sx={{ ml: 2 }}>
+                    Last updated: {formatDate(new Date().toISOString())}
+                  </Typography>
+                )}
+              </Box>
             </Alert>
           </Box>
         )}

@@ -1,9 +1,11 @@
 from flask import Blueprint, jsonify, request
 import requests
 import os
+import json
 from datetime import datetime, timedelta
 import logging
 import random
+import hashlib
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -20,6 +22,14 @@ NEWS_API_KEY = os.environ.get('NEWS_API_KEY', 'bfa5fbf17e864cf2a47694de22a333f8'
 
 # Base URL for NewsAPI
 NEWS_API_URL = "https://newsapi.org/v2/everything"
+
+# Cache directory
+CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cache')
+if not os.path.exists(CACHE_DIR):
+    os.makedirs(CACHE_DIR)
+
+# Cache settings
+CACHE_DURATION = 60 * 60  # 1 hour in seconds
 
 # Currency codes to full names mapping
 CURRENCY_NAMES = {
@@ -39,6 +49,56 @@ CURRENCY_NAMES = {
     "RUB": "Russian Ruble",
     "INR": "Indian Rupee"
 }
+
+def get_cache_path(category):
+    """Generate a cache file path for a specific category"""
+    # Create a safe filename from the category
+    filename = f"forex_news_{category}.json"
+    return os.path.join(CACHE_DIR, filename)
+
+def get_cached_news(category):
+    """Get news from cache if available and not expired"""
+    cache_path = get_cache_path(category)
+    
+    if not os.path.exists(cache_path):
+        return None
+    
+    try:
+        with open(cache_path, 'r') as f:
+            cache_data = json.load(f)
+        
+        # Check if cache is expired
+        cached_time = cache_data.get('timestamp', 0)
+        current_time = int(datetime.now().timestamp())
+        
+        if current_time - cached_time <= CACHE_DURATION:
+            logger.info(f"Using cached news data for category: {category}")
+            return cache_data.get('data')
+        else:
+            logger.info(f"Cache expired for category: {category}")
+            return None
+    except Exception as e:
+        logger.error(f"Error reading cache: {str(e)}")
+        return None
+
+def save_to_cache(category, data):
+    """Save news data to cache"""
+    cache_path = get_cache_path(category)
+    
+    try:
+        cache_data = {
+            'timestamp': int(datetime.now().timestamp()),
+            'data': data
+        }
+        
+        with open(cache_path, 'w') as f:
+            json.dump(cache_data, f)
+        
+        logger.info(f"Saved news data to cache for category: {category}")
+        return True
+    except Exception as e:
+        logger.error(f"Error saving to cache: {str(e)}")
+        return False
 
 def get_fallback_news():
     """Generate fallback news data when API is unavailable"""
@@ -134,13 +194,13 @@ def determine_related_currencies(title, description, category):
         "INR": ["indian rupee", "inr", "india", "rbi"],
     }
     
-    # Check specific category first
-    if category in currency_terms:
-        related.append(category)
+    # If category is a specific currency code, make sure it's the first in the list
+    if category.upper() in CURRENCY_NAMES:
+        related.append(category.upper())
     
     # Add other currencies mentioned in the text
     for currency, terms in currency_terms.items():
-        if currency != category:  # Skip if already added from category
+        if currency not in related:  # Skip if already added from category
             for term in terms:
                 if term in text:
                     related.append(currency)
@@ -155,39 +215,86 @@ def determine_related_currencies(title, description, category):
     
     return related[:3]  # Limit to 3 currencies
 
+def filter_articles_by_category(articles, category):
+    """Filter articles based on the selected category"""
+    if category == 'all':
+        return articles
+    
+    filtered = []
+    
+    # If category is a specific currency
+    if category.upper() in CURRENCY_NAMES:
+        currency = category.upper()
+        for article in articles:
+            # Look for explicit mentions in the title or summary
+            if (
+                currency in article['title'].upper() or 
+                CURRENCY_NAMES[currency].upper() in article['title'].upper() or
+                currency in article['summary'].upper() or
+                CURRENCY_NAMES[currency].upper() in article['summary'].upper()
+            ):
+                # Make sure this currency is in relatedCurrencies
+                if currency not in article['relatedCurrencies']:
+                    article['relatedCurrencies'].insert(0, currency)
+                    if len(article['relatedCurrencies']) > 3:
+                        article['relatedCurrencies'] = article['relatedCurrencies'][:3]
+                filtered.append(article)
+            # Also include if it's already identified as related
+            elif currency in article['relatedCurrencies']:
+                # Ensure this currency is first in the list
+                article['relatedCurrencies'].remove(currency)
+                article['relatedCurrencies'].insert(0, currency)
+                filtered.append(article)
+    
+    # For special categories
+    elif category == 'majors':
+        major_currencies = ['USD', 'EUR', 'GBP', 'JPY']
+        for article in articles:
+            if any(currency in article['relatedCurrencies'] for currency in major_currencies):
+                filtered.append(article)
+    
+    elif category == 'economic':
+        economic_terms = ['gdp', 'inflation', 'employment', 'economy', 'economic', 'growth', 'recession']
+        for article in articles:
+            text = (article['title'] + " " + article['summary']).lower()
+            if any(term in text for term in economic_terms):
+                filtered.append(article)
+    
+    elif category == 'central_banks':
+        bank_terms = ['central bank', 'fed', 'federal reserve', 'ecb', 'european central bank', 
+                     'boe', 'bank of england', 'boj', 'bank of japan', 'rba', 'reserve bank']
+        for article in articles:
+            text = (article['title'] + " " + article['summary']).lower()
+            if any(term in text for term in bank_terms):
+                filtered.append(article)
+    
+    return filtered
+
 @news_bp.route('/api/news/forex', methods=['GET'])
 def get_forex_news():
     """Get forex related news from NewsAPI"""
     try:
         category = request.args.get('category', 'all')
-        logger.info(f"Getting forex news with category: {category}")
+        force_refresh = request.args.get('force', 'false').lower() == 'true'
+        logger.info(f"Getting forex news with category: {category}, force refresh: {force_refresh}")
         
-        # Default search query
-        search_query = "forex OR currency OR exchange rate OR dollar OR euro"
+        # Check for cached data first if not forcing refresh
+        if not force_refresh:
+            cached_data = get_cached_news(category)
+            if cached_data:
+                return jsonify(cached_data), 200
         
-        # Adjust query based on category
-        if category != 'all':
-            if category == 'majors':
-                search_query = "(USD OR EUR OR GBP OR JPY) AND forex"
-            elif category == 'economic':
-                search_query = "economy OR economic data OR GDP OR inflation OR employment"
-            elif category == 'central_banks':
-                search_query = "central bank OR fed OR ecb OR boe OR boj OR monetary policy OR interest rate"
-            else:
-                # For specific currency
-                currency_code = category.upper()
-                currency_name = CURRENCY_NAMES.get(currency_code, currency_code)
-                search_query = f"{currency_code} OR {currency_name} OR {currency_name} exchange rate"
+        # Default search query - broad forex terms to get a variety of articles
+        search_query = "forex OR currency OR exchange rate OR dollar OR euro OR yen OR pound"
         
-        # Always use the API since we have a real key
-        # Set up API parameters
+        # Set up API parameters - always fetch a broader set and filter later
         params = {
             "apiKey": NEWS_API_KEY,
             "q": search_query,
             "language": "en",
             "sortBy": "publishedAt",
-            "pageSize": 10,
-            "domains": "reuters.com,ft.com,bloomberg.com,cnbc.com,wsj.com,economist.com,investing.com,marketwatch.com"
+            "pageSize": 30,  # Request more articles to ensure we have enough after filtering
+            "domains": "reuters.com,ft.com,bloomberg.com,cnbc.com,wsj.com,economist.com,investing.com,marketwatch.com,fxstreet.com"
         }
         
         response = requests.get(NEWS_API_URL, params=params, timeout=5)
@@ -196,7 +303,7 @@ def get_forex_news():
             news_data = response.json()
             
             # Transform the data to match our format
-            articles = []
+            all_articles = []
             for article in news_data.get("articles", []):
                 # Extract source name
                 source = article.get("source", {}).get("name", "Unknown Source")
@@ -239,33 +346,83 @@ def get_forex_news():
                     "relatedCurrencies": related_currencies
                 }
                 
-                articles.append(article_obj)
+                all_articles.append(article_obj)
             
-            # Return the transformed data
-            return jsonify({
-                "articles": articles,
-                "totalCount": len(articles),
+            # Now filter articles based on category
+            filtered_articles = filter_articles_by_category(all_articles, category)
+            
+            # Create the response data
+            response_data = {
+                "articles": filtered_articles,
+                "totalCount": len(filtered_articles),
                 "lastUpdated": datetime.now().isoformat(),
-                "source": "NewsAPI"
-            }), 200
+                "source": "NewsAPI",
+                "category": category
+            }
+            
+            # Save to cache
+            save_to_cache(category, response_data)
+            
+            # Return the filtered data
+            return jsonify(response_data), 200
         else:
             logger.error(f"News API returned error: {response.status_code}, {response.text}")
-            # Fall back to synthetic data
+            # Try to get from cache first even if it's expired
+            expired_cache = get_cached_news(category)
+            if expired_cache:
+                expired_cache["source"] = "Expired Cache"
+                return jsonify(expired_cache), 200
+                
+            # Fall back to synthetic data if no cache available
             fallback_articles = get_fallback_news()
-            return jsonify({
+            response_data = {
                 "articles": fallback_articles,
                 "totalCount": len(fallback_articles),
                 "lastUpdated": datetime.now().isoformat(),
-                "source": "Fallback Data"
-            }), 200
+                "source": "Fallback Data",
+                "category": category
+            }
+            return jsonify(response_data), 200
     
     except Exception as e:
         logger.error(f"Error getting forex news: {str(e)}")
+        # Try to get from cache first even if it's expired
+        expired_cache = get_cached_news(category)
+        if expired_cache:
+            expired_cache["source"] = "Expired Cache (Error Recovery)"
+            return jsonify(expired_cache), 200
+            
         # Return fallback data in case of error
         fallback_articles = get_fallback_news()
-        return jsonify({
+        response_data = {
             "articles": fallback_articles,
             "totalCount": len(fallback_articles),
             "lastUpdated": datetime.now().isoformat(),
-            "source": "Fallback Data (Error)"
-        }), 200 
+            "source": "Fallback Data (Error)",
+            "category": category
+        }
+        return jsonify(response_data), 200
+
+@news_bp.route('/api/news/forex/clear-cache', methods=['POST'])
+def clear_news_cache():
+    """Clear the news cache"""
+    try:
+        category = request.args.get('category')
+        
+        if category:
+            # Clear specific category
+            cache_path = get_cache_path(category)
+            if os.path.exists(cache_path):
+                os.remove(cache_path)
+                logger.info(f"Cleared cache for category: {category}")
+        else:
+            # Clear all categories
+            for file in os.listdir(CACHE_DIR):
+                if file.startswith('forex_news_') and file.endswith('.json'):
+                    os.remove(os.path.join(CACHE_DIR, file))
+            logger.info("Cleared all news cache")
+        
+        return jsonify({"success": True, "message": "Cache cleared successfully"}), 200
+    except Exception as e:
+        logger.error(f"Error clearing cache: {str(e)}")
+        return jsonify({"success": False, "message": f"Error clearing cache: {str(e)}"}), 500 
