@@ -749,7 +749,7 @@ const MarketAnalysis = ({ selectedSymbol }) => {
         <Box>
           {analysisData && (
             <Typography variant="caption" sx={{ color: colors.secondaryText, display: 'block', mb: 1, textAlign: 'right' }}>
-              Last updated: {analysisData.last_updated || analysisData.updated_at || new Date().toISOString()}
+              Last updated: {analysisData.updated_at || analysisData.last_updated || new Date().toISOString()}
             </Typography>
           )}
           <Button 

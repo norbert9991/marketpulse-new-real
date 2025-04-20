@@ -46,7 +46,8 @@ def get_market_analysis(symbol):
                 ti.macd_hist, 
                 ti.sma20, 
                 ti.sma50, 
-                ti.sma200
+                ti.sma200,
+                md.updated_at
             FROM market_data md
             LEFT JOIN technical_indicators ti ON md.symbol = ti.symbol
             WHERE md.symbol = %s
@@ -67,7 +68,8 @@ def get_market_analysis(symbol):
                     ti.macd_hist, 
                     ti.sma20, 
                     ti.sma50, 
-                    ti.sma200
+                    ti.sma200,
+                    md.updated_at
                 FROM market_data md
                 LEFT JOIN technical_indicators ti ON md.symbol = ti.symbol
                 WHERE md.symbol = %s
@@ -128,7 +130,7 @@ def get_market_analysis(symbol):
             },
             "predictions": [],
             "prediction_dates": [],
-            "last_updated": datetime.now().isoformat()
+            "updated_at": market_row[9].isoformat() if market_row[9] else datetime.now().isoformat()
         }
         
         # Process support and resistance levels
