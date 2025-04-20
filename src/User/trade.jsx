@@ -1781,7 +1781,7 @@ const Trade = () => {
                         </Typography>
                         <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
                           ${simulationResults.startingBalance.toLocaleString()}
-                        </Typography>
+              </Typography>
             </Box>
             
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, borderBottom: `1px dashed ${colors.borderColor}`, pb: 1 }}>
@@ -1790,7 +1790,7 @@ const Trade = () => {
                         </Typography>
                         <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
                           ${simulationResults.endingBalance.toLocaleString()}
-                        </Typography>
+              </Typography>
             </Box>
             
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, borderBottom: `1px dashed ${colors.borderColor}`, pb: 1 }}>
@@ -1962,7 +1962,7 @@ const Trade = () => {
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                       <Typography variant="h6" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
                         Simulation Results
-                      </Typography>
+                </Typography>
                       <Box sx={{
                         backgroundColor: colors.accentBlue,
                         color: '#fff',
@@ -2170,7 +2170,7 @@ const Trade = () => {
                           transform: 'translateY(20px)'
                         }}>
                           {['EURUSD', 'EURJPY', 'GBPUSD', 'EURNZD', 'EURCAD', 'EURCHF', 'AUDUSD'].map((symbol, i) => (
-            <Typography 
+                <Typography 
                             key={i} 
                             variant="caption" 
                   sx={{ 
@@ -2182,7 +2182,7 @@ const Trade = () => {
                             }}
                           >
                             {symbol}
-            </Typography>
+                </Typography>
                           ))}
                         </Box>
                         

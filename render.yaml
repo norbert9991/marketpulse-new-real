@@ -16,17 +16,17 @@ services:
           name: finals_gzev
           property: connectionString
       - key: DB_HOST
-        value: dpg-cvpt2b8d13ps79866gc0-a
+        value: dpg-cvpr2b8dl3ps73866gc0-a
       - key: DB_USER
         value: finals_gzev_user
       - key: DB_PASSWORD
-        value: pnzrRDareyMyh7Z0g7BGCHfDE7eSjdjV
+        value: prnrRDareyMyh720g7BGCHfDE7eSjdjV
       - key: DB_NAME
         value: finals_gzev
       - key: DB_PORT
         value: 5432
       - key: FRONTEND_URL
-        value: https://marketpulse-new-real-static.onrender.com
+        value: https://marketpulse-new-real-static-2.0.onrender.com
   
   - type: web
     name: marketpulse-frontend
@@ -44,7 +44,7 @@ services:
         value: no-store
     envVars:
       - key: REACT_APP_API_URL
-        value: https://marketpulse-new-real.onrender.com
+        value: https://marketpulse-new-real-2.0.onrender.com/api
 
 # Using existing database instead of creating a new one
 # databases:

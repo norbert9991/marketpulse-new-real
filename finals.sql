@@ -68,6 +68,9 @@ INSERT INTO login (user_id, username, email, pass, role, last_login, account_sta
 (2, 'admin', 'admin@example.com', 'scrypt:32768:8:1$zU4WVnJuKLCyBMA4$c3dd498edab1575f98db2d62a83aeec9192aeaeacdba6c23e2656bf1960298cbf9b4df7d7a00b43b86e9e2fa4e2dadcc2220d81025b11fe238a02b38df11fbe9', 'admin', '2025-04-05 11:38:53', 'active', '2025-03-29 08:58:02', 10000),
 (3, 'test', 'tes@gmail.com', 'scrypt:32768:8:1$T0sSeJKCRzuKPR7Z$3d15de7ac8003e2af709beb77e62a0f66f0b3952f0df0e6c56f8ba9f54c1aaee101b8433f57658cec7c4f83398606991383e7f9ce75c6e42ebb3f2cae66b84a0', 'user', '2025-04-05 11:29:29', 'active', '2025-04-03 10:57:07', 123);
 
+-- Reset the sequence to the correct next value
+SELECT setval('login_user_id_seq', (SELECT MAX(user_id) FROM login));
+
 -- --------------------------------------------------------
 
 --
@@ -367,3 +370,242 @@ INSERT INTO technical_indicators (id, symbol, rsi, macd, macd_signal, macd_hist,
 ALTER TABLE favorites
   ADD CONSTRAINT favorites_user_id_fkey
   FOREIGN KEY (user_id) REFERENCES login(user_id); 
+
+-- Table for simulation sessions
+CREATE TABLE IF NOT EXISTS simulation_sessions (
+  session_id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES login(user_id),
+  simulation_amount DECIMAL(20,2) NOT NULL,
+  trading_type VARCHAR(20) NOT NULL CHECK (trading_type IN ('short-term', 'long-term')),
+  start_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  end_time TIMESTAMP,
+  final_balance DECIMAL(20,2),
+  profit_loss DECIMAL(20,2),
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table for open orders in simulation
+CREATE TABLE IF NOT EXISTS simulation_orders (
+  order_id SERIAL PRIMARY KEY,
+  session_id INTEGER NOT NULL REFERENCES simulation_sessions(session_id),
+  symbol VARCHAR(20) NOT NULL,
+  order_type VARCHAR(20) NOT NULL CHECK (order_type IN ('market', 'limit', 'stop')),
+  direction VARCHAR(10) NOT NULL CHECK (direction IN ('buy', 'sell')),
+  amount DECIMAL(20,2) NOT NULL,
+  price DECIMAL(20,8),
+  target_price DECIMAL(20,8),
+  stop_loss DECIMAL(20,8),
+  leverage INTEGER NOT NULL DEFAULT 1,
+  status VARCHAR(20) NOT NULL CHECK (status IN ('open', 'filled', 'canceled', 'partially_filled')),
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table for positions in simulation
+CREATE TABLE IF NOT EXISTS simulation_positions (
+  position_id SERIAL PRIMARY KEY,
+  session_id INTEGER NOT NULL REFERENCES simulation_sessions(session_id),
+  symbol VARCHAR(20) NOT NULL,
+  direction VARCHAR(10) NOT NULL CHECK (direction IN ('buy', 'sell')),
+  open_price DECIMAL(20,8) NOT NULL,
+  amount DECIMAL(20,2) NOT NULL,
+  leverage INTEGER NOT NULL DEFAULT 1,
+  take_profit DECIMAL(20,8),
+  stop_loss DECIMAL(20,8),
+  margin_used DECIMAL(20,2) NOT NULL,
+  status VARCHAR(20) NOT NULL CHECK (status IN ('open', 'closed')),
+  opened_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  closed_at TIMESTAMP,
+  closing_price DECIMAL(20,8),
+  profit_loss DECIMAL(20,2),
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table for trade history in simulation
+CREATE TABLE IF NOT EXISTS simulation_trade_history (
+  trade_id SERIAL PRIMARY KEY,
+  session_id INTEGER NOT NULL REFERENCES simulation_sessions(session_id),
+  position_id INTEGER REFERENCES simulation_positions(position_id),
+  order_id INTEGER REFERENCES simulation_orders(order_id),
+  symbol VARCHAR(20) NOT NULL,
+  direction VARCHAR(10) NOT NULL CHECK (direction IN ('buy', 'sell')),
+  order_type VARCHAR(20) NOT NULL,
+  open_price DECIMAL(20,8) NOT NULL,
+  close_price DECIMAL(20,8) NOT NULL,
+  amount DECIMAL(20,2) NOT NULL,
+  leverage INTEGER NOT NULL DEFAULT 1,
+  profit_loss DECIMAL(20,2) NOT NULL,
+  trade_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes for better performance
+CREATE INDEX idx_sim_sessions_user ON simulation_sessions(user_id);
+CREATE INDEX idx_sim_orders_session ON simulation_orders(session_id);
+CREATE INDEX idx_sim_positions_session ON simulation_positions(session_id);
+CREATE INDEX idx_sim_trade_history_session ON simulation_trade_history(session_id);
+
+-- Long-term trading system tables
+-- Create trading strategies table
+CREATE TABLE IF NOT EXISTS trading_strategies (
+  strategy_id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  description TEXT,
+  total_net_pl DECIMAL(10,2) NOT NULL,
+  one_year_net_pl DECIMAL(10,2) NOT NULL,
+  six_month_net_pl DECIMAL(10,2),
+  three_month_net_pl DECIMAL(10,2),
+  risk_level VARCHAR(10) NOT NULL CHECK (risk_level IN ('low', 'medium', 'high')),
+  avg_duration VARCHAR(50),
+  max_drawdown DECIMAL(10,2),
+  sharpe_ratio DECIMAL(10,4),
+  active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create simulation_long_term table
+CREATE TABLE IF NOT EXISTS simulation_long_term (
+  simulation_id SERIAL PRIMARY KEY,
+  user_id INT NOT NULL,
+  initial_balance DECIMAL(15,2) NOT NULL,
+  current_balance DECIMAL(15,2) NOT NULL,
+  start_date TIMESTAMP NOT NULL,
+  end_date TIMESTAMP,
+  time_period VARCHAR(20) NOT NULL,
+  status VARCHAR(10) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed', 'paused')),
+  total_profit_loss DECIMAL(15,2),
+  profit_loss_percentage DECIMAL(10,2),
+  total_trades INT DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES login(user_id)
+);
+
+-- Create simulation_periods table
+CREATE TABLE IF NOT EXISTS simulation_periods (
+  period_id SERIAL PRIMARY KEY,
+  name VARCHAR(50) NOT NULL,
+  days INT NOT NULL,
+  is_default BOOLEAN DEFAULT FALSE,
+  display_order INT NOT NULL
+);
+
+-- Create simulation_period_options table
+CREATE TABLE IF NOT EXISTS simulation_period_options (
+  period_id SERIAL PRIMARY KEY,
+  period_name VARCHAR(50) NOT NULL,
+  period_value VARCHAR(20) NOT NULL,
+  days_duration INT NOT NULL,
+  is_default BOOLEAN DEFAULT FALSE,
+  active BOOLEAN DEFAULT TRUE,
+  display_order INT DEFAULT 0
+);
+
+-- Create strategy_performance_history table
+CREATE TABLE IF NOT EXISTS strategy_performance_history (
+  id SERIAL PRIMARY KEY,
+  strategy_id INT NOT NULL,
+  date DATE NOT NULL,
+  balance DECIMAL(15,2) NOT NULL,
+  daily_profit_loss DECIMAL(15,2),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (strategy_id) REFERENCES trading_strategies(strategy_id)
+);
+
+-- Create strategy_trades table
+CREATE TABLE IF NOT EXISTS strategy_trades (
+  trade_id SERIAL PRIMARY KEY,
+  strategy_id INT NOT NULL,
+  symbol VARCHAR(20) NOT NULL,
+  trade_type VARCHAR(4) NOT NULL CHECK (trade_type IN ('buy', 'sell')),
+  open_price DECIMAL(15,5) NOT NULL,
+  close_price DECIMAL(15,5),
+  open_time TIMESTAMP NOT NULL,
+  close_time TIMESTAMP,
+  lot_size DECIMAL(10,2) NOT NULL,
+  profit_loss DECIMAL(15,2),
+  pips DECIMAL(10,1),
+  status VARCHAR(6) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (strategy_id) REFERENCES trading_strategies(strategy_id)
+);
+
+-- Create simulation_allocations table
+CREATE TABLE IF NOT EXISTS simulation_allocations (
+  allocation_id SERIAL PRIMARY KEY,
+  simulation_id INT NOT NULL,
+  strategy_id INT NOT NULL,
+  allocated_amount DECIMAL(15,2) NOT NULL,
+  current_value DECIMAL(15,2) NOT NULL,
+  copy_ratio INT NOT NULL DEFAULT 1,
+  profit_loss DECIMAL(15,2),
+  profit_loss_percentage DECIMAL(10,2),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (simulation_id) REFERENCES simulation_long_term(simulation_id),
+  FOREIGN KEY (strategy_id) REFERENCES trading_strategies(strategy_id)
+);
+
+-- Create simulation_results table
+CREATE TABLE IF NOT EXISTS simulation_results (
+  result_id SERIAL PRIMARY KEY,
+  simulation_id INT NOT NULL,
+  date DATE NOT NULL,
+  total_balance DECIMAL(15,2) NOT NULL,
+  daily_profit_loss DECIMAL(15,2),
+  monthly_profit_loss DECIMAL(15,2),
+  total_trades INT DEFAULT 0,
+  winning_trades INT DEFAULT 0,
+  losing_trades INT DEFAULT 0,
+  win_rate DECIMAL(5,2),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (simulation_id) REFERENCES simulation_long_term(simulation_id)
+);
+
+-- Create simulation_symbol_performance table
+CREATE TABLE IF NOT EXISTS simulation_symbol_performance (
+  id SERIAL PRIMARY KEY,
+  simulation_id INT NOT NULL,
+  symbol VARCHAR(20) NOT NULL,
+  total_trades INT DEFAULT 0,
+  winning_trades INT DEFAULT 0,
+  losing_trades INT DEFAULT 0,
+  profit_loss DECIMAL(15,2),
+  profit_loss_percentage DECIMAL(10,2),
+  weight DECIMAL(5,2),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (simulation_id) REFERENCES simulation_long_term(simulation_id)
+);
+
+-- Insert sample strategies
+INSERT INTO trading_strategies 
+(name, description, total_net_pl, one_year_net_pl, six_month_net_pl, three_month_net_pl, risk_level, avg_duration, max_drawdown, sharpe_ratio)
+VALUES
+('Triumph', 'Conservative trend-following strategy using major currency pairs', 121.00, 121.00, 67.50, 32.50, 'low', '3-5 days', 15.20, 1.75),
+('Legacy', 'Momentum-based strategy focusing on breakouts and pullbacks', 538.00, 102.00, 48.00, 22.50, 'medium', '1-3 days', 22.40, 1.95),
+('Alpine', 'Range-trading strategy exploiting overbought and oversold conditions', 317.00, 77.00, 42.00, 20.00, 'medium', '2-4 days', 18.60, 1.82),
+('Ivory', 'Contrarian strategy that trades against extreme market movements', 125.00, -13.00, 25.00, 35.00, 'high', '1-2 days', 27.50, 1.45),
+('Quantum', 'High-frequency scalping algorithm targeting small price movements', 87.00, 24.00, 12.00, 8.00, 'high', '1-4 hours', 32.10, 1.25);
+
+-- Insert default simulation periods
+INSERT INTO simulation_periods (name, days, is_default, display_order)
+VALUES
+('1 Year', 365, TRUE, 1),
+('6 Months', 180, FALSE, 2),
+('3 Months', 90, FALSE, 3),
+('1 Month', 30, FALSE, 4),
+('2 Years', 730, FALSE, 5);
+
+-- Insert simulation period options
+INSERT INTO simulation_period_options
+(period_name, period_value, days_duration, is_default, active, display_order)
+VALUES
+('1 Month', '1M', 30, FALSE, TRUE, 1),
+('3 Months', '3M', 90, FALSE, TRUE, 2),
+('6 Months', '6M', 180, FALSE, TRUE, 3),
+('1 Year', '1Y', 365, TRUE, TRUE, 4),
+('2 Years', '2Y', 730, FALSE, TRUE, 5),
+('3 Years', '3Y', 1095, FALSE, TRUE, 6); 
