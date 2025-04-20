@@ -92,14 +92,11 @@ const MarketAnalysis = ({ selectedSymbol }) => {
     }
   }, [selectedSymbol]);
 
-  const fetchMarketAnalysis = async (symbol, forceRefresh = false) => {
+  const fetchMarketAnalysis = async (symbol) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await API.market.analyze({ 
-        symbol: symbol,
-        force_refresh: forceRefresh 
-      });
+      const response = await API.market.analyze({ symbol });
       console.log('Market analysis response:', response.status);
       setAnalysisData(response.data);
       // Reset retry count on successful fetch
@@ -115,7 +112,7 @@ const MarketAnalysis = ({ selectedSymbol }) => {
           console.log(`Retrying market analysis fetch (attempt ${retryCount + 1})`);
           setTimeout(() => {
             setRetryCount(prev => prev + 1);
-            fetchMarketAnalysis(symbol, forceRefresh);
+            fetchMarketAnalysis(symbol);
           }, 2000);
         } else {
           setError('The server encountered an error processing this request. Please try again later.');
@@ -128,19 +125,61 @@ const MarketAnalysis = ({ selectedSymbol }) => {
     }
   };
 
-  const fetchPriceHistory = async (symbol, days = 30, forceRefresh = false) => {
+  const fetchPriceHistory = async (symbol) => {
     setHistoryLoading(true);
     setHistoryError(null);
     try {
-      const response = await API.market.getHistory(symbol, {
-        days: days,
-        force_refresh: forceRefresh
-      });
-      console.log('Price history response:', response);
-      setHistoryData(response.data);
+      // Try to strip the -X suffix for troubleshooting
+      // Even though this is now also handled in axiosConfig.js
+      const plainSymbol = symbol.includes('-X') ? symbol.split('-X')[0] : symbol;
+      
+      console.log('Fetching price history for symbol:', symbol);
+      console.log('Plain symbol (without -X):', plainSymbol);
+      
+      // First try with the original symbol
+      try {
+        const response = await API.market.getHistory(symbol);
+        console.log('Price history response:', response.status);
+        setHistoryData(response.data);
+        return; // Exit the function if successful
+      } catch (firstErr) {
+        console.error('Error with original symbol, trying plain symbol:', firstErr);
+        
+        // If that fails, try with the plain symbol without -X as a fallback
+        if (symbol !== plainSymbol) {
+          try {
+            const plainResponse = await API.market.getHistory(plainSymbol);
+            console.log('Price history response with plain symbol:', plainResponse.status);
+            setHistoryData(plainResponse.data);
+            return; // Exit the function if successful
+          } catch (secondErr) {
+            console.error('Error with plain symbol too:', secondErr);
+            // Continue to the final catch block
+            throw secondErr;
+          }
+        } else {
+          // If symbols are identical, just throw the original error
+          throw firstErr;
+        }
+      }
     } catch (err) {
-      console.error('Error fetching price history:', err);
-      setHistoryError(err.response?.data?.error || 'Failed to fetch price history');
+      console.error('Error fetching price history (all attempts failed):', err);
+      
+      // Create a helpful error message
+      let errorMessage = 'No historical data is available for this symbol';
+      if (err.response?.status === 404) {
+        errorMessage = `No historical data available for ${symbol}. The data may not exist in our database.`;
+      } else if (err.response?.status === 500) {
+        errorMessage = 'Server error while retrieving historical data. Please try again later.';
+      }
+      
+      setHistoryError(errorMessage);
+      
+      // Create empty history data structure for a better UX
+      setHistoryData({
+        symbol: symbol,
+        history: []
+      });
     } finally {
       setHistoryLoading(false);
     }
@@ -151,127 +190,48 @@ const MarketAnalysis = ({ selectedSymbol }) => {
       setLoading(true);
       setError(null);
       
+      // Symbol cleaning is now handled in axiosConfig.js
       console.log('Refreshing data for symbol:', selectedSymbol);
       
-      // Use the force_refresh parameter
-      fetchMarketAnalysis(selectedSymbol, true);
-      fetchPriceHistory(selectedSymbol, 30, true);
+      API.market.refresh(selectedSymbol)
+        .then(response => {
+          console.log('Market refresh response:', response.status);
+          setAnalysisData(response.data);
+          // Refresh history data too
+          fetchPriceHistory(selectedSymbol);
+        })
+        .catch(err => {
+          console.error('Error refreshing market analysis:', err);
+          
+          // Handle specific error cases
+          if (err.response?.status === 500) {
+            setError('The server encountered an error. This could be due to temporary issues, please try again later.');
+          } else {
+            setError(err.response?.data?.error || 'Failed to refresh market analysis data');
+          }
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     }
   };
 
   const renderPredictionChart = () => {
-    console.log('Rendering prediction chart with data:', analysisData);
-    
-    if (!analysisData) {
-      console.log('No analysis data available');
-      return null;
-    }
-    
-    if (!analysisData.predictions) {
-      console.log('No predictions array in analysis data');
-      return (
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: 'column',
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          py: 4 
-        }}>
-          <Typography sx={{ color: colors.secondaryText, mb: 2 }}>
-            No prediction data available for this symbol
-          </Typography>
-          <Button 
-            variant="outlined" 
-            startIcon={<RefreshIcon />}
-            onClick={() => fetchMarketAnalysis(selectedSymbol, true)}
-            sx={{ 
-              color: colors.accentBlue,
-              borderColor: colors.accentBlue
-            }}
-          >
-            Refresh Data
-          </Button>
-        </Box>
-      );
-    }
-    
-    if (!analysisData.prediction_dates) {
-      console.log('No prediction_dates array in analysis data');
-      // If we have predictions but no dates, create generic dates
-      analysisData.prediction_dates = Array(analysisData.predictions.length)
-        .fill(0)
-        .map((_, i) => `Day ${i+1}`);
-      console.log('Created generic dates:', analysisData.prediction_dates);
-    }
-    
-    console.log('Predictions array:', analysisData.predictions);
-    console.log('Prediction dates array:', analysisData.prediction_dates);
+    if (!analysisData || !analysisData.predictions || !analysisData.prediction_dates) return null;
 
-    // Check if arrays are empty or contain invalid data
-    if (analysisData.predictions.length === 0) {
-      console.log('Predictions array is empty');
-      return (
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: 'column',
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          py: 4 
-        }}>
-          <Typography sx={{ color: colors.secondaryText, mb: 2 }}>
-            No price predictions available for this symbol
-          </Typography>
-          <Button 
-            variant="outlined" 
-            startIcon={<RefreshIcon />}
-            onClick={() => fetchMarketAnalysis(selectedSymbol, true)}
-            sx={{ 
-              color: colors.accentBlue,
-              borderColor: colors.accentBlue
-            }}
-          >
-            Refresh Data
-          </Button>
-        </Box>
-      );
-    }
+    // Ensure predictions are numbers
+    const numericPredictions = analysisData.predictions.map(pred => 
+      typeof pred === 'number' ? pred : parseFloat(pred)
+    );
 
-    // Ensure predictions are numbers, filter out null/undefined/NaN values
-    const numericPredictions = analysisData.predictions
-      .filter(pred => pred !== null && pred !== undefined && !isNaN(Number(pred)))
-      .map(pred => typeof pred === 'number' ? pred : parseFloat(pred));
-    
-    console.log('Numeric predictions:', numericPredictions);
-    
-    // If all predictions filtered out, show error
-    if (numericPredictions.length === 0) {
-      return (
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: 'column',
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          py: 4 
-        }}>
-          <Typography sx={{ color: colors.secondaryText }}>
-            Invalid prediction data. Please try refreshing.
-          </Typography>
-        </Box>
-      );
-    }
-
-    // Ensure dates and predictions arrays match in length
-    const predictionDates = analysisData.prediction_dates.slice(0, numericPredictions.length);
-    
     // Format the dates to display in a readable format (MM-DD)
-    const formattedDates = predictionDates.map(date => {
+    const formattedDates = analysisData.prediction_dates.map(date => {
       // Handle both "2025-04-06" format and "Day 1" format
-      if (date && typeof date === 'string' && date.includes('-')) {
+      if (date.includes('-')) {
         return date.replace(/^\d{4}-/, ''); // Remove year prefix
       }
-      return date || '';
+      return date;
     });
-    console.log('Formatted dates:', formattedDates);
 
     const chartData = {
       labels: formattedDates,
@@ -290,7 +250,6 @@ const MarketAnalysis = ({ selectedSymbol }) => {
         }
       ]
     };
-    console.log('Chart data prepared:', chartData);
 
     const options = {
       responsive: true,
@@ -368,7 +327,7 @@ const MarketAnalysis = ({ selectedSymbol }) => {
           <Button 
             variant="outlined" 
             startIcon={<RefreshIcon />}
-            onClick={() => fetchPriceHistory(selectedSymbol, 30, true)}
+            onClick={() => fetchPriceHistory(selectedSymbol)}
             sx={{ 
               color: colors.accentBlue,
               borderColor: colors.accentBlue
@@ -844,36 +803,29 @@ const MarketAnalysis = ({ selectedSymbol }) => {
         <Typography variant="h6" sx={{ color: colors.primaryText }}>
           Market Analysis: {selectedSymbol}
         </Typography>
-        <Box>
-          {analysisData && (
-            <Typography variant="caption" sx={{ color: colors.secondaryText, display: 'block', mb: 1, textAlign: 'right' }}>
-              Last updated: {analysisData.updated_at || analysisData.last_updated || new Date().toISOString()}
-            </Typography>
-          )}
-          <Button 
-            variant="outlined" 
-            startIcon={loading ? <CircularProgress size={20} /> : <RefreshIcon />}
-            onClick={handleRefresh}
-            disabled={loading}
-            sx={{ 
-              color: colors.accentBlue,
-              borderColor: colors.accentBlue,
-              '&:hover': {
-                backgroundColor: `${colors.accentBlue}22`,
-                borderColor: colors.accentBlue
-              }
-            }}
-          >
-            {loading ? 'Refreshing...' : 'Refresh Data'}
-          </Button>
-        </Box>
+        <Button 
+          variant="outlined" 
+          startIcon={loading ? <CircularProgress size={20} /> : <RefreshIcon />}
+          onClick={handleRefresh}
+          disabled={loading}
+          sx={{ 
+            color: colors.accentBlue,
+            borderColor: colors.accentBlue,
+            '&:hover': {
+              backgroundColor: `${colors.accentBlue}22`,
+              borderColor: colors.accentBlue
+            }
+          }}
+        >
+          {loading ? 'Refreshing...' : 'Refresh Data'}
+        </Button>
       </Box>
       
       {error && (
         <Alert 
           severity="error" 
           action={
-            <Button color="inherit" size="small" onClick={() => fetchMarketAnalysis(selectedSymbol, true)}>
+            <Button color="inherit" size="small" onClick={() => fetchMarketAnalysis(selectedSymbol)}>
               Retry
             </Button>
           }
@@ -924,7 +876,7 @@ const MarketAnalysis = ({ selectedSymbol }) => {
               <Alert 
                 severity="warning" 
                 action={
-                  <Button color="inherit" size="small" onClick={() => fetchPriceHistory(selectedSymbol, 30, true)}>
+                  <Button color="inherit" size="small" onClick={() => fetchPriceHistory(selectedSymbol)}>
                     Retry
                   </Button>
                 }
@@ -950,25 +902,9 @@ const MarketAnalysis = ({ selectedSymbol }) => {
         </>
       ) : (
         <Box sx={{ textAlign: 'center', p: 4 }}>
-          <Typography sx={{ color: colors.secondaryText, mb: 2 }}>
+          <Typography sx={{ color: colors.secondaryText }}>
             Select a market pair to view analysis
           </Typography>
-          {selectedSymbol && (
-            <Button
-              variant="outlined"
-              startIcon={<RefreshIcon />}
-              onClick={() => {
-                fetchMarketAnalysis(selectedSymbol, true);
-                fetchPriceHistory(selectedSymbol, 30, true);
-              }}
-              sx={{
-                color: colors.accentBlue,
-                borderColor: colors.accentBlue
-              }}
-            >
-              Refresh Data
-            </Button>
-          )}
         </Box>
       )}
     </Paper>

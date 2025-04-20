@@ -221,16 +221,13 @@ const Market = () => {
     // User must click "Start Analyze" button to fetch data
   };
 
-  const fetchMarketAnalysis = async (symbolToFetch = selectedPair, forceRefresh = false) => {
+  const fetchMarketAnalysis = async (symbolToFetch = selectedPair) => {
     try {
-      setLoading(true);
+    setLoading(true);
       
       // Try to fetch market analysis
-      console.log(`Attempting to analyze symbol: ${symbolToFetch}, force refresh: ${forceRefresh}`);
-      const response = await API.market.analyze({ 
-        symbol: symbolToFetch,
-        force_refresh: forceRefresh 
-      });
+      console.log(`Attempting to analyze symbol: ${symbolToFetch}`);
+      const response = await API.market.analyze({ symbol: symbolToFetch });
       
       console.log('Raw API response:', response.data);
       
@@ -702,12 +699,12 @@ const Market = () => {
                     console.warn('selectedPair is an object instead of a string, extracting value');
                     const actualValue = selectedPair?.value || 'EURUSD=X';
                     setSelectedPair(actualValue);
-                    setTimeout(() => fetchMarketAnalysis(actualValue, false), 100);
+                    setTimeout(() => fetchMarketAnalysis(actualValue), 100);
                   } else {
                     // Reset data when clicking analyze button
                     setAnalysisData(null);
                     setError(null);
-                    fetchMarketAnalysis(selectedPair, false);
+                    fetchMarketAnalysis(selectedPair);
                   }
                 }}
                 disabled={loading}
@@ -718,29 +715,6 @@ const Market = () => {
               >
                 {loading ? <CircularProgress size={24} /> : 'Start Analyze'}
               </Button>
-              
-              <Button 
-                variant="outlined" 
-                onClick={() => {
-                  console.log('Refreshing data for:', selectedPair);
-                  // Force a refresh of market data
-                  setAnalysisData(null);
-                  setError(null);
-                  fetchMarketAnalysis(selectedPair, true);
-                }}
-                disabled={loading}
-                sx={{ 
-                  borderColor: colors.borderColor,
-                  color: colors.secondaryText,
-                  '&:hover': {
-                    borderColor: colors.accentBlue,
-                    backgroundColor: `${colors.accentBlue}10`
-                  }
-                }}
-              >
-                {loading ? <CircularProgress size={24} /> : 'Refresh Data'}
-              </Button>
-              
               <Button
                 variant="outlined"
                 onClick={toggleFavorite}
