@@ -18,7 +18,9 @@ import {
   Link,
   Menu,
   MenuItem,
-  Alert
+  Alert,
+  Pagination,
+  Stack
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
@@ -57,22 +59,16 @@ const colors = {
 const newsCategories = [
   { value: 'all', label: 'All News' },
   { value: 'majors', label: 'Major Pairs' },
-  { value: 'USD', label: 'USD News' },
-  { value: 'EUR', label: 'EUR News' },
-  { value: 'GBP', label: 'GBP News' },
-  { value: 'JPY', label: 'JPY News' },
+  { value: 'usd', label: 'USD News' },
+  { value: 'eur', label: 'EUR News' },
+  { value: 'gbp', label: 'GBP News' },
+  { value: 'jpy', label: 'JPY News' },
   { value: 'economic', label: 'Economic Data' },
   { value: 'central_banks', label: 'Central Banks' }
 ];
 
 const ForexNews = () => {
   const navigate = useNavigate();
-  
-  // Get API URL from environment or default to localhost
-  const API_URL = 
-    process.env.NODE_ENV === 'production' 
-      ? 'https://marketpulse-new-real-2-0.onrender.com'
-      : (process.env.REACT_APP_API_URL || 'http://localhost:5000');
   
   // State variables
   const [newsData, setNewsData] = useState([]);
@@ -83,6 +79,9 @@ const ForexNews = () => {
   const [refreshCount, setRefreshCount] = useState(0);
   const [anchorEl, setAnchorEl] = useState(null);
   const [apiSource, setApiSource] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [pageSize] = useState(5); // Fixed page size
   
   // Menu handling
   const handleMenuOpen = (event) => {
@@ -91,6 +90,13 @@ const ForexNews = () => {
   
   const handleMenuClose = () => {
     setAnchorEl(null);
+  };
+
+  // Pagination handling
+  const handlePageChange = (event, newPage) => {
+    setPage(newPage);
+    // Keep scroll position when changing pages
+    window.scrollTo(0, 0);
   };
 
   // Effect to load saved articles from localStorage
@@ -109,9 +115,8 @@ const ForexNews = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Call the real backend endpoint
-        console.log(`Fetching news for category: ${currentCategory}`);
-        const response = await fetch(`${API_URL}/api/news/forex?category=${currentCategory}`);
+        // Call the real backend endpoint with pagination
+        const response = await fetch(`${API_URL}/api/news/forex?category=${currentCategory}&page=${page}&pageSize=${pageSize}`);
         
         if (!response.ok) {
           throw new Error(`API returned status ${response.status}`);
@@ -120,9 +125,9 @@ const ForexNews = () => {
         const data = await response.json();
         
         if (data && data.articles) {
-          console.log(`Received ${data.articles.length} articles for category ${currentCategory}`);
           setNewsData(data.articles);
           setApiSource(data.source || 'API');
+          setTotalPages(data.totalPages || 1);
           setError(null);
         } else {
           throw new Error('Invalid data format returned from API');
@@ -138,12 +143,15 @@ const ForexNews = () => {
           if (fallbackResponse && fallbackResponse.data && fallbackResponse.data.articles) {
             setNewsData(fallbackResponse.data.articles);
             setApiSource('Local Cache');
+            setTotalPages(1);
           } else {
             setNewsData([]);
+            setTotalPages(1);
           }
         } catch (fallbackError) {
           console.error('Failed to get fallback news data:', fallbackError);
           setNewsData([]);
+          setTotalPages(1);
         }
       } finally {
         setLoading(false);
@@ -151,7 +159,7 @@ const ForexNews = () => {
     };
 
     fetchData();
-  }, [currentCategory, refreshCount, API_URL]);
+  }, [currentCategory, refreshCount, page, pageSize]);
 
   // Format date to be more readable
   const formatDate = (dateString) => {
@@ -212,61 +220,22 @@ const ForexNews = () => {
     handleMenuClose();
     setLoading(true);
     
-    // Remember current position to maintain scroll position after refresh
-    const scrollPosition = window.pageYOffset;
+    // Reset to first page when force refreshing
+    setPage(1);
     
-    // Call API with force=true to bypass cache
-    fetch(`${API_URL}/api/news/forex?category=${currentCategory}&force=true`)
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`API returned status ${response.status}`);
-        }
-        return response.json();
-      })
-      .then(data => {
-        if (data && data.articles) {
-          setNewsData(data.articles);
-          setApiSource(data.source || 'API (Force Refresh)');
-          setError(null);
-          
-          // Restore scroll position after refresh
-          setTimeout(() => window.scrollTo(0, scrollPosition), 100);
-        } else {
-          throw new Error('Invalid data format returned from API');
-        }
-      })
-      .catch(error => {
-        console.error('Error force refreshing news data:', error);
-        setError('Failed to force refresh forex news. Please try again later.');
-        
-        // Try using the in-component fallback
-        try {
-          const fallbackResponse = API.news.getForexNews({ category: currentCategory });
-          if (fallbackResponse && fallbackResponse.data && fallbackResponse.data.articles) {
-            setNewsData(fallbackResponse.data.articles);
-            setApiSource('Local Cache (Fallback after Force Refresh Failed)');
-          }
-        } catch (fallbackError) {
-          console.error('Failed to get fallback news data after force refresh failed:', fallbackError);
-        }
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+    // Clear the cache first
+    localStorage.removeItem(`forex_news_${currentCategory}`);
+    
+    // Then fetch fresh data by incrementing the refresh counter
+    setRefreshCount(prev => prev + 1);
   };
 
   // Handle standard refresh with optimistic UI update
   const handleRefresh = () => {
     setLoading(true);
     
-    // Remember current position to maintain scroll position after refresh
-    const scrollPosition = window.pageYOffset;
-    
     // Increment refresh counter to trigger the useEffect
     setRefreshCount(prev => prev + 1);
-    
-    // Restore scroll position after refresh
-    setTimeout(() => window.scrollTo(0, scrollPosition), 100);
   };
 
   // Share article - in a real app, this would open a share dialog
@@ -287,6 +256,18 @@ const ForexNews = () => {
       alert(`Sharing article: ${article.title}`);
     }
   };
+
+  // Handle category change
+  const handleCategoryChange = (category) => {
+    setCurrentCategory(category);
+    setPage(1); // Reset to first page when changing category
+  };
+
+  // Get API URL from environment or default to localhost
+  const API_URL = 
+    process.env.NODE_ENV === 'production' 
+      ? 'https://marketpulse-new-real-2-0.onrender.com'
+      : (process.env.REACT_APP_API_URL || 'http://localhost:5000');
 
   return (
     <Box sx={{ display: 'flex', bgcolor: colors.darkBg, height: '100vh', overflow: 'hidden' }}>
@@ -382,10 +363,7 @@ const ForexNews = () => {
             <Chip
               key={category.value}
               label={category.label}
-              onClick={() => {
-                setCurrentCategory(category.value);
-                setLoading(true);
-              }}
+              onClick={() => handleCategoryChange(category.value)}
               sx={{
                 bgcolor: currentCategory === category.value ? colors.accentBlue : colors.cardBg,
                 color: colors.primaryText,
@@ -414,24 +392,7 @@ const ForexNews = () => {
                 }
               }}
             >
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                <Typography variant="body2">
-                  Data source: <b>{apiSource}</b> 
-                  {newsData.length > 0 && ` (${newsData.length} articles)`}
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  {currentCategory !== 'all' && (
-                    <Typography variant="caption" sx={{ mr: 2 }}>
-                      Category: <b>{currentCategory}</b>
-                    </Typography>
-                  )}
-                  {newsData.length > 0 && (
-                    <Typography variant="caption">
-                      Last updated: {formatDate(new Date().toISOString())}
-                    </Typography>
-                  )}
-                </Box>
-              </Box>
+              Data source: {apiSource} {page > 1 && `- Page ${page} of ${totalPages}`}
             </Alert>
           </Box>
         )}
@@ -457,192 +418,221 @@ const ForexNews = () => {
             <Box sx={{ maxWidth: '100%' }}>
               {newsData.length === 0 ? (
                 <Paper sx={{ p: 3, bgcolor: colors.cardBg, color: colors.primaryText, borderRadius: 2, textAlign: 'center' }}>
-                  <Typography variant="h6" sx={{ mb: 2 }}>No news articles found</Typography>
-                  <Typography variant="body2" sx={{ mb: 3 }}>
-                    There are no recent news articles matching the <b>{
-                      newsCategories.find(cat => cat.value === currentCategory)?.label || currentCategory
-                    }</b> category.
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    onClick={handleForceRefresh}
-                    sx={{ bgcolor: colors.accentBlue }}
-                  >
-                    Force Refresh
-                  </Button>
+                  <Typography>No news articles found for the selected category.</Typography>
                 </Paper>
               ) : (
-                newsData.map(article => (
-                  <Paper
-                    key={article.id}
-                    elevation={0}
-                    sx={{ 
-                      bgcolor: colors.cardBg, 
-                      color: colors.primaryText,
-                      border: `1px solid ${colors.borderColor}`,
-                      borderRadius: 2,
-                      mb: 3,
-                      overflow: 'hidden',
-                      width: '100%'
-                    }}
-                  >
-                    {/* Card Header with image */}
-                    <Box sx={{ width: '100%', position: 'relative' }}>
-                      <CardMedia
-                        component="img"
-                        height="220"
-                        image={article.image || 'https://via.placeholder.com/500x200?text=Forex+News'}
-                        alt={article.title}
-                        sx={{ width: '100%' }}
-                      />
-                      <Box sx={{ 
-                        position: 'absolute', 
-                        bottom: 0, 
-                        left: 0, 
-                        width: '100%', 
-                        bgcolor: 'rgba(10, 12, 20, 0.7)',
-                        p: 2
-                      }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Typography variant="caption" sx={{ color: colors.secondaryText }}>
-                            {article.source}
-                          </Typography>
-                          <Typography variant="caption" sx={{ color: colors.secondaryText }}>
-                            {formatDate(article.date)}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    </Box>
-                    
-                    {/* Article content */}
-                    <Box sx={{ p: 3 }}>
-                      <Typography 
-                        variant="h6" 
-                        sx={{ 
-                          fontWeight: 'bold', 
-                          mb: 2,
-                          lineHeight: 1.3
-                        }}
-                      >
-                        {article.title}
-                      </Typography>
-                      
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
-                          color: colors.secondaryText, 
-                          mb: 3
-                        }}
-                      >
-                        {article.summary}
-                      </Typography>
-                      
-                      {/* Tags and sentiment */}
-                      <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          {article.sentiment === 'Bullish' ? (
-                            <TrendingUpIcon fontSize="small" sx={{ color: colors.buyGreen }} />
-                          ) : article.sentiment === 'Bearish' ? (
-                            <TrendingDownIcon fontSize="small" sx={{ color: colors.sellRed }} />
-                          ) : (
-                            <HelpOutlineIcon fontSize="small" sx={{ color: colors.secondaryText }} />
-                          )}
-                          <Typography 
-                            variant="body2" 
-                            sx={{ 
-                              color: getSentimentColor(article.sentiment),
-                              fontWeight: 'bold'
-                            }}
-                          >
-                            {article.sentiment || 'Neutral'}
-                          </Typography>
-                        </Box>
-                        
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Typography 
-                            variant="body2" 
-                            sx={{ 
-                              color: getImpactColor(article.impact),
-                              fontWeight: 'bold'
-                            }}
-                          >
-                            Impact: {article.impact || 'Medium'}
-                          </Typography>
+                <>
+                  {newsData.map(article => (
+                    <Paper
+                      key={article.id}
+                      elevation={0}
+                      sx={{ 
+                        bgcolor: colors.cardBg, 
+                        color: colors.primaryText,
+                        border: `1px solid ${colors.borderColor}`,
+                        borderRadius: 2,
+                        mb: 3,
+                        overflow: 'hidden',
+                        width: '100%'
+                      }}
+                    >
+                      {/* Card Header with image */}
+                      <Box sx={{ width: '100%', position: 'relative' }}>
+                        <CardMedia
+                          component="img"
+                          height="220"
+                          image={article.image || 'https://via.placeholder.com/500x200?text=Forex+News'}
+                          alt={article.title}
+                          sx={{ width: '100%' }}
+                        />
+                        <Box sx={{ 
+                          position: 'absolute', 
+                          bottom: 0, 
+                          left: 0, 
+                          width: '100%', 
+                          bgcolor: 'rgba(10, 12, 20, 0.7)',
+                          p: 2
+                        }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography variant="caption" sx={{ color: colors.secondaryText }}>
+                              {article.source}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: colors.secondaryText }}>
+                              {formatDate(article.date)}
+                            </Typography>
+                          </Box>
                         </Box>
                       </Box>
                       
-                      {/* Currency tags */}
-                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
-                        {article.relatedCurrencies && article.relatedCurrencies.map(currency => (
-                          <Chip 
-                            key={currency} 
-                            label={currency} 
-                            size="small"
-                            sx={{ 
-                              bgcolor: colors.panelBg,
-                              color: colors.secondaryText,
-                              borderRadius: '4px',
-                              height: '24px'
-                            }}
-                          />
-                        ))}
-                      </Box>
-                    </Box>
-                    
-                    {/* Action buttons */}
-                    <Box sx={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      borderTop: `1px solid ${colors.borderColor}`,
-                      p: 2
-                    }}>
-                      <Box>
-                        <Tooltip title={savedArticles.some(saved => saved.id === article.id) ? "Remove from Saved" : "Save Article"}>
-                          <IconButton 
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              toggleSaveArticle(article);
-                            }}
-                            sx={{ color: savedArticles.some(saved => saved.id === article.id) ? colors.accentBlue : colors.secondaryText }}
-                          >
-                            {savedArticles.some(saved => saved.id === article.id) ? <BookmarkIcon /> : <BookmarkBorderIcon />}
-                          </IconButton>
-                        </Tooltip>
-                        
-                        <Tooltip title="Share Article">
-                          <IconButton 
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              shareArticle(article);
-                            }}
-                            sx={{ color: colors.secondaryText }}
-                          >
-                            <ShareIcon />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                      
-                      <Box>
-                        <Button
-                          variant="text"
-                          endIcon={<OpenInNewIcon />}
-                          component="a"
-                          href={article.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                      {/* Article content */}
+                      <Box sx={{ p: 3 }}>
+                        <Typography 
+                          variant="h6" 
                           sx={{ 
-                            color: colors.accentBlue,
-                            textTransform: 'none'
+                            fontWeight: 'bold', 
+                            mb: 2,
+                            lineHeight: 1.3
                           }}
                         >
-                          Read Full Article
-                        </Button>
+                          {article.title}
+                        </Typography>
+                        
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: colors.secondaryText, 
+                            mb: 3
+                          }}
+                        >
+                          {article.summary}
+                        </Typography>
+                        
+                        {/* Tags and sentiment */}
+                        <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            {article.sentiment === 'Bullish' ? (
+                              <TrendingUpIcon fontSize="small" sx={{ color: colors.buyGreen }} />
+                            ) : article.sentiment === 'Bearish' ? (
+                              <TrendingDownIcon fontSize="small" sx={{ color: colors.sellRed }} />
+                            ) : (
+                              <HelpOutlineIcon fontSize="small" sx={{ color: colors.secondaryText }} />
+                            )}
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                color: getSentimentColor(article.sentiment),
+                                fontWeight: 'bold'
+                              }}
+                            >
+                              {article.sentiment || 'Neutral'}
+                            </Typography>
+                          </Box>
+                          
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                color: getImpactColor(article.impact),
+                                fontWeight: 'bold'
+                              }}
+                            >
+                              Impact: {article.impact || 'Medium'}
+                            </Typography>
+                          </Box>
+                        </Box>
+                        
+                        {/* Currency tags */}
+                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+                          {article.relatedCurrencies && article.relatedCurrencies.map(currency => (
+                            <Chip 
+                              key={currency} 
+                              label={currency} 
+                              size="small"
+                              sx={{ 
+                                bgcolor: colors.panelBg,
+                                color: colors.secondaryText,
+                                borderRadius: '4px',
+                                height: '24px'
+                              }}
+                            />
+                          ))}
+                        </Box>
                       </Box>
+                      
+                      {/* Action buttons */}
+                      <Box sx={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        borderTop: `1px solid ${colors.borderColor}`,
+                        p: 2
+                      }}>
+                        <Box>
+                          <Tooltip title={savedArticles.some(saved => saved.id === article.id) ? "Remove from Saved" : "Save Article"}>
+                            <IconButton 
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                toggleSaveArticle(article);
+                              }}
+                              sx={{ color: savedArticles.some(saved => saved.id === article.id) ? colors.accentBlue : colors.secondaryText }}
+                            >
+                              {savedArticles.some(saved => saved.id === article.id) ? <BookmarkIcon /> : <BookmarkBorderIcon />}
+                            </IconButton>
+                          </Tooltip>
+                          
+                          <Tooltip title="Share Article">
+                            <IconButton 
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                shareArticle(article);
+                              }}
+                              sx={{ color: colors.secondaryText }}
+                            >
+                              <ShareIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                        
+                        <Box>
+                          <Button
+                            variant="text"
+                            endIcon={<OpenInNewIcon />}
+                            component="a"
+                            href={article.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            sx={{ 
+                              color: colors.accentBlue,
+                              textTransform: 'none'
+                            }}
+                          >
+                            Read Full Article
+                          </Button>
+                        </Box>
+                      </Box>
+                    </Paper>
+                  ))}
+                  
+                  {/* Pagination controls */}
+                  {totalPages > 1 && (
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        mt: 4,
+                        mb: 2
+                      }}
+                    >
+                      <Stack spacing={2}>
+                        <Pagination
+                          count={totalPages}
+                          page={page}
+                          onChange={handlePageChange}
+                          color="primary"
+                          size="large"
+                          showFirstButton
+                          showLastButton
+                          sx={{
+                            '& .MuiPaginationItem-root': {
+                              color: colors.secondaryText,
+                              '&.Mui-selected': {
+                                bgcolor: colors.accentBlue,
+                                color: colors.primaryText,
+                                '&:hover': {
+                                  bgcolor: 'primary.dark',
+                                },
+                              },
+                              '&:hover': {
+                                bgcolor: colors.hoverBg,
+                              },
+                            },
+                          }}
+                        />
+                      </Stack>
                     </Box>
-                  </Paper>
-                ))
+                  )}
+                </>
               )}
             </Box>
           )}
