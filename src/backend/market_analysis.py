@@ -374,37 +374,63 @@ def generate_synthetic_data(symbol):
     Returns:
         dict: Synthetic market data
     """
-    # Define some base prices for common forex pairs
+    # Define some base prices for common forex pairs with updated values
     base_prices = {
-        'EURUSD': 1.0782,
-        'GBPUSD': 1.26734,
+        'EURUSD': 1.0853,
+        'GBPUSD': 1.2701,
         'USDJPY': 151.68,
         'USDCAD': 1.3642,
         'AUDUSD': 0.6578,
         'NZDUSD': 0.6142,
-        'USDCHF': 0.9014,
-        'EURGBP': 0.8523,
-        'EURJPY': 163.54,
-        'GBPJPY': 192.13
+        'USDCHF': 0.8987,
+        'EURGBP': 0.8547,
+        'EURJPY': 164.64,
+        'GBPJPY': 192.65,
+        'USDMXN': 19.87,
+        'USDZAR': 18.45,
+        'USDTRY': 32.17,
+        'USDBRL': 5.42,
+        'USDCNY': 7.24,
+        'USDRUB': 90.75,
+        'USDINR': 83.47
     }
     
     # Clean symbol for lookup - remove =X or -X suffix if present
     clean_symbol = symbol.replace('-X', '').replace('=X', '')
     
     # For 6-character symbols, check if they look like forex pairs
+    is_forex = False
     if len(clean_symbol) == 6:
-        forex_currencies = ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'NZD', 'CAD', 'CHF']
+        forex_currencies = ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'NZD', 'CAD', 'CHF', 'MXN', 'ZAR', 'TRY', 'BRL', 'CNY', 'RUB', 'INR']
         first_currency = clean_symbol[:3]
         second_currency = clean_symbol[3:]
         
         if first_currency in forex_currencies and second_currency in forex_currencies:
             # This is a forex pair - ensure it has a reasonable price
+            is_forex = True
             if clean_symbol not in base_prices:
                 # If not in our list, use a reasonable default based on similar pairs
                 if 'JPY' in clean_symbol:
                     base_prices[clean_symbol] = 100.0 + (np.random.random() * 50)
-                elif 'GBP' in clean_symbol:
-                    base_prices[clean_symbol] = 1.2 + (np.random.random() * 0.3)
+                elif 'GBP' in clean_symbol or 'EUR' in clean_symbol:
+                    if second_currency == 'USD':
+                        # GBP/USD or EUR/USD type pairs are typically > 1
+                        base_prices[clean_symbol] = 1.0 + (np.random.random() * 0.3)
+                    elif first_currency == 'USD':
+                        # USD/GBP or USD/EUR are typically < 1
+                        base_prices[clean_symbol] = 0.7 + (np.random.random() * 0.2)
+                    else:
+                        base_prices[clean_symbol] = 0.8 + (np.random.random() * 0.4)
+                elif second_currency == 'USD':
+                    # Other currency against USD (like AUD/USD)
+                    base_prices[clean_symbol] = 0.5 + (np.random.random() * 0.3)
+                elif first_currency == 'USD':
+                    # USD against other currency
+                    if second_currency in ['MXN', 'ZAR', 'TRY', 'BRL', 'RUB', 'INR']:
+                        # Emerging market currencies have higher USD exchange rates
+                        base_prices[clean_symbol] = 10.0 + (np.random.random() * 30.0)
+                    else:
+                        base_prices[clean_symbol] = 1.0 + (np.random.random() * 0.5)
                 else:
                     base_prices[clean_symbol] = 1.0 + (np.random.random() * 0.2)
     
@@ -413,6 +439,13 @@ def generate_synthetic_data(symbol):
     
     # Add some randomness
     current_price = base_price * (1 + (np.random.random() * 0.02 - 0.01))
+    
+    # For forex pairs, ensure appropriate precision (typically 4-5 decimal places)
+    if is_forex:
+        if 'JPY' in clean_symbol:
+            current_price = round(current_price, 3)  # JPY pairs usually have 3 decimal places
+        else:
+            current_price = round(current_price, 5)  # Other forex pairs typically have 5 decimal places
     
     # Generate support and resistance levels
     support_levels = [
@@ -491,26 +524,6 @@ def generate_synthetic_data(symbol):
         slope = (recent_prices[-1] - recent_prices[0]) / len(recent_prices)
     trend = "Bullish" if slope > 0 else "Bearish"
     
-    # Generate consistent sentiment data for similar symbols
-    # Use the symbol as a seed for pseudo-random but consistent results
-    random.seed(hash(clean_symbol) % 10000)
-    
-    # Realistic sentiment values
-    sentiment_confidence = round(random.random() * 30 + 50)  # 50-80 range
-    is_bullish = random.random() > 0.5
-    overall_sentiment = "Bullish" if is_bullish else "Bearish"
-    
-    # News and social sentiment
-    news_sentiment_value = round(random.random() * 0.8 - 0.4, 2)  # -0.4 to 0.4
-    social_sentiment_value = round(random.random() * 0.8 - 0.4, 2)  # -0.4 to 0.4
-    
-    # News counts
-    news_count = round(random.random() * 50 + 10)  # 10-60
-    social_count = round(random.random() * 200 + 50)  # 50-250
-    
-    # Reset random seed
-    random.seed()
-    
     # Return synthetic data in the same format as real data
     return {
         "symbol": symbol,
@@ -541,13 +554,13 @@ def generate_synthetic_data(symbol):
             "resistance": resistance_levels
         },
         "sentiment": {
-            "overall": overall_sentiment,
-            "confidence": sentiment_confidence,
-            "news_sentiment": news_sentiment_value,
-            "social_sentiment": social_sentiment_value,
-            "market_mood": "Positive" if is_bullish else "Negative",
-            "news_count": news_count,
-            "social_count": social_count
+            "overall": "Bullish" if np.random.random() > 0.5 else "Bearish",
+            "confidence": round(np.random.random() * 30 + 50),
+            "news_sentiment": round(np.random.random() * 0.6 - 0.3, 2),
+            "social_sentiment": round(np.random.random() * 0.6 - 0.3, 2),
+            "market_mood": "Positive" if np.random.random() > 0.5 else "Negative",
+            "news_count": round(np.random.random() * 50 + 10),
+            "social_count": round(np.random.random() * 200 + 50)
         }
     }
 
@@ -564,28 +577,38 @@ def analyze_stock(symbol):
     try:
         logger.info(f"Starting analysis for symbol: {symbol}")
         
-        # Force synthetic data for all forex pairs
-        # Check if it's a forex symbol (either by name or pattern)
-        clean_symbol = symbol.replace('-X', '').replace('=X', '')
+        # Expanded list of problematic symbols that need synthetic data
+        problematic_symbols = [
+            'GBPUSD', 'GBPUSD-X', 'GBPUSD=X',
+            'USDJPY', 'USDJPY-X', 'USDJPY=X',
+            'USDCAD', 'USDCAD-X', 'USDCAD=X',
+            'EURUSD', 'EURUSD-X', 'EURUSD=X',
+            'AUDUSD', 'AUDUSD-X', 'AUDUSD=X',
+            'NZDUSD', 'NZDUSD-X', 'NZDUSD=X',
+            'USDCHF', 'USDCHF-X', 'USDCHF=X',
+            'EURGBP', 'EURGBP-X', 'EURGBP=X',
+            'EURJPY', 'EURJPY-X', 'EURJPY=X',
+            'GBPJPY', 'GBPJPY-X', 'GBPJPY=X'
+        ]
+        
+        # Also check if it matches the format of a forex pair
         forex_currencies = ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'NZD', 'CAD', 'CHF']
+        clean_symbol = symbol.replace('-X', '').replace('=X', '')
         
         is_forex_pair = False
-        # Check explicit forex naming pattern
-        if '-X' in symbol or '=X' in symbol:
-            is_forex_pair = True
-        # Check six-character pattern with currency codes
-        elif len(clean_symbol) == 6:
+        if len(clean_symbol) == 6:
             first_currency = clean_symbol[:3]
             second_currency = clean_symbol[3:]
             if first_currency in forex_currencies and second_currency in forex_currencies:
                 is_forex_pair = True
+                logger.info(f"Detected forex pair: {symbol}")
         
-        # Always use synthetic data for forex pairs
-        if is_forex_pair:
-            logger.info(f"Using synthetic data for forex pair: {symbol}")
+        # Check if we need to use synthetic data
+        # Always use synthetic data for forex pairs for consistency
+        if any(ps == symbol for ps in problematic_symbols) or is_forex_pair:
+            logger.info(f"Using synthetic data for forex/problematic symbol: {symbol}")
             return generate_synthetic_data(symbol)
         
-        # Continue with regular analysis for non-forex symbols...
         # Get historical data for the last 30 days
         end_date = datetime.now()
         start_date = end_date - timedelta(days=30)
@@ -604,7 +627,7 @@ def analyze_stock(symbol):
         if hist is None or hist.empty:
             logger.warning(f"No data available from Yahoo Finance for {formatted_symbol}, using synthetic data")
             return generate_synthetic_data(symbol)
-        
+            
         logger.info(f"Processing data for {formatted_symbol}, {len(hist)} data points")
         
         # Prepare data for linear regression

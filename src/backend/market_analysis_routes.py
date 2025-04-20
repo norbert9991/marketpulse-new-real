@@ -24,10 +24,60 @@ def get_market_analysis(symbol):
         # Clean the symbol by removing -X suffix if present
         clean_symbol = symbol.split('-X')[0] if '-X' in symbol else symbol
         
+        # Check if this is a forex pair - we'll force refresh data for forex pairs
+        is_forex = False
+        forex_currencies = ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'NZD', 'CAD', 'CHF']
+        if clean_symbol and len(clean_symbol) == 6:
+            first_currency = clean_symbol[:3]
+            second_currency = clean_symbol[3:]
+            if first_currency in forex_currencies and second_currency in forex_currencies:
+                is_forex = True
+                logger.info(f"Forex pair detected: {symbol}")
+        
         logger.info(f"Fetching market analysis for symbol: {symbol}, clean_symbol: {clean_symbol}")
         
-        conn = db_manager.get_connection()
-        cursor = conn.cursor()
+        # For forex pairs, first check if we have CURRENT data
+        if is_forex:
+            logger.info(f"Checking for current data for forex pair: {symbol}")
+            # Get the most recent date from price history
+            conn = db_manager.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT MAX(timestamp)
+                FROM price_history
+                WHERE symbol = %s
+            """, (symbol,))
+            
+            last_date_row = cursor.fetchone()
+            last_date = last_date_row[0] if last_date_row and last_date_row[0] else None
+            
+            # Check if the data is stale (more than 1 day old)
+            today = datetime.now().date()
+            data_is_stale = False
+            
+            if last_date:
+                days_old = (today - last_date.date()).days
+                logger.info(f"Last data for {symbol} is from {last_date.date()}, which is {days_old} days old")
+                if days_old > 1:
+                    data_is_stale = True
+            else:
+                data_is_stale = True
+                
+            if data_is_stale:
+                logger.info(f"Data for {symbol} is stale or missing, generating fresh data")
+                cursor.close()
+                db_manager.release_connection(conn)
+                # Generate fresh synthetic data for forex pairs
+                synthetic_data = generate_synthetic_data(symbol)
+                ensure_complete_response_structure(synthetic_data)
+                return jsonify(synthetic_data), 200
+                
+            # Continue with standard processing if data is current
+            cursor.close()
+            db_manager.release_connection(conn)
+            conn = db_manager.get_connection()
+            cursor = conn.cursor()
         
         # First try with the original symbol
         cursor.execute("""
@@ -174,6 +224,30 @@ def get_market_analysis(symbol):
             historical_low.append(float(low_price) if low_price else 0.0)
             historical_close.append(float(close_price) if close_price else 0.0)
             historical_prices.append(float(close_price) if close_price else 0.0)
+        
+        # Check if historical data is stale (most recent date is more than 1 day old)
+        data_is_stale = False
+        if historical_dates:
+            last_date_str = historical_dates[-1]
+            try:
+                last_date = datetime.strptime(last_date_str, '%Y-%m-%d').date()
+                days_old = (datetime.now().date() - last_date).days
+                if days_old > 1:
+                    logger.info(f"Historical data for {symbol} is stale: last date {last_date_str}, {days_old} days old")
+                    data_is_stale = True
+            except:
+                data_is_stale = True
+        else:
+            data_is_stale = True
+        
+        # Generate fresh data for stale or missing historical data
+        if data_is_stale and is_forex:
+            logger.info(f"Generating new synthetic data for stale historical data for {symbol}")
+            cursor.close()
+            db_manager.release_connection(conn)
+            synthetic_data = generate_synthetic_data(symbol)
+            ensure_complete_response_structure(synthetic_data)
+            return jsonify(synthetic_data), 200
         
         # Update response with historical data
         response["historical_data"] = {
