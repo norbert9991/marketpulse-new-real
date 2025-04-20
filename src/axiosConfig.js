@@ -612,46 +612,6 @@ export const API = {
       }
     },
     
-    forceRefresh: (symbol) => {
-      try {
-        console.log(`[API] Forcing refresh for symbol: ${symbol}`);
-        
-        // Clear local cache for this symbol
-        const cacheKey = `market_analysis_${symbol}`;
-        apiCache.clear(cacheKey);
-        
-        // Try to clear other possible variations of the symbol
-        if (symbol.includes('-X')) {
-          apiCache.clear(`market_analysis_${symbol.replace('-X', '=X')}`);
-          apiCache.clear(`market_analysis_${symbol.replace('-X', '')}`);
-        } else if (symbol.includes('=X')) {
-          apiCache.clear(`market_analysis_${symbol.replace('=X', '-X')}`);
-          apiCache.clear(`market_analysis_${symbol.replace('=X', '')}`);
-        } else if (symbol.includes('/')) {
-          const noSlash = symbol.replace('/', '');
-          apiCache.clear(`market_analysis_${noSlash}`);
-          apiCache.clear(`market_analysis_${noSlash}-X`);
-          apiCache.clear(`market_analysis_${noSlash}=X`);
-        }
-        
-        // Call the backend force-refresh endpoint to clear server cache and force re-fetch
-        return axiosInstance.post(`/api/market-analysis/force-refresh/${symbol}`)
-          .then(response => {
-            console.log(`[API] Force refresh successful for ${symbol}`);
-            
-            // Add the fresh data to the cache
-            if (response.data && response.data.data) {
-              apiCache.set(cacheKey, response.data.data, 5 * 60 * 1000); // Cache for 5 minutes
-            }
-            
-            return response;
-          });
-      } catch (error) {
-        console.error(`[API] Error in forceRefresh for ${symbol}:`, error);
-        return Promise.reject(error);
-      }
-    },
-    
     // Helper function to generate basic synthetic data
     generateSyntheticData: (symbol) => {
       return generateBasicSyntheticData(symbol);
