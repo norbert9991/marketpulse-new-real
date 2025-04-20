@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from db_connection import db_manager
-from market_analysis import analyze_stock, generate_synthetic_data
+from market_analysis import analyze_stock, generate_synthetic_data, format_symbol_for_yahoo
 import json
 import logging
 import concurrent.futures
@@ -19,36 +19,25 @@ def get_market_analysis(symbol):
     conn = None
     cursor = None
     try:
-        # Clean the symbol by removing -X suffix if present
+        # Clean and format the symbol properly
+        original_symbol = symbol
         clean_symbol = symbol.split('-X')[0] if '-X' in symbol else symbol
+        yahoo_formatted_symbol = format_symbol_for_yahoo(symbol)
         
-        logger.info(f"Fetching market analysis for symbol: {symbol}, clean_symbol: {clean_symbol}")
+        logger.info(f"Fetching market analysis for symbol: {original_symbol}, clean_symbol: {clean_symbol}, yahoo_formatted: {yahoo_formatted_symbol}")
+        
+        # Try various symbol formats when querying the database
+        symbols_to_try = list(set([original_symbol, clean_symbol, yahoo_formatted_symbol]))
+        logger.info(f"Will try the following symbol formats: {symbols_to_try}")
         
         conn = db_manager.get_connection()
         cursor = conn.cursor()
         
-        # First try with the original symbol
-        cursor.execute("""
-            SELECT 
-                md.current_price, 
-                md.trend,
-                ti.rsi, 
-                ti.macd, 
-                ti.macd_signal, 
-                ti.macd_hist, 
-                ti.sma20, 
-                ti.sma50, 
-                ti.sma200
-            FROM market_data md
-            LEFT JOIN technical_indicators ti ON md.symbol = ti.symbol
-            WHERE md.symbol = %s
-        """, (symbol,))
+        market_row = None
+        symbol_found = None
         
-        market_row = cursor.fetchone()
-        
-        # If no results with original symbol and it differs from clean_symbol, try with clean_symbol
-        if not market_row and symbol != clean_symbol:
-            logger.info(f"No market data found for {symbol}, trying with clean symbol: {clean_symbol}")
+        # Try each symbol format in order
+        for sym in symbols_to_try:
             cursor.execute("""
                 SELECT 
                     md.current_price, 
@@ -63,46 +52,49 @@ def get_market_analysis(symbol):
                 FROM market_data md
                 LEFT JOIN technical_indicators ti ON md.symbol = ti.symbol
                 WHERE md.symbol = %s
-            """, (clean_symbol,))
+            """, (sym,))
             
-            market_row = cursor.fetchone()
-            
-            # If we found data with the clean symbol, use that as the symbol in the response
-            if market_row:
-                symbol = clean_symbol
+            row = cursor.fetchone()
+            if row:
+                market_row = row
+                symbol_found = sym
+                logger.info(f"Found market data using symbol format: {sym}")
+                break
         
         # Fetch support and resistance levels
-        # Use the symbol that was found to have data in the previous query
-        symbol_to_use = clean_symbol if market_row and symbol != clean_symbol else symbol
-        cursor.execute("""
-            SELECT level_type, level_value
-            FROM support_resistance
-            WHERE symbol = %s
-        """, (symbol_to_use,))
+        sr_rows = []
+        prediction_rows = []
         
-        sr_rows = cursor.fetchall()
+        if symbol_found:
+            cursor.execute("""
+                SELECT level_type, level_value
+                FROM support_resistance
+                WHERE symbol = %s
+            """, (symbol_found,))
+            
+            sr_rows = cursor.fetchall()
+            
+            # Fetch price predictions
+            cursor.execute("""
+                SELECT prediction_date, predicted_price
+                FROM price_predictions
+                WHERE symbol = %s
+                ORDER BY prediction_date ASC
+            """, (symbol_found,))
+            
+            prediction_rows = cursor.fetchall()
         
-        # Fetch price predictions
-        cursor.execute("""
-            SELECT prediction_date, predicted_price
-            FROM price_predictions
-            WHERE symbol = %s
-            ORDER BY prediction_date ASC
-        """, (symbol_to_use,))
-        
-        prediction_rows = cursor.fetchall()
-        
-        # If no market data exists yet, perform analysis
+        # If no market data exists yet, perform analysis with the Yahoo-formatted symbol
         if not market_row:
             cursor.close()
             db_manager.release_connection(conn)
-            logger.info(f"No existing market data for {symbol}, performing new analysis")
-            analysis_result = analyze_stock(symbol)
+            logger.info(f"No existing market data for {symbol}, performing new analysis with {yahoo_formatted_symbol}")
+            analysis_result = analyze_stock(yahoo_formatted_symbol)
             return jsonify(analysis_result), 200
         
-        # Prepare response
+        # Prepare response using the original requested symbol for consistency in the UI
         response = {
-            "symbol": symbol,
+            "symbol": original_symbol,
             "current_price": float(market_row[0]) if market_row[0] else 0.0,
             "trend": market_row[1] if market_row[1] else "Neutral",
             "technical_indicators": {
@@ -153,13 +145,14 @@ def get_market_analysis(symbol):
 def refresh_market_analysis(symbol):
     """Force a refresh of market analysis data for a specific symbol"""
     try:
-        # Clean the symbol by removing -X suffix if present
-        clean_symbol = symbol.split('-X')[0] if '-X' in symbol else symbol
+        # Format the symbol for Yahoo Finance
+        original_symbol = symbol
+        yahoo_formatted_symbol = format_symbol_for_yahoo(symbol)
         
-        logger.info(f"Refreshing market analysis for symbol: {symbol}, clean_symbol: {clean_symbol}")
+        logger.info(f"Refreshing market analysis for symbol: {original_symbol}, yahoo_formatted: {yahoo_formatted_symbol}")
         
-        # Use the clean symbol for analysis
-        analysis_result = analyze_stock(clean_symbol)
+        # Use the Yahoo-formatted symbol for analysis
+        analysis_result = analyze_stock(yahoo_formatted_symbol)
         
         if "error" in analysis_result:
             return jsonify({"error": analysis_result["error"]}), 400
@@ -175,33 +168,28 @@ def get_symbol_history(symbol):
     conn = None
     cursor = None
     try:
-        # Clean the symbol by removing -X suffix if present
+        # Format the symbol properly
+        original_symbol = symbol
         clean_symbol = symbol.split('-X')[0] if '-X' in symbol else symbol
+        yahoo_formatted_symbol = format_symbol_for_yahoo(symbol)
         
-        logger.info(f"Fetching price history for symbol: {symbol}, clean_symbol: {clean_symbol}")
+        # Remove =X suffix for database queries since the DB typically stores the clean version
+        db_symbol = yahoo_formatted_symbol.replace('=X', '') if yahoo_formatted_symbol.endswith('=X') else yahoo_formatted_symbol
+        
+        logger.info(f"Fetching price history for symbol: {original_symbol}, clean_symbol: {clean_symbol}, yahoo_formatted: {yahoo_formatted_symbol}, db_symbol: {db_symbol}")
+        
+        # Try various symbol formats when querying the database
+        symbols_to_try = list(set([original_symbol, clean_symbol, yahoo_formatted_symbol, db_symbol]))
+        logger.info(f"Will try the following symbol formats: {symbols_to_try}")
         
         conn = db_manager.get_connection()
         cursor = conn.cursor()
         
-        # First try with the original symbol
-        cursor.execute("""
-            SELECT 
-                open_price,
-                high_price,
-                low_price,
-                close_price,
-                timestamp
-            FROM price_history
-            WHERE symbol = %s
-            ORDER BY timestamp DESC
-            LIMIT 30
-        """, (symbol,))
+        rows = []
+        symbol_found = None
         
-        rows = cursor.fetchall()
-        
-        # If no results with original symbol and it differs from clean_symbol, try with clean_symbol
-        if len(rows) == 0 and symbol != clean_symbol:
-            logger.info(f"No data found for {symbol}, trying with clean symbol: {clean_symbol}")
+        # Try each symbol format in order
+        for sym in symbols_to_try:
             cursor.execute("""
                 SELECT 
                     open_price,
@@ -213,22 +201,23 @@ def get_symbol_history(symbol):
                 WHERE symbol = %s
                 ORDER BY timestamp DESC
                 LIMIT 30
-            """, (clean_symbol,))
+            """, (sym,))
             
-            rows = cursor.fetchall()
-            
-            # If we found data with the clean symbol, use that as the symbol in the response
-            if len(rows) > 0:
-                symbol = clean_symbol
+            result_rows = cursor.fetchall()
+            if result_rows and len(result_rows) > 0:
+                rows = result_rows
+                symbol_found = sym
+                logger.info(f"Found price history using symbol format: {sym}")
+                break
         
         # If still no data, return appropriate message
         if len(rows) == 0:
-            logger.warning(f"No price history data found for symbol: {symbol} or {clean_symbol}")
+            logger.warning(f"No price history data found for any format of symbol: {original_symbol}")
             cursor.close()
             db_manager.release_connection(conn)
             return jsonify({
                 "message": "No historical data available",
-                "symbol": symbol,
+                "symbol": original_symbol,
                 "history": []
             }), 404
         
@@ -249,8 +238,9 @@ def get_symbol_history(symbol):
         cursor.close()
         db_manager.release_connection(conn)
         
+        # Always return the original symbol in the response for UI consistency
         return jsonify({
-            "symbol": symbol,
+            "symbol": original_symbol,
             "history": history
         }), 200
         

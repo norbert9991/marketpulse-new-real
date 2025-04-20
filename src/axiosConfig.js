@@ -563,6 +563,17 @@ export const API = {
             }
           }
           
+          // Known forex pairs for more reliable formatting
+          const knownForexPairs = [
+            'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD'
+          ];
+          
+          // Ensure exact matching for common forex pairs (case insensitive)
+          const uppercaseSymbol = data.symbol.toUpperCase();
+          if (knownForexPairs.includes(uppercaseSymbol)) {
+            formattedSymbol = `${uppercaseSymbol}=X`;
+          }
+          
           // Handle stock indices
           const indices = ['GSPC', 'DJI', 'IXIC', 'NYA', 'XAX', 'RUT'];
           if (indices.includes(data.symbol) && !data.symbol.startsWith('^')) {
@@ -594,6 +605,12 @@ export const API = {
             // Cache the response for 10 minutes (600000 ms)
             if (response.data) {
               apiCache.set(cacheKey, response.data, 10 * 60 * 1000);
+              
+              // Also cache with the original symbol for better cache hits
+              if (originalSymbol !== formattedSymbol) {
+                const originalCacheKey = `market_analysis_${originalSymbol}`;
+                apiCache.set(originalCacheKey, response.data, 10 * 60 * 1000);
+              }
             }
             
             return response;
@@ -609,6 +626,12 @@ export const API = {
                   // Cache synthetic data too, but for less time (5 minutes)
                   if (syntheticResponse.data) {
                     apiCache.set(cacheKey, syntheticResponse.data, 5 * 60 * 1000);
+                    
+                    // Also cache with the original symbol
+                    if (originalSymbol !== formattedSymbol) {
+                      const originalCacheKey = `market_analysis_${originalSymbol}`;
+                      apiCache.set(originalCacheKey, syntheticResponse.data, 5 * 60 * 1000);
+                    }
                   }
                   return syntheticResponse;
                 })
@@ -715,6 +738,17 @@ export const API = {
             }
           }
           
+          // Known forex pairs for more reliable formatting
+          const knownForexPairs = [
+            'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD'
+          ];
+          
+          // Ensure exact matching for common forex pairs (case insensitive)
+          const uppercaseSymbol = symbol.toUpperCase();
+          if (knownForexPairs.includes(uppercaseSymbol)) {
+            formattedSymbol = `${uppercaseSymbol}=X`;
+          }
+          
           // Handle stock indices
           const indices = ['GSPC', 'DJI', 'IXIC', 'NYA', 'XAX', 'RUT'];
           if (indices.includes(symbol) && !symbol.startsWith('^')) {
@@ -744,7 +778,7 @@ export const API = {
               // Return empty data structure instead of rejecting
               return {
                 data: {
-                  symbol: cleanSymbol,
+                  symbol: originalSymbol,
                   history: []
                 }
               };

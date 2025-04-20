@@ -79,6 +79,13 @@ def get_ticker_data(symbol, start_date_str, end_date_str):
         # Format symbol for Yahoo Finance
         formatted_symbol = format_symbol_for_yahoo(symbol)
         
+        # Check if this is one of the problematic symbols
+        problematic_pairs = ['EURUSD=X', 'AUDUSD=X', 'NZDUSD=X', 'USDCHF=X']
+        is_problematic = formatted_symbol in problematic_pairs
+        
+        if is_problematic:
+            logger.info(f"Special handling for problematic pair: {formatted_symbol}")
+        
         # Create a cache key for this request
         cache_key = f"{formatted_symbol}_{start_date_str}_{end_date_str}"
         
@@ -124,24 +131,38 @@ def get_ticker_data(symbol, start_date_str, end_date_str):
         # Apply rate limiting before making the API call
         rate_limiter.wait_if_needed()
         
-        logger.info(f"Fetching data from Yahoo Finance for {formatted_symbol}")
+        logger.info(f"Fetching data from Yahoo Finance for {formatted_symbol} (problematic: {is_problematic})")
+        
+        # For problematic symbols, add extra delays and use a more conservative approach
+        max_attempts = 4 if is_problematic else 3  # Allow an extra retry for problematic pairs
         
         # Get data with retry mechanism
-        for attempt in range(3):  # Retry up to 3 times
+        for attempt in range(max_attempts):
             try:
                 # Add a small random delay between attempts to avoid rate limits
                 if attempt > 0:
-                    delay = random.uniform(2, 5) * attempt
-                    logger.info(f"Waiting {delay:.2f} seconds before retry {attempt+1}/3")
+                    # Use longer delays for problematic pairs
+                    base_delay = 3.0 if is_problematic else 2.0
+                    delay = random.uniform(base_delay, base_delay * 2.5) * attempt
+                    logger.info(f"Waiting {delay:.2f} seconds before retry {attempt+1}/{max_attempts}")
                     time.sleep(delay)
                 
+                # For problematic symbols, log the exact request
+                if is_problematic:
+                    logger.info(f"Creating yfinance.Ticker for {formatted_symbol}")
+                
                 stock = yf.Ticker(formatted_symbol)
+                
                 # Parse string dates to datetime objects for yfinance
                 start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
                 end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
                 
                 # Add a small buffer to end date to ensure we get all data
                 end_date_buffer = end_date + timedelta(days=1)
+                
+                # For problematic symbols, log the exact date range
+                if is_problematic:
+                    logger.info(f"Requesting history for {formatted_symbol}: {start_date} to {end_date_buffer}")
                 
                 hist = stock.history(start=start_date, end=end_date_buffer)
                 
@@ -175,8 +196,14 @@ def get_ticker_data(symbol, start_date_str, end_date_str):
                 
                 return hist
             except Exception as e:
-                logger.error(f"Attempt {attempt+1} failed to fetch data for {formatted_symbol}: {str(e)}")
-                if attempt < 2:  # If it's not the last attempt
+                error_msg = str(e)
+                logger.error(f"Attempt {attempt+1} failed to fetch data for {formatted_symbol}: {error_msg}")
+                
+                # For problematic symbols, log more details
+                if is_problematic:
+                    logger.error(f"Error type for {formatted_symbol}: {type(e).__name__}")
+                    
+                if attempt < max_attempts - 1:  # If it's not the last attempt
                     continue
                 else:
                     return None
@@ -235,16 +262,50 @@ def format_symbol_for_yahoo(symbol):
     Returns:
         str: Properly formatted symbol for Yahoo Finance
     """
+    # Handle null/None values
+    if not symbol:
+        return symbol
+    
+    # Normalize to uppercase for consistent handling
+    symbol = symbol.upper()
+    
     # Handle currency pairs with -X suffix (e.g., GBPUSD-X, EURUSD-X)
     if '-X' in symbol:
         return symbol.replace('-X', '=X')
     
-    # Handle standard currency pairs without suffix (e.g., EURUSD, GBPUSD)
-    # Check if it might be a forex pair (exactly 6 characters and contains common currency codes)
+    # Handle the case where a symbol already has =X suffix
+    if symbol.endswith('=X'):
+        return symbol
+    
+    # Special handling for pairs that consistently failed in the past
+    problematic_pairs = {
+        'EURUSD': 'EURUSD=X',
+        'AUDUSD': 'AUDUSD=X',
+        'NZDUSD': 'NZDUSD=X',
+        'USDCHF': 'USDCHF=X',
+    }
+    
+    if symbol in problematic_pairs:
+        logger.info(f"Special handling for known pair {symbol} -> {problematic_pairs[symbol]}")
+        return problematic_pairs[symbol]
+    
+    # Standard forex pairs without a suffix
+    common_forex_pairs = [
+        # Major pairs
+        'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD',
+        # Cross pairs
+        'EURGBP', 'EURJPY', 'GBPJPY', 'EURAUD', 'EURCHF', 'EURNZD', 'GBPCHF',
+        'GBPAUD', 'GBPCAD', 'AUDCAD', 'AUDNZD', 'AUDCHF', 'AUDCAD', 'NZDCAD'
+    ]
+    
+    # Match exact forex pairs for highest precision
+    if symbol in common_forex_pairs:
+        return f"{symbol}=X"
+    
+    # If not an exact match, try the length and substring check for general forex formatting
     if len(symbol) == 6 and any(curr in symbol for curr in ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CHF', 'CAD', 'NZD']):
-        # Add the =X suffix if not already present
-        if not symbol.endswith('=X'):
-            return f"{symbol}=X"
+        # Add the =X suffix for forex pairs
+        return f"{symbol}=X"
     
     # Handle indices - add ^ if needed for indices like GSPC (S&P 500)
     if symbol in ['GSPC', 'DJI', 'IXIC', 'NYA', 'XAX', 'RUT']:
@@ -527,20 +588,27 @@ def analyze_stock(symbol):
         dict: Market analysis data
     """
     try:
-        logger.info(f"Starting analysis for symbol: {symbol}")
+        # Make sure the symbol is properly formatted for Yahoo Finance
+        original_symbol = symbol
+        formatted_symbol = format_symbol_for_yahoo(symbol)
+        
+        logger.info(f"Starting analysis for original symbol: {original_symbol}, formatted: {formatted_symbol}")
         
         # Define problematic symbols that need synthetic data
         # Note: Most forex pairs should work fine with proper formatting now
         problematic_symbols = [
             # Add only truly problematic symbols here that continuously fail
             # For example, exotic currency pairs or specific symbols with Yahoo Finance issues
-            # Leave this list empty for now since we've improved the formatting
+            # Left empty since we've improved the formatting
         ]
         
         # Check if we need to use synthetic data
-        if symbol in problematic_symbols:
-            logger.info(f"Using synthetic data for known problematic symbol: {symbol}")
-            return generate_synthetic_data(symbol)
+        if formatted_symbol in problematic_symbols:
+            logger.info(f"Using synthetic data for known problematic symbol: {formatted_symbol}")
+            synthetic_data = generate_synthetic_data(formatted_symbol)
+            # Make sure we return the original symbol for UI consistency
+            synthetic_data["symbol"] = original_symbol
+            return synthetic_data
         
         # Get historical data for the last 30 days
         end_date = datetime.now()
@@ -551,14 +619,17 @@ def analyze_stock(symbol):
         end_date_str = end_date.strftime('%Y-%m-%d')
         
         # Fetch data from Yahoo Finance with caching
-        hist = get_ticker_data(symbol, start_date_str, end_date_str)
+        hist = get_ticker_data(formatted_symbol, start_date_str, end_date_str)
         
         # If data retrieval failed, generate synthetic data
         if hist is None or hist.empty:
-            logger.warning(f"No data available from Yahoo Finance for {symbol}, using synthetic data")
-            return generate_synthetic_data(symbol)
+            logger.warning(f"No data available from Yahoo Finance for {formatted_symbol}, using synthetic data")
+            synthetic_data = generate_synthetic_data(formatted_symbol)
+            # Make sure we return the original symbol for UI consistency
+            synthetic_data["symbol"] = original_symbol
+            return synthetic_data
             
-        logger.info(f"Processing data for {symbol}, {len(hist)} data points")
+        logger.info(f"Processing data for {formatted_symbol}, {len(hist)} data points")
         
         # Prepare data for linear regression
         X = np.array(range(len(hist))).reshape(-1, 1)
@@ -602,7 +673,7 @@ def analyze_stock(symbol):
         resistance_levels = recent_data.nlargest(3).tolist()
         
         # Get sentiment analysis
-        sentiment_data = analyze_sentiment(symbol)
+        sentiment_data = analyze_sentiment(formatted_symbol)
         
         # Handle NaN values and ensure all values are JSON-serializable
         def safe_float(value):
@@ -617,9 +688,9 @@ def analyze_stock(symbol):
         prediction_dates = [(end_date + timedelta(days=i+1)).strftime('%Y-%m-%d') for i in range(len(predictions))]
         logger.info(f"Generated prediction dates: {prediction_dates}")
         
-        # Prepare response with safe value handling
+        # Prepare response with safe value handling and use original symbol for UI consistency
         response = {
-            "symbol": symbol,
+            "symbol": original_symbol,  # Use original symbol in response for UI consistency
             "current_price": safe_float(hist['Close'].iloc[-1]),
             "trend": trend,
             "slope": safe_float(slope),
@@ -649,25 +720,32 @@ def analyze_stock(symbol):
             "sentiment": sentiment_data
         }
         
-        # Store data in database
-        logger.info(f"Storing data for {symbol} in database")
-        store_success = store_price_data(symbol, response)
+        # Store data in database - use formatted symbol for database but original symbol for UI
+        # We want to store the properly formatted symbol in DB for consistency
+        logger.info(f"Storing data for {formatted_symbol} in database")
+        
+        # Make a copy with the formatted symbol for database storage
+        db_response = response.copy()
+        db_response["symbol"] = formatted_symbol
+        
+        store_success = store_price_data(formatted_symbol, db_response)
         if not store_success:
-            logger.warning(f"Failed to store price data for {symbol}")
+            logger.warning(f"Failed to store price data for {formatted_symbol}")
         
         # Store or update analysis results in the market_data table
         conn = db_manager.get_connection()
         cursor = conn.cursor()
         
         try:
-            # Check if the symbol already exists
+            # Check if the symbol already exists - try both original and formatted
             cursor.execute("""
-                SELECT * FROM market_data WHERE symbol = %s
-            """, (symbol,))
+                SELECT * FROM market_data 
+                WHERE symbol = %s OR symbol = %s
+            """, (original_symbol, formatted_symbol))
             existing = cursor.fetchone()
             
             if existing:
-                # Update existing record
+                # Update existing record with formatted symbol
                 cursor.execute("""
                     UPDATE market_data SET 
                         current_price = %s,
@@ -675,13 +753,13 @@ def analyze_stock(symbol):
                         trend = %s,
                         updated_at = NOW()
                     WHERE symbol = %s
-                """, (response['current_price'], response['slope'], response['trend'], symbol))
+                """, (response['current_price'], response['slope'], response['trend'], formatted_symbol))
             else:
-                # Insert new record
+                # Insert new record with formatted symbol
                 cursor.execute("""
                     INSERT INTO market_data (symbol, current_price, change_percentage, trend, updated_at) 
                     VALUES (%s, %s, %s, %s, NOW())
-                """, (symbol, response['current_price'], response['slope'], response['trend']))
+                """, (formatted_symbol, response['current_price'], response['slope'], response['trend']))
             
             conn.commit()
             cursor.close()
@@ -696,5 +774,7 @@ def analyze_stock(symbol):
         
     except Exception as e:
         logger.error(f"Error in analyze_stock: {str(e)}")
-        # Return synthetic data as a fallback
-        return generate_synthetic_data(symbol) 
+        # Return synthetic data as a fallback, but preserve original symbol
+        synthetic_data = generate_synthetic_data(symbol)
+        synthetic_data["symbol"] = original_symbol
+        return synthetic_data 
