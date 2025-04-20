@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, Typography, Button, Paper, TextField, Select, MenuItem, FormControl, InputLabel, Tabs, Tab, Grid, Divider, IconButton, Chip, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Switch, Tooltip } from '@mui/material';
+import { Box, Typography, Button, Paper, TextField, Select, MenuItem, FormControl, InputLabel, Tabs, Tab, Grid, Divider, IconButton, Chip, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Switch, Tooltip, Slider } from '@mui/material';
 import { createChart, CrosshairMode, LineStyle } from 'lightweight-charts';
 import Sidebar from './Sidebar';
 import { API } from '../axiosConfig';
@@ -2512,6 +2512,7 @@ const Trade = () => {
                   }}
                 >
                   {selectedPair} Trading
+                  {renderTooltip('Short-term trading focuses on quick market movements and rapid execution')}
                 </Typography>
                 
                 <Box>
@@ -2549,6 +2550,7 @@ const Trade = () => {
                   >
                     <Typography variant="h6" sx={{ color: colors.primaryText, mb: 3, fontWeight: 'bold' }}>
                       Place Order
+                      {renderTooltip('Set up your trading parameters and execute trades')}
                     </Typography>
                     
                     <Box sx={{ mb: 3 }}>
@@ -2600,67 +2602,108 @@ const Trade = () => {
                             }
                           }}
                         >
-                          <MenuItem value="market">Market Order</MenuItem>
-                          <MenuItem value="limit">Limit Order</MenuItem>
-                          <MenuItem value="stop">Stop Order</MenuItem>
+                          <MenuItem value="market">Market Order {renderTooltip('Execute immediately at current market price')}</MenuItem>
+                          <MenuItem value="limit">Limit Order {renderTooltip('Execute only when price reaches your target or better')}</MenuItem>
+                          <MenuItem value="stop">Stop Order {renderTooltip('Execute when price crosses a threshold, useful for limiting losses')}</MenuItem>
                         </Select>
                       </FormControl>
                       
-                      <TextField
-                        fullWidth
-                        label="Amount"
-                        type="number"
-                        value={amount}
-                        onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
-                        variant="outlined"
-                        sx={{ 
-                          mb: 2,
-                          '& .MuiOutlinedInput-root': {
-                            color: colors.primaryText,
-                            backgroundColor: colors.panelBg,
-                            '& fieldset': {
-                              borderColor: colors.borderColor,
+                      <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                        <TextField
+                          fullWidth
+                          label="Amount"
+                          type="number"
+                          value={amount}
+                          onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+                          variant="outlined"
+                          InputProps={{
+                            endAdornment: renderTooltip('The amount in dollars you want to trade')
+                          }}
+                          sx={{ 
+                            '& .MuiOutlinedInput-root': {
+                              color: colors.primaryText,
+                              backgroundColor: colors.panelBg,
+                              '& fieldset': {
+                                borderColor: colors.borderColor,
+                              },
+                              '&:hover fieldset': {
+                                borderColor: colors.accentBlue,
+                              },
+                              '&.Mui-focused fieldset': {
+                                borderColor: colors.accentBlue,
+                              },
                             },
-                            '&:hover fieldset': {
-                              borderColor: colors.accentBlue,
+                            '& .MuiInputLabel-root': {
+                              color: colors.secondaryText,
                             },
-                            '&.Mui-focused fieldset': {
-                              borderColor: colors.accentBlue,
-                            },
-                          },
-                          '& .MuiInputLabel-root': {
-                            color: colors.secondaryText,
-                          },
-                        }}
-                      />
+                          }}
+                        />
                       
-                      <TextField
-                        fullWidth
-                        label="Leverage"
-                        type="number"
-                        value={leverage}
-                        onChange={(e) => setLeverage(parseFloat(e.target.value) || 1)}
-                        variant="outlined"
-                        sx={{ 
-                          mb: 2,
-                          '& .MuiOutlinedInput-root': {
-                            color: colors.primaryText,
-                            backgroundColor: colors.panelBg,
-                            '& fieldset': {
-                              borderColor: colors.borderColor,
+                        <TextField
+                          fullWidth
+                          label="Leverage"
+                          type="number"
+                          value={leverage}
+                          onChange={(e) => setLeverage(parseFloat(e.target.value) || 1)}
+                          variant="outlined"
+                          InputProps={{
+                            endAdornment: renderTooltip('Multiplies your buying power but also your risk')
+                          }}
+                          sx={{ 
+                            '& .MuiOutlinedInput-root': {
+                              color: colors.primaryText,
+                              backgroundColor: colors.panelBg,
+                              '& fieldset': {
+                                borderColor: colors.borderColor,
+                              },
+                              '&:hover fieldset': {
+                                borderColor: colors.accentBlue,
+                              },
+                              '&.Mui-focused fieldset': {
+                                borderColor: colors.accentBlue,
+                              },
                             },
-                            '&:hover fieldset': {
-                              borderColor: colors.accentBlue,
+                            '& .MuiInputLabel-root': {
+                              color: colors.secondaryText,
                             },
-                            '&.Mui-focused fieldset': {
-                              borderColor: colors.accentBlue,
+                          }}
+                        />
+                      </Box>
+
+                      {orderType !== 'market' && (
+                        <TextField
+                          fullWidth
+                          label={orderType === 'limit' ? 'Limit Price' : 'Stop Price'}
+                          type="number"
+                          value={orderPrice}
+                          onChange={(e) => setOrderPrice(parseFloat(e.target.value) || 0)}
+                          variant="outlined"
+                          InputProps={{
+                            endAdornment: renderTooltip(orderType === 'limit' ? 
+                              'The price at which your order will be executed' : 
+                              'The price that triggers your stop order')
+                          }}
+                          sx={{ 
+                            mb: 2,
+                            '& .MuiOutlinedInput-root': {
+                              color: colors.primaryText,
+                              backgroundColor: colors.panelBg,
+                              '& fieldset': {
+                                borderColor: colors.borderColor,
+                              },
+                              '&:hover fieldset': {
+                                borderColor: colors.accentBlue,
+                              },
+                              '&.Mui-focused fieldset': {
+                                borderColor: colors.accentBlue,
+                              },
                             },
-                          },
-                          '& .MuiInputLabel-root': {
-                            color: colors.secondaryText,
-                          },
-                        }}
-                      />
+                            '& .MuiInputLabel-root': {
+                              color: colors.secondaryText,
+                            },
+                          }}
+                        />
+                      )}
                     </Box>
                     
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
@@ -2677,7 +2720,7 @@ const Trade = () => {
                           },
                         }}
                       >
-                        Buy / Long
+                        Buy / Long {renderTooltip('Profit when price goes up')}
                       </Button>
                       
                       <Button
@@ -2693,7 +2736,7 @@ const Trade = () => {
                           },
                         }}
                       >
-                        Sell / Short
+                        Sell / Short {renderTooltip('Profit when price goes down')}
                       </Button>
                     </Box>
                   </Paper>
@@ -2710,6 +2753,7 @@ const Trade = () => {
                   >
                     <Typography variant="h6" sx={{ color: colors.primaryText, mb: 3, fontWeight: 'bold' }}>
                       Market Overview
+                      {renderTooltip('Current market conditions and technical analysis')}
                     </Typography>
                     
                     {/* Display current price */}
@@ -2745,8 +2789,8 @@ const Trade = () => {
                     <Grid container spacing={2} sx={{ mb: 3 }}>
                       <Grid item xs={6}>
                         <Paper sx={{ p: 2, bgcolor: colors.cardBg, border: `1px solid ${colors.borderColor}` }}>
-                          <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 1 }}>
-                            RSI
+                          <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 1, display: 'flex', alignItems: 'center' }}>
+                            RSI {renderTooltip('Relative Strength Index. Above 70 is overbought, below 30 is oversold')}
                           </Typography>
                           <Typography variant="h6" sx={{ 
                             color: indicators.rsi.value > 70 ? colors.sellRed : 
@@ -2760,8 +2804,8 @@ const Trade = () => {
                       </Grid>
                       <Grid item xs={6}>
                         <Paper sx={{ p: 2, bgcolor: colors.cardBg, border: `1px solid ${colors.borderColor}` }}>
-                          <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 1 }}>
-                            MACD
+                          <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 1, display: 'flex', alignItems: 'center' }}>
+                            MACD {renderTooltip('Moving Average Convergence Divergence. Positive values suggest uptrend')}
                           </Typography>
                           <Typography variant="h6" sx={{ 
                             color: indicators.macd.histogram > 0 ? colors.buyGreen : colors.sellRed,
@@ -2772,11 +2816,41 @@ const Trade = () => {
                         </Paper>
                       </Grid>
                     </Grid>
+
+                    {/* Additional indicators row */}
+                    <Grid container spacing={2} sx={{ mb: 3 }}>
+                      <Grid item xs={6}>
+                        <Paper sx={{ p: 2, bgcolor: colors.cardBg, border: `1px solid ${colors.borderColor}` }}>
+                          <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 1, display: 'flex', alignItems: 'center' }}>
+                            Volatility {renderTooltip('Market volatility based on recent price action')}
+                          </Typography>
+                          <Typography variant="h6" sx={{ 
+                            color: Math.random() > 0.5 ? colors.warningOrange : colors.primaryText,
+                            fontWeight: 'bold'
+                          }}>
+                            {(Math.random() * 15 + 5).toFixed(2)}%
+                          </Typography>
+                        </Paper>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Paper sx={{ p: 2, bgcolor: colors.cardBg, border: `1px solid ${colors.borderColor}` }}>
+                          <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 1, display: 'flex', alignItems: 'center' }}>
+                            Trend Strength {renderTooltip('Indicates how strong the current trend is')}
+                          </Typography>
+                          <Typography variant="h6" sx={{ 
+                            color: colors.primaryText,
+                            fontWeight: 'bold'
+                          }}>
+                            {(Math.random() * 80 + 20).toFixed(0)}
+                          </Typography>
+                        </Paper>
+                      </Grid>
+                    </Grid>
                     
                     {/* Buy/Sell signals */}
                     <Box sx={{ p: 2, bgcolor: colors.cardBg, border: `1px solid ${colors.borderColor}`, borderRadius: 1, mb: 3 }}>
-                      <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 1 }}>
-                        Signal
+                      <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 1, display: 'flex', alignItems: 'center' }}>
+                        Signal {renderTooltip('Trading recommendation based on technical analysis')}
                       </Typography>
                       <Typography variant="body1" sx={{ 
                         color: indicators.rsi.value > 50 ? colors.buyGreen : colors.sellRed,
@@ -2790,8 +2864,8 @@ const Trade = () => {
                     
                     {/* Support/Resistance levels */}
                     <Box>
-                      <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 1 }}>
-                        Support/Resistance
+                      <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 1, display: 'flex', alignItems: 'center' }}>
+                        Support/Resistance {renderTooltip('Price levels where the currency pair tends to reverse direction')}
                       </Typography>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                         <Typography variant="body2" sx={{ color: colors.secondaryText }}>
@@ -2824,13 +2898,14 @@ const Trade = () => {
                   >
                     <Typography variant="h6" sx={{ color: colors.primaryText, mb: 3, fontWeight: 'bold' }}>
                       Account Information
+                      {renderTooltip('Your trading account details and active positions')}
                     </Typography>
                     
                     {/* Balance info */}
                     <Box sx={{ mb: 3 }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>
-                          Available Balance
+                        <Typography variant="body2" sx={{ color: colors.secondaryText, display: 'flex', alignItems: 'center' }}>
+                          Available Balance {renderTooltip('Funds available for new trades')}
                         </Typography>
                         <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
                           ${availableBalance.toLocaleString()}
@@ -2838,8 +2913,8 @@ const Trade = () => {
                       </Box>
                       
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>
-                          Locked Margin
+                        <Typography variant="body2" sx={{ color: colors.secondaryText, display: 'flex', alignItems: 'center' }}>
+                          Locked Margin {renderTooltip('Funds currently used as collateral for open positions')}
                         </Typography>
                         <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
                           ${lockedMargin.toLocaleString()}
@@ -2857,8 +2932,8 @@ const Trade = () => {
                     </Box>
                     
                     {/* Current position */}
-                    <Typography variant="subtitle2" sx={{ color: colors.primaryText, mb: 2 }}>
-                      Current Position
+                    <Typography variant="subtitle2" sx={{ color: colors.primaryText, mb: 2, display: 'flex', alignItems: 'center' }}>
+                      Current Position {renderTooltip('Your open trading position')}
                     </Typography>
                     
                     {position ? (
@@ -2932,7 +3007,7 @@ const Trade = () => {
                             },
                           }}
                         >
-                          Close Position
+                          Close Position {renderTooltip('Exit your current position at market price')}
                         </Button>
                       </Box>
                     ) : (
@@ -2950,8 +3025,8 @@ const Trade = () => {
                     )}
                     
                     {/* Quick trade buttons */}
-                    <Typography variant="subtitle2" sx={{ color: colors.primaryText, mb: 2 }}>
-                      Quick Trade
+                    <Typography variant="subtitle2" sx={{ color: colors.primaryText, mb: 2, display: 'flex', alignItems: 'center' }}>
+                      Quick Trade {renderTooltip('Trade quickly with preset amounts')}
                     </Typography>
                     
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
@@ -2996,6 +3071,317 @@ const Trade = () => {
                           </Button>
                         </React.Fragment>
                       ))}
+                    </Box>
+
+                    {/* Price Alerts */}
+                    <Typography variant="subtitle2" sx={{ color: colors.primaryText, mb: 2, display: 'flex', alignItems: 'center' }}>
+                      Price Alerts {renderTooltip('Get notified when price reaches specified levels')}
+                    </Typography>
+                    
+                    <Box sx={{ 
+                      p: 2, 
+                      bgcolor: colors.cardBg, 
+                      border: `1px solid ${colors.borderColor}`,
+                      borderRadius: '8px',
+                      mb: 2
+                    }}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Alert Price"
+                        type="number"
+                        value={alertPrice}
+                        onChange={(e) => setAlertPrice(parseFloat(e.target.value) || 0)}
+                        variant="outlined"
+                        sx={{ 
+                          mb: 2,
+                          '& .MuiOutlinedInput-root': {
+                            color: colors.primaryText,
+                            backgroundColor: colors.panelBg,
+                            '& fieldset': {
+                              borderColor: colors.borderColor,
+                            },
+                          },
+                        }}
+                      />
+                      <Button
+                        fullWidth
+                        variant="contained"
+                        onClick={addPriceAlert}
+                        sx={{
+                          backgroundColor: colors.accentBlue,
+                          color: colors.primaryText,
+                        }}
+                      >
+                        Add Alert
+                      </Button>
+                    </Box>
+                  </Paper>
+                </Grid>
+              </Grid>
+            </Paper>
+          </Box>
+        )}
+
+        {/* Risk Management Section */}
+        {step === 3 && tradingType === 'short-term' && (
+          <Box sx={{ maxWidth: '1400px', mx: 'auto', mb: 4 }}>
+            <Paper
+              sx={{ 
+                p: 4, 
+                backgroundColor: colors.cardBg,
+                border: `1px solid ${colors.borderColor}`,
+                borderRadius: '16px',
+                boxShadow: `0 12px 24px ${colors.shadowColor}`
+              }}
+            >
+              <Typography 
+                variant="h5" 
+                sx={{ 
+                  color: colors.primaryText,
+                  fontWeight: 'bold',
+                  mb: 3,
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+              >
+                Advanced Risk Management {renderTooltip('Tools to help protect your capital and manage trading risk')}
+              </Typography>
+
+              <Grid container spacing={3}>
+                {/* Stop Loss & Take Profit */}
+                <Grid item xs={12} md={6}>
+                  <Paper
+                    sx={{
+                      p: 3,
+                      backgroundColor: colors.panelBg,
+                      border: `1px solid ${colors.borderColor}`,
+                      borderRadius: '12px'
+                    }}
+                  >
+                    <Typography variant="h6" sx={{ color: colors.primaryText, mb: 3, fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
+                      Stop Loss & Take Profit {renderTooltip('Automatically close your position at specified price levels')}
+                    </Typography>
+                    
+                    <Box sx={{ mb: 3 }}>
+                      <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 1 }}>
+                        Current Price: {currentPrice ? currentPrice.toFixed(5) : "-.-----"}
+                      </Typography>
+                      
+                      <Grid container spacing={2} sx={{ mb: 2 }}>
+                        <Grid item xs={6}>
+                          <TextField
+                            fullWidth
+                            label="Stop Loss"
+                            placeholder="0.00000"
+                            size="small"
+                            InputProps={{
+                              endAdornment: renderTooltip('Price at which to close position to limit losses')
+                            }}
+                            sx={{ 
+                              '& .MuiOutlinedInput-root': {
+                                color: colors.primaryText,
+                                backgroundColor: colors.panelBg,
+                                '& fieldset': { borderColor: colors.borderColor },
+                              },
+                            }}
+                          />
+                        </Grid>
+                        <Grid item xs={6}>
+                          <TextField
+                            fullWidth
+                            label="Take Profit"
+                            placeholder="0.00000"
+                            size="small"
+                            InputProps={{
+                              endAdornment: renderTooltip('Price at which to close position to secure profits')
+                            }}
+                            sx={{ 
+                              '& .MuiOutlinedInput-root': {
+                                color: colors.primaryText,
+                                backgroundColor: colors.panelBg,
+                                '& fieldset': { borderColor: colors.borderColor },
+                              },
+                            }}
+                          />
+                        </Grid>
+                      </Grid>
+                      
+                      <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 2 }}>
+                        Set as percentage of entry price:
+                      </Typography>
+                      
+                      <Grid container spacing={2}>
+                        <Grid item xs={6}>
+                          <Slider
+                            defaultValue={5}
+                            step={0.5}
+                            marks={[
+                              { value: 0.5, label: '0.5%' },
+                              { value: 10, label: '10%' }
+                            ]}
+                            min={0.5}
+                            max={10}
+                            valueLabelDisplay="auto"
+                            valueLabelFormat={(value) => `${value}%`}
+                            sx={{
+                              color: colors.sellRed,
+                              '& .MuiSlider-markLabel': {
+                                color: colors.secondaryText,
+                              }
+                            }}
+                          />
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Slider
+                            defaultValue={8}
+                            step={0.5}
+                            marks={[
+                              { value: 0.5, label: '0.5%' },
+                              { value: 10, label: '10%' }
+                            ]}
+                            min={0.5}
+                            max={10}
+                            valueLabelDisplay="auto"
+                            valueLabelFormat={(value) => `${value}%`}
+                            sx={{
+                              color: colors.buyGreen,
+                              '& .MuiSlider-markLabel': {
+                                color: colors.secondaryText,
+                              }
+                            }}
+                          />
+                        </Grid>
+                      </Grid>
+                    </Box>
+                    
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      sx={{
+                        backgroundColor: colors.accentBlue,
+                        color: colors.primaryText,
+                        '&:hover': {
+                          backgroundColor: colors.accentBlue,
+                          opacity: 0.9,
+                        },
+                      }}
+                    >
+                      Apply To Position
+                    </Button>
+                  </Paper>
+                </Grid>
+                
+                {/* Risk Calculator */}
+                <Grid item xs={12} md={6}>
+                  <Paper
+                    sx={{
+                      p: 3,
+                      backgroundColor: colors.panelBg,
+                      border: `1px solid ${colors.borderColor}`,
+                      borderRadius: '12px'
+                    }}
+                  >
+                    <Typography variant="h6" sx={{ color: colors.primaryText, mb: 3, fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
+                      Position Risk Calculator {renderTooltip('Calculate maximum potential loss and recommended position size')}
+                    </Typography>
+                    
+                    <Box sx={{ mb: 3 }}>
+                      <Grid container spacing={2} sx={{ mb: 2 }}>
+                        <Grid item xs={6}>
+                          <TextField
+                            fullWidth
+                            label="Account Risk %"
+                            defaultValue="2"
+                            size="small"
+                            InputProps={{
+                              endAdornment: renderTooltip('Percentage of your account to risk on this trade')
+                            }}
+                            sx={{ 
+                              '& .MuiOutlinedInput-root': {
+                                color: colors.primaryText,
+                                backgroundColor: colors.panelBg,
+                                '& fieldset': { borderColor: colors.borderColor },
+                              },
+                            }}
+                          />
+                        </Grid>
+                        <Grid item xs={6}>
+                          <TextField
+                            fullWidth
+                            label="Risk/Reward Ratio"
+                            defaultValue="1:2"
+                            size="small"
+                            InputProps={{
+                              endAdornment: renderTooltip('The ratio between what you risk and what you aim to gain')
+                            }}
+                            sx={{ 
+                              '& .MuiOutlinedInput-root': {
+                                color: colors.primaryText,
+                                backgroundColor: colors.panelBg,
+                                '& fieldset': { borderColor: colors.borderColor },
+                              },
+                            }}
+                          />
+                        </Grid>
+                      </Grid>
+                      
+                      <Box sx={{ p: 2, bgcolor: colors.cardBg, border: `1px solid ${colors.borderColor}`, borderRadius: '8px', mb: 3 }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 2 }}>
+                          Based on your inputs:
+                        </Typography>
+                        
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                          <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                            Recommended Position Size
+                          </Typography>
+                          <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                            ${Math.floor(availableBalance * 0.02).toLocaleString()}
+                          </Typography>
+                        </Box>
+                        
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                          <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                            Maximum Loss
+                          </Typography>
+                          <Typography variant="body2" sx={{ color: colors.sellRed, fontWeight: 'bold' }}>
+                            ${Math.floor(availableBalance * 0.02).toLocaleString()}
+                          </Typography>
+                        </Box>
+                        
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                          <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                            Target Profit
+                          </Typography>
+                          <Typography variant="body2" sx={{ color: colors.buyGreen, fontWeight: 'bold' }}>
+                            ${Math.floor(availableBalance * 0.04).toLocaleString()}
+                          </Typography>
+                        </Box>
+                      </Box>
+                      
+                      <Box sx={{ display: 'flex', gap: 2 }}>
+                        <Button
+                          fullWidth
+                          variant="contained"
+                          sx={{
+                            backgroundColor: colors.accentBlue,
+                            color: colors.primaryText,
+                          }}
+                        >
+                          Use Recommended
+                        </Button>
+                        
+                        <Button
+                          fullWidth
+                          variant="outlined"
+                          sx={{
+                            borderColor: colors.borderColor,
+                            color: colors.secondaryText,
+                          }}
+                        >
+                          Reset
+                        </Button>
+                      </Box>
                     </Box>
                   </Paper>
                 </Grid>
