@@ -217,21 +217,24 @@ def determine_related_currencies(title, description, category):
 
 def filter_articles_by_category(articles, category):
     """Filter articles based on the selected category"""
-    if category == 'all':
+    if category.lower() == 'all':
         return articles
     
     filtered = []
     
+    # Ensure case-insensitive comparison for currency codes
+    category_upper = category.upper()
+    
     # If category is a specific currency
-    if category.upper() in CURRENCY_NAMES:
-        currency = category.upper()
+    if category_upper in CURRENCY_NAMES:
+        currency = category_upper
+        logger.info(f"Filtering for specific currency: {currency}")
         for article in articles:
             # Look for explicit mentions in the title or summary
+            article_text = (article['title'] + " " + article['summary']).upper()
             if (
-                currency in article['title'].upper() or 
-                CURRENCY_NAMES[currency].upper() in article['title'].upper() or
-                currency in article['summary'].upper() or
-                CURRENCY_NAMES[currency].upper() in article['summary'].upper()
+                currency in article_text or 
+                CURRENCY_NAMES[currency].upper() in article_text
             ):
                 # Make sure this currency is in relatedCurrencies
                 if currency not in article['relatedCurrencies']:
@@ -247,27 +250,32 @@ def filter_articles_by_category(articles, category):
                 filtered.append(article)
     
     # For special categories
-    elif category == 'majors':
+    elif category.lower() == 'majors':
+        logger.info("Filtering for major currency pairs")
         major_currencies = ['USD', 'EUR', 'GBP', 'JPY']
         for article in articles:
             if any(currency in article['relatedCurrencies'] for currency in major_currencies):
                 filtered.append(article)
     
-    elif category == 'economic':
+    elif category.lower() == 'economic':
+        logger.info("Filtering for economic news")
         economic_terms = ['gdp', 'inflation', 'employment', 'economy', 'economic', 'growth', 'recession']
         for article in articles:
             text = (article['title'] + " " + article['summary']).lower()
             if any(term in text for term in economic_terms):
                 filtered.append(article)
     
-    elif category == 'central_banks':
+    elif category.lower() == 'central_banks':
+        logger.info("Filtering for central bank news")
         bank_terms = ['central bank', 'fed', 'federal reserve', 'ecb', 'european central bank', 
-                     'boe', 'bank of england', 'boj', 'bank of japan', 'rba', 'reserve bank']
+                     'boe', 'bank of england', 'boj', 'bank of japan', 'rba', 'reserve bank',
+                     'interest rate', 'rate decision', 'monetary policy']
         for article in articles:
             text = (article['title'] + " " + article['summary']).lower()
             if any(term in text for term in bank_terms):
                 filtered.append(article)
     
+    logger.info(f"Filtered to {len(filtered)} articles for category: {category}")
     return filtered
 
 @news_bp.route('/api/news/forex', methods=['GET'])
@@ -275,6 +283,10 @@ def get_forex_news():
     """Get forex related news from NewsAPI"""
     try:
         category = request.args.get('category', 'all')
+        # Normalize category
+        if category.lower() in ['central_banks', 'central-banks']:
+            category = 'central_banks'
+        
         force_refresh = request.args.get('force', 'false').lower() == 'true'
         logger.info(f"Getting forex news with category: {category}, force refresh: {force_refresh}")
         
@@ -282,6 +294,7 @@ def get_forex_news():
         if not force_refresh:
             cached_data = get_cached_news(category)
             if cached_data:
+                logger.info(f"Returning {len(cached_data.get('articles', []))} cached articles for category: {category}")
                 return jsonify(cached_data), 200
         
         # Default search query - broad forex terms to get a variety of articles
@@ -332,6 +345,9 @@ def get_forex_news():
                 # Determine related currencies
                 related_currencies = determine_related_currencies(title, description, category)
                 
+                # Log for debugging
+                logger.debug(f"Article: '{title[:50]}...' - Related currencies: {related_currencies}")
+                
                 # Create article object
                 article_obj = {
                     "id": article_id,
@@ -350,6 +366,9 @@ def get_forex_news():
             
             # Now filter articles based on category
             filtered_articles = filter_articles_by_category(all_articles, category)
+            
+            # Log summary of filtering
+            logger.info(f"Retrieved {len(all_articles)} articles from API, filtered to {len(filtered_articles)} for category '{category}'")
             
             # Create the response data
             response_data = {

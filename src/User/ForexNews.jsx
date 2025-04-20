@@ -57,10 +57,10 @@ const colors = {
 const newsCategories = [
   { value: 'all', label: 'All News' },
   { value: 'majors', label: 'Major Pairs' },
-  { value: 'usd', label: 'USD News' },
-  { value: 'eur', label: 'EUR News' },
-  { value: 'gbp', label: 'GBP News' },
-  { value: 'jpy', label: 'JPY News' },
+  { value: 'USD', label: 'USD News' },
+  { value: 'EUR', label: 'EUR News' },
+  { value: 'GBP', label: 'GBP News' },
+  { value: 'JPY', label: 'JPY News' },
   { value: 'economic', label: 'Economic Data' },
   { value: 'central_banks', label: 'Central Banks' }
 ];
@@ -104,6 +104,7 @@ const ForexNews = () => {
       setLoading(true);
       try {
         // Call the real backend endpoint
+        console.log(`Fetching news for category: ${currentCategory}`);
         const response = await fetch(`${API_URL}/api/news/forex?category=${currentCategory}`);
         
         if (!response.ok) {
@@ -113,6 +114,7 @@ const ForexNews = () => {
         const data = await response.json();
         
         if (data && data.articles) {
+          console.log(`Received ${data.articles.length} articles for category ${currentCategory}`);
           setNewsData(data.articles);
           setApiSource(data.source || 'API');
           setError(null);
@@ -143,7 +145,7 @@ const ForexNews = () => {
     };
 
     fetchData();
-  }, [currentCategory, refreshCount]);
+  }, [currentCategory, refreshCount, API_URL]);
 
   // Format date to be more readable
   const formatDate = (dateString) => {
@@ -380,7 +382,10 @@ const ForexNews = () => {
             <Chip
               key={category.value}
               label={category.label}
-              onClick={() => setCurrentCategory(category.value)}
+              onClick={() => {
+                setCurrentCategory(category.value);
+                setLoading(true);
+              }}
               sx={{
                 bgcolor: currentCategory === category.value ? colors.accentBlue : colors.cardBg,
                 color: colors.primaryText,
@@ -414,11 +419,18 @@ const ForexNews = () => {
                   Data source: <b>{apiSource}</b> 
                   {newsData.length > 0 && ` (${newsData.length} articles)`}
                 </Typography>
-                {newsData.length > 0 && (
-                  <Typography variant="caption" sx={{ ml: 2 }}>
-                    Last updated: {formatDate(new Date().toISOString())}
-                  </Typography>
-                )}
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  {currentCategory !== 'all' && (
+                    <Typography variant="caption" sx={{ mr: 2 }}>
+                      Category: <b>{currentCategory}</b>
+                    </Typography>
+                  )}
+                  {newsData.length > 0 && (
+                    <Typography variant="caption">
+                      Last updated: {formatDate(new Date().toISOString())}
+                    </Typography>
+                  )}
+                </Box>
               </Box>
             </Alert>
           </Box>
@@ -445,7 +457,19 @@ const ForexNews = () => {
             <Box sx={{ maxWidth: '100%' }}>
               {newsData.length === 0 ? (
                 <Paper sx={{ p: 3, bgcolor: colors.cardBg, color: colors.primaryText, borderRadius: 2, textAlign: 'center' }}>
-                  <Typography>No news articles found for the selected category.</Typography>
+                  <Typography variant="h6" sx={{ mb: 2 }}>No news articles found</Typography>
+                  <Typography variant="body2" sx={{ mb: 3 }}>
+                    There are no recent news articles matching the <b>{
+                      newsCategories.find(cat => cat.value === currentCategory)?.label || currentCategory
+                    }</b> category.
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    onClick={handleForceRefresh}
+                    sx={{ bgcolor: colors.accentBlue }}
+                  >
+                    Force Refresh
+                  </Button>
                 </Paper>
               ) : (
                 newsData.map(article => (
