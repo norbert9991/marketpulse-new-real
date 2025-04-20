@@ -148,17 +148,29 @@ function generateBasicSyntheticData(symbol) {
     isForex = true;
   }
   
-  // More realistic base price for known symbols
-  let basePrice = syntheticPrice;
-  if (isForex) {
-    if (symbol.includes('USD') && symbol.includes('JPY')) {
-      basePrice = 150.0;
-    } else if (symbol.includes('GBP') && symbol.includes('USD')) {
-      basePrice = 1.25;
-    } else if (symbol.includes('EUR') && symbol.includes('USD')) {
-      basePrice = 1.09;
-    }
-  }
+  // Clean the symbol for lookup
+  const cleanSymbol = symbol.replace('-X', '').replace('=X', '');
+  
+  // More realistic base prices for known currency pairs
+  const basePrices = {
+    'EURUSD': 1.078,
+    'GBPUSD': 1.267,
+    'USDJPY': 151.5,
+    'USDCAD': 1.364,
+    'AUDUSD': 0.658,
+    'NZDUSD': 0.614,
+    'USDCHF': 0.901,
+    'EURGBP': 0.852,
+    'EURJPY': 163.5,
+    'GBPJPY': 192.1
+  };
+  
+  // Use base price if available, otherwise use default
+  let basePrice = basePrices[cleanSymbol] || syntheticPrice;
+  
+  // For JPY pairs, adjust the prediction scale
+  const isJpyPair = cleanSymbol.includes('JPY');
+  const scaleFactor = isJpyPair ? 10 : 1;
   
   return {
     symbol: symbol,
@@ -174,8 +186,16 @@ function generateBasicSyntheticData(symbol) {
       sma200: basePrice
     },
     support_resistance: {
-      support: [basePrice * 0.98, basePrice * 0.97, basePrice * 0.95],
-      resistance: [basePrice * 1.02, basePrice * 1.03, basePrice * 1.05]
+      support: [
+        basePrice * (1 - 0.01 * scaleFactor), 
+        basePrice * (1 - 0.02 * scaleFactor), 
+        basePrice * (1 - 0.03 * scaleFactor)
+      ],
+      resistance: [
+        basePrice * (1 + 0.01 * scaleFactor), 
+        basePrice * (1 + 0.02 * scaleFactor), 
+        basePrice * (1 + 0.03 * scaleFactor)
+      ]
     },
     sentiment: {
       overall: 'Neutral',
@@ -188,10 +208,10 @@ function generateBasicSyntheticData(symbol) {
     },
     predictions: [
       basePrice,
-      basePrice * (1 + (Math.random() * 0.02 - 0.01)),
-      basePrice * (1 + (Math.random() * 0.03 - 0.015)),
-      basePrice * (1 + (Math.random() * 0.04 - 0.02)),
-      basePrice * (1 + (Math.random() * 0.05 - 0.025))
+      basePrice * (1 + (Math.random() * 0.02 - 0.01) * scaleFactor),
+      basePrice * (1 + (Math.random() * 0.03 - 0.015) * scaleFactor),
+      basePrice * (1 + (Math.random() * 0.04 - 0.02) * scaleFactor),
+      basePrice * (1 + (Math.random() * 0.05 - 0.025) * scaleFactor)
     ],
     prediction_dates: [
       'Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5'
@@ -634,11 +654,18 @@ export const API = {
           }
         }
         
-        // Check if this is one of the problematic pairs
-        const isGbpUsd = cleanSymbol === 'GBPUSD' || originalSymbol === 'GBPUSD=X' || originalSymbol === 'GBPUSD-X';
-        const isUsdJpy = cleanSymbol === 'USDJPY' || originalSymbol === 'USDJPY=X' || originalSymbol === 'USDJPY-X';
-        const isUsdCad = cleanSymbol === 'USDCAD' || originalSymbol === 'USDCAD=X' || originalSymbol === 'USDCAD-X';
-        const needsSyntheticData = isGbpUsd || isUsdJpy || isUsdCad;
+        // Define forex pairs that need synthetic data
+        const forexPairs = [
+          'GBPUSD', 'USDJPY', 'USDCAD', 'EURUSD', 'AUDUSD', 
+          'NZDUSD', 'USDCHF', 'EURGBP', 'EURJPY', 'GBPJPY'
+        ];
+        
+        // Check if this is one of the problematic pairs that needs synthetic data
+        const needsSyntheticData = forexPairs.some(pair => 
+          cleanSymbol === pair || 
+          originalSymbol === `${pair}=X` || 
+          originalSymbol === `${pair}-X`
+        );
         
         // Extensive debug logging
         console.log('[API] getHistory - Original Symbol:', originalSymbol);
@@ -652,13 +679,47 @@ export const API = {
           
           // Set appropriate base price based on currency pair
           let basePrice;
-          if (isGbpUsd) {
-            basePrice = 1.267;
-          } else if (isUsdJpy) {
-            basePrice = 151.5;
-          } else if (isUsdCad) {
-            basePrice = 1.364;
+          
+          // Determine base price for the specific currency pair
+          switch(cleanSymbol) {
+            case 'GBPUSD':
+              basePrice = 1.267;
+              break;
+            case 'USDJPY':
+              basePrice = 151.5;
+              break;
+            case 'USDCAD':
+              basePrice = 1.364;
+              break;
+            case 'EURUSD':
+              basePrice = 1.078;
+              break;
+            case 'AUDUSD':
+              basePrice = 0.658;
+              break;
+            case 'NZDUSD':
+              basePrice = 0.614;
+              break;
+            case 'USDCHF':
+              basePrice = 0.901;
+              break;
+            case 'EURGBP':
+              basePrice = 0.852;
+              break;
+            case 'EURJPY':
+              basePrice = 163.5;
+              break;
+            case 'GBPJPY':
+              basePrice = 192.1;
+              break;
+            default:
+              // Default fallback
+              basePrice = cleanSymbol.includes('JPY') ? 150.0 : 1.0;
           }
+          
+          // Determine if this is a JPY pair for proper scaling
+          const isJpyPair = cleanSymbol.includes('JPY');
+          const scaleFactor = isJpyPair ? 10 : 1; // Larger variations for JPY pairs
           
           // Generate synthetic history data
           const history = [];
@@ -670,15 +731,15 @@ export const API = {
             date.setDate(today.getDate() - i);
             const dateString = date.toISOString().split('T')[0];
             
-            // Base price with some variation
+            // Base price with some variation - using sine wave for natural-looking price movement
             const variation = (Math.sin(i * 0.3) * 0.015) + (Math.random() * 0.006 - 0.003);
-            const close = basePrice + variation * (isUsdJpy ? 10 : 1); // Larger variations for JPY
+            const close = basePrice + variation * scaleFactor;
             
             history.push({
               date: dateString,
-              open: close - (Math.random() * 0.005 * (isUsdJpy ? 10 : 1)),
-              high: close + (Math.random() * 0.008 * (isUsdJpy ? 10 : 1)),
-              low: close - (Math.random() * 0.008 * (isUsdJpy ? 10 : 1)),
+              open: close - (Math.random() * 0.005 * scaleFactor),
+              high: close + (Math.random() * 0.008 * scaleFactor),
+              low: close - (Math.random() * 0.008 * scaleFactor),
               close: close,
               volume: Math.floor(Math.random() * 10000) + 5000
             });

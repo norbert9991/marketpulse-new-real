@@ -363,16 +363,16 @@ def generate_synthetic_data(symbol):
     """
     # Define some base prices for common forex pairs
     base_prices = {
-        'EURUSD': 1.0782,
-        'GBPUSD': 1.26734,
-        'USDJPY': 151.68,
-        'USDCAD': 1.3642,
-        'AUDUSD': 0.6578,
-        'NZDUSD': 0.6142,
-        'USDCHF': 0.9014,
-        'EURGBP': 0.8523,
-        'EURJPY': 163.54,
-        'GBPJPY': 192.13
+        'EURUSD': 1.078,
+        'GBPUSD': 1.267,
+        'USDJPY': 151.5,
+        'USDCAD': 1.364,
+        'AUDUSD': 0.658,
+        'NZDUSD': 0.614,
+        'USDCHF': 0.901,
+        'EURGBP': 0.852,
+        'EURJPY': 163.5,
+        'GBPJPY': 192.1
     }
     
     # Clean symbol for lookup
@@ -381,20 +381,24 @@ def generate_synthetic_data(symbol):
     # Use base price if available, otherwise use a default
     base_price = base_prices.get(clean_symbol, 100.0)
     
+    # Determine if this is a JPY pair for proper scaling
+    is_jpy_pair = 'JPY' in clean_symbol
+    scale_factor = 10 if is_jpy_pair else 1
+    
     # Add some randomness
     current_price = base_price * (1 + (np.random.random() * 0.02 - 0.01))
     
-    # Generate support and resistance levels
+    # Generate support and resistance levels with appropriate scaling
     support_levels = [
-        round(current_price * (1 - 0.01), 4),
-        round(current_price * (1 - 0.02), 4),
-        round(current_price * (1 - 0.03), 4)
+        round(current_price * (1 - 0.01 * scale_factor), 4),
+        round(current_price * (1 - 0.02 * scale_factor), 4),
+        round(current_price * (1 - 0.03 * scale_factor), 4)
     ]
     
     resistance_levels = [
-        round(current_price * (1 + 0.01), 4),
-        round(current_price * (1 + 0.02), 4),
-        round(current_price * (1 + 0.03), 4)
+        round(current_price * (1 + 0.01 * scale_factor), 4),
+        round(current_price * (1 + 0.02 * scale_factor), 4),
+        round(current_price * (1 + 0.03 * scale_factor), 4)
     ]
     
     # Generate technical indicators
@@ -425,9 +429,9 @@ def generate_synthetic_data(symbol):
         future_date = end_date + timedelta(days=i)
         date_str = future_date.strftime('%Y-%m-%d')
         
-        # Random change
+        # Random change with appropriate scaling
         random_change = np.random.random() * 0.02 - 0.01
-        pred_price = round(current_price * (1 + random_change), 4)
+        pred_price = round(current_price * (1 + random_change * scale_factor), 4)
         
         predictions.append(pred_price)
         prediction_dates.append(date_str)
@@ -437,14 +441,14 @@ def generate_synthetic_data(symbol):
         past_date = end_date - timedelta(days=i)
         date_str = past_date.strftime('%Y-%m-%d')
         
-        # Create somewhat realistic price history
+        # Create somewhat realistic price history with appropriate scaling
         random_variation = np.sin(i * 0.2) * 0.02 + (np.random.random() * 0.01 - 0.005)
-        historical_price = round(current_price * (1 + random_variation), 4)
+        historical_price = round(current_price * (1 + random_variation * scale_factor), 4)
         
-        # Slight variations for open/high/low
-        open_price = round(historical_price * (1 + (np.random.random() * 0.002 - 0.001)), 4)
-        high_price = round(max(open_price, historical_price) * (1 + np.random.random() * 0.002), 4)
-        low_price = round(min(open_price, historical_price) * (1 - np.random.random() * 0.002), 4)
+        # Slight variations for open/high/low with appropriate scaling
+        open_price = round(historical_price * (1 + (np.random.random() * 0.002 - 0.001) * scale_factor), 4)
+        high_price = round(max(open_price, historical_price) * (1 + np.random.random() * 0.002 * scale_factor), 4)
+        low_price = round(min(open_price, historical_price) * (1 - np.random.random() * 0.002 * scale_factor), 4)
         
         historical_dates.append(date_str)
         historical_prices.append(historical_price)
@@ -517,7 +521,14 @@ def analyze_stock(symbol):
         problematic_symbols = [
             'GBPUSD', 'GBPUSD-X', 'GBPUSD=X',
             'USDJPY', 'USDJPY-X', 'USDJPY=X',
-            'USDCAD', 'USDCAD-X', 'USDCAD=X'
+            'USDCAD', 'USDCAD-X', 'USDCAD=X',
+            'EURUSD', 'EURUSD-X', 'EURUSD=X',
+            'AUDUSD', 'AUDUSD-X', 'AUDUSD=X',
+            'NZDUSD', 'NZDUSD-X', 'NZDUSD=X',
+            'USDCHF', 'USDCHF-X', 'USDCHF=X',
+            'EURGBP', 'EURGBP-X', 'EURGBP=X',
+            'EURJPY', 'EURJPY-X', 'EURJPY=X',
+            'GBPJPY', 'GBPJPY-X', 'GBPJPY=X'
         ]
         
         # Check if we need to use synthetic data
