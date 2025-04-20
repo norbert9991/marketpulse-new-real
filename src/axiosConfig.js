@@ -137,82 +137,133 @@ axiosInstance.interceptors.response.use(
 
 // Helper function for generating basic synthetic data when all else fails
 function generateBasicSyntheticData(symbol) {
-  const syntheticPrice = 1.0;
+  // Default synthetic price base
+  const syntheticPrice = 100.0;
   
-  // Determine if this is a forex pair
+  // Determine if this is a forex pair and get clean symbols
   let isForex = false;
-  if (symbol.includes('-X') || symbol.includes('=X') || 
-      (symbol.length === 6 && 
-       ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'NZD', 'CAD', 'CHF'].some(curr => 
-         symbol.includes(curr)))) {
+  let cleanSymbol = symbol.replace('-X', '').replace('=X', '');
+  
+  if (cleanSymbol.length === 6 && 
+      ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'NZD', 'CAD', 'CHF'].some(curr => 
+        cleanSymbol.includes(curr))) {
     isForex = true;
   }
   
-  // Clean the symbol for lookup
-  const cleanSymbol = symbol.replace('-X', '').replace('=X', '');
-  
-  // More realistic base prices for known currency pairs
-  const basePrices = {
-    'EURUSD': 1.078,
-    'GBPUSD': 1.267,
-    'USDJPY': 151.5,
-    'USDCAD': 1.364,
-    'AUDUSD': 0.658,
-    'NZDUSD': 0.614,
-    'USDCHF': 0.901,
-    'EURGBP': 0.852,
-    'EURJPY': 163.5,
-    'GBPJPY': 192.1
+  // Real-world base prices for common forex pairs (as of mid-2023)
+  const forexBasePrices = {
+    'EURUSD': 1.09,
+    'GBPUSD': 1.27,
+    'USDJPY': 150.7,  // Note: this is inverted (JPY per 1 USD)
+    'USDCHF': 0.89,
+    'AUDUSD': 0.66,
+    'USDCAD': 1.35,
+    'NZDUSD': 0.61,
+    'EURGBP': 0.86,
+    'EURJPY': 163.9,
+    'GBPJPY': 192.1,
+    'EURCHF': 0.97,
+    'GBPCHF': 1.13,
+    'AUDNZD': 1.08,
+    'AUDCAD': 0.89,
+    'EURNZD': 1.79,
+    'EURCAD': 1.47
   };
   
-  // Use base price if available, otherwise use default
-  let basePrice = basePrices[cleanSymbol] || syntheticPrice;
+  // More realistic base price for known symbols
+  let basePrice = syntheticPrice;
+  if (isForex && forexBasePrices[cleanSymbol]) {
+    basePrice = forexBasePrices[cleanSymbol];
+  } else if (isForex) {
+    // For unknown forex pairs, make a reasonable guess
+    const currencies = [
+      {code: 'USD', value: 1.00},
+      {code: 'EUR', value: 1.09},
+      {code: 'GBP', value: 1.27},
+      {code: 'CHF', value: 1.12},
+      {code: 'AUD', value: 0.66},
+      {code: 'CAD', value: 0.74},
+      {code: 'JPY', value: 0.0066},  // JPY value is relative to USD
+      {code: 'NZD', value: 0.61}
+    ];
+    
+    // Try to estimate the pair value based on constituent currencies
+    if (cleanSymbol.length === 6) {
+      const baseCurr = cleanSymbol.substring(0, 3);
+      const quoteCurr = cleanSymbol.substring(3, 6);
+      
+      const baseVal = currencies.find(c => c.code === baseCurr)?.value || 1.0;
+      const quoteVal = currencies.find(c => c.code === quoteCurr)?.value || 1.0;
+      
+      // Calculate base price as ratio of currency values
+      basePrice = baseVal / quoteVal;
+      
+      // For JPY as quote currency, scale up the result
+      if (quoteCurr === 'JPY') {
+        basePrice *= 100;
+      }
+    }
+  }
   
-  // For JPY pairs, adjust the prediction scale
-  const isJpyPair = cleanSymbol.includes('JPY');
-  const scaleFactor = isJpyPair ? 10 : 1;
+  // Add slight randomization to the price
+  basePrice = basePrice * (1 + (Math.random() * 0.01 - 0.005));
+  
+  // Round to appropriate decimal places based on the pair
+  let decimals = 4;  // Default for most forex pairs
+  if (cleanSymbol.includes('JPY')) {
+    decimals = 2;  // For JPY pairs
+  }
+  basePrice = parseFloat(basePrice.toFixed(decimals));
+  
+  // Generate support/resistance levels based on base price
+  const priceScale = cleanSymbol.includes('JPY') ? 1.0 : 0.01;
+  const support_levels = [
+    parseFloat((basePrice * (1 - 0.01 * priceScale)).toFixed(decimals)),
+    parseFloat((basePrice * (1 - 0.02 * priceScale)).toFixed(decimals)),
+    parseFloat((basePrice * (1 - 0.03 * priceScale)).toFixed(decimals))
+  ];
+  
+  const resistance_levels = [
+    parseFloat((basePrice * (1 + 0.01 * priceScale)).toFixed(decimals)),
+    parseFloat((basePrice * (1 + 0.02 * priceScale)).toFixed(decimals)),
+    parseFloat((basePrice * (1 + 0.03 * priceScale)).toFixed(decimals))
+  ];
+  
+  // Generate predictions with appropriate magnitude of changes
+  const predictions = [];
+  for (let i = 0; i < 5; i++) {
+    const randomChange = (Math.random() * 0.03 - 0.015) * priceScale;
+    const pred = parseFloat((basePrice * (1 + randomChange)).toFixed(decimals));
+    predictions.push(pred);
+  }
   
   return {
     symbol: symbol,
     current_price: basePrice,
     trend: Math.random() > 0.5 ? 'Bullish' : 'Bearish',
     technical_indicators: {
-      rsi: 50,
-      macd: 0,
-      macd_signal: 0,
-      macd_hist: 0,
-      sma20: basePrice,
-      sma50: basePrice,
-      sma200: basePrice
+      rsi: Math.floor(Math.random() * 30) + 35,  // 35-65 range
+      macd: parseFloat((Math.random() * 0.02 - 0.01).toFixed(5)),
+      macd_signal: parseFloat((Math.random() * 0.02 - 0.01).toFixed(5)),
+      macd_hist: parseFloat((Math.random() * 0.02 - 0.01).toFixed(5)),
+      sma20: parseFloat((basePrice * (1 + (Math.random() * 0.01 - 0.005))).toFixed(decimals)),
+      sma50: parseFloat((basePrice * (1 + (Math.random() * 0.02 - 0.01))).toFixed(decimals)),
+      sma200: parseFloat((basePrice * (1 + (Math.random() * 0.03 - 0.015))).toFixed(decimals))
     },
     support_resistance: {
-      support: [
-        basePrice * (1 - 0.01 * scaleFactor), 
-        basePrice * (1 - 0.02 * scaleFactor), 
-        basePrice * (1 - 0.03 * scaleFactor)
-      ],
-      resistance: [
-        basePrice * (1 + 0.01 * scaleFactor), 
-        basePrice * (1 + 0.02 * scaleFactor), 
-        basePrice * (1 + 0.03 * scaleFactor)
-      ]
+      support: support_levels,
+      resistance: resistance_levels
     },
     sentiment: {
-      overall: 'Neutral',
-      confidence: 50,
-      news_sentiment: 0,
-      social_sentiment: 0,
-      market_mood: 'Neutral',
-      news_count: 0,
-      social_count: 0
+      overall: Math.random() > 0.6 ? 'Bullish' : Math.random() > 0.5 ? 'Bearish' : 'Neutral',
+      confidence: Math.floor(Math.random() * 30) + 45,
+      news_sentiment: parseFloat((Math.random() * 0.6 - 0.3).toFixed(2)),
+      social_sentiment: parseFloat((Math.random() * 0.6 - 0.3).toFixed(2)),
+      market_mood: Math.random() > 0.55 ? 'Positive' : 'Negative',
+      news_count: Math.floor(Math.random() * 50) + 5,
+      social_count: Math.floor(Math.random() * 200) + 30
     },
-    predictions: [
-      basePrice,
-      basePrice * (1 + (Math.random() * 0.02 - 0.01) * scaleFactor),
-      basePrice * (1 + (Math.random() * 0.03 - 0.015) * scaleFactor),
-      basePrice * (1 + (Math.random() * 0.04 - 0.02) * scaleFactor),
-      basePrice * (1 + (Math.random() * 0.05 - 0.025) * scaleFactor)
-    ],
+    predictions: predictions,
     prediction_dates: [
       'Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5'
     ],
@@ -499,9 +550,17 @@ export const API = {
         let formattedSymbol = data.symbol;
         
         if (typeof data.symbol === 'string') {
-          // Format for Yahoo Finance - change "-X" to "=X" for forex
+          // Format for Yahoo Finance - forex pairs
           if (data.symbol.includes('-X')) {
+            // Convert 'EURUSD-X' to 'EURUSD=X'
             formattedSymbol = data.symbol.replace('-X', '=X');
+          } else if (data.symbol.length === 6 && 
+                    ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CHF', 'CAD', 'NZD'].some(curr => 
+                      data.symbol.includes(curr))) {
+            // Standard currency pairs without suffix - add =X suffix if not present
+            if (!data.symbol.endsWith('=X')) {
+              formattedSymbol = `${data.symbol}=X`;
+            }
           }
           
           // Handle stock indices
@@ -638,121 +697,45 @@ export const API = {
     },
     getHistory: (symbol) => {
       try {
-        // Carefully clean the symbol by removing the "-X" suffix if present
+        // Get the original symbol
         const originalSymbol = symbol;
-        let cleanSymbol = symbol;
+        let formattedSymbol = symbol;
         
         if (typeof symbol === 'string') {
-          // First method: Split at -X and take first part
+          // Format for Yahoo Finance - forex pairs
           if (symbol.includes('-X')) {
-            cleanSymbol = symbol.split('-X')[0];
+            // Convert 'EURUSD-X' to 'EURUSD=X'
+            formattedSymbol = symbol.replace('-X', '=X');
+          } else if (symbol.length === 6 && 
+                    ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CHF', 'CAD', 'NZD'].some(curr => 
+                      symbol.includes(curr))) {
+            // Standard currency pairs without suffix - add =X suffix if not present
+            if (!symbol.endsWith('=X')) {
+              formattedSymbol = `${symbol}=X`;
+            }
+          }
+          
+          // Handle stock indices
+          const indices = ['GSPC', 'DJI', 'IXIC', 'NYA', 'XAX', 'RUT'];
+          if (indices.includes(symbol) && !symbol.startsWith('^')) {
+            formattedSymbol = `^${symbol}`;
           }
           
           // Safety check: Make sure we don't send an empty string
-          if (!cleanSymbol) {
-            cleanSymbol = originalSymbol;
+          if (!formattedSymbol) {
+            formattedSymbol = originalSymbol;
           }
         }
         
-        // Define forex pairs that need synthetic data
-        const forexPairs = [
-          'GBPUSD', 'USDJPY', 'USDCAD', 'EURUSD', 'AUDUSD', 
-          'NZDUSD', 'USDCHF', 'EURGBP', 'EURJPY', 'GBPJPY'
-        ];
+        // For history API endpoint, we need to use the clean symbol without =X
+        const cleanSymbol = formattedSymbol.replace('=X', '');
         
-        // Check if this is one of the problematic pairs that needs synthetic data
-        const needsSyntheticData = forexPairs.some(pair => 
-          cleanSymbol === pair || 
-          originalSymbol === `${pair}=X` || 
-          originalSymbol === `${pair}-X`
-        );
-        
-        // Extensive debug logging
         console.log('[API] getHistory - Original Symbol:', originalSymbol);
-        console.log('[API] getHistory - Cleaned Symbol:', cleanSymbol);
-        console.log('[API] getHistory - Needs synthetic data:', needsSyntheticData);
+        console.log('[API] getHistory - Formatted Symbol:', formattedSymbol);
+        console.log('[API] getHistory - Clean Symbol for API:', cleanSymbol);
         console.log('[API] getHistory - Full URL:', `${API_URL}/api/market-analysis/${cleanSymbol}/history`);
         
-        // If it's a problematic pair, return synthetic data immediately
-        if (needsSyntheticData) {
-          console.log(`[API] Using synthetic history data for ${cleanSymbol} due to known API issues`);
-          
-          // Set appropriate base price based on currency pair
-          let basePrice;
-          
-          // Determine base price for the specific currency pair
-          switch(cleanSymbol) {
-            case 'GBPUSD':
-              basePrice = 1.267;
-              break;
-            case 'USDJPY':
-              basePrice = 151.5;
-              break;
-            case 'USDCAD':
-              basePrice = 1.364;
-              break;
-            case 'EURUSD':
-              basePrice = 1.078;
-              break;
-            case 'AUDUSD':
-              basePrice = 0.658;
-              break;
-            case 'NZDUSD':
-              basePrice = 0.614;
-              break;
-            case 'USDCHF':
-              basePrice = 0.901;
-              break;
-            case 'EURGBP':
-              basePrice = 0.852;
-              break;
-            case 'EURJPY':
-              basePrice = 163.5;
-              break;
-            case 'GBPJPY':
-              basePrice = 192.1;
-              break;
-            default:
-              // Default fallback
-              basePrice = cleanSymbol.includes('JPY') ? 150.0 : 1.0;
-          }
-          
-          // Determine if this is a JPY pair for proper scaling
-          const isJpyPair = cleanSymbol.includes('JPY');
-          const scaleFactor = isJpyPair ? 10 : 1; // Larger variations for JPY pairs
-          
-          // Generate synthetic history data
-          const history = [];
-          const today = new Date();
-          
-          // Generate 30 days of history
-          for (let i = 29; i >= 0; i--) {
-            const date = new Date(today);
-            date.setDate(today.getDate() - i);
-            const dateString = date.toISOString().split('T')[0];
-            
-            // Base price with some variation - using sine wave for natural-looking price movement
-            const variation = (Math.sin(i * 0.3) * 0.015) + (Math.random() * 0.006 - 0.003);
-            const close = basePrice + variation * scaleFactor;
-            
-            history.push({
-              date: dateString,
-              open: close - (Math.random() * 0.005 * scaleFactor),
-              high: close + (Math.random() * 0.008 * scaleFactor),
-              low: close - (Math.random() * 0.008 * scaleFactor),
-              close: close,
-              volume: Math.floor(Math.random() * 10000) + 5000
-            });
-          }
-          
-          return {
-            data: {
-              symbol: cleanSymbol,
-              history: history
-            }
-          };
-        }
-        
+        // The backend API expects the symbol without the suffix
         return axiosInstance.get(`/api/market-analysis/${cleanSymbol}/history`)
           .catch(error => {
             // Handle 404 errors gracefully
