@@ -82,16 +82,29 @@ def get_ticker_data(symbol, start_date_str, end_date_str):
         # Create a cache key for this request
         cache_key = f"{formatted_symbol}_{start_date_str}_{end_date_str}"
         
+        # Define problematic symbols that need shorter cache time
+        problematic_symbols = ['EURUSD', 'EUR/USD', 'EURUSD=X', 'EUR-USD']
+        is_problematic = any(ps in symbol or ps in formatted_symbol for ps in problematic_symbols)
+        
+        # Determine appropriate cache TTL
+        if is_problematic:
+            cache_ttl = 15 * 60  # 15 minutes for problematic symbols like EUR/USD
+            logger.info(f"Using shorter cache TTL for problematic symbol: {symbol}")
+        elif is_active_symbol(formatted_symbol):
+            cache_ttl = 2 * 3600  # 2 hours for actively traded symbols
+        else:
+            cache_ttl = 24 * 3600  # 24 hours for less active symbols
+        
         # Check memory cache first
         if cache_key in memory_cache:
             cache_entry = memory_cache[cache_key]
             cache_age = time.time() - cache_entry['timestamp']
-            # Cache for 4 hours (14400 seconds) for actively traded symbols, 24 hours for others
-            cache_ttl = 4 * 3600 if is_active_symbol(formatted_symbol) else 24 * 3600
             
             if cache_age < cache_ttl:
                 logger.info(f"Using memory-cached data for {formatted_symbol} (age: {cache_age/60:.1f} min)")
                 return cache_entry['data']
+            else:
+                logger.info(f"Memory cache expired for {formatted_symbol} (age: {cache_age/60:.1f} min)")
         
         # If not in memory cache, check disk cache
         cache_file = os.path.join(CACHE_DIR, f"{cache_key}.json")
@@ -101,7 +114,6 @@ def get_ticker_data(symbol, start_date_str, end_date_str):
                     cache_data = json.load(f)
                 
                 cache_age = time.time() - cache_data['timestamp']
-                cache_ttl = 4 * 3600 if is_active_symbol(formatted_symbol) else 24 * 3600
                 
                 if cache_age < cache_ttl:
                     logger.info(f"Using disk-cached data for {formatted_symbol} (age: {cache_age/60:.1f} min)")
@@ -117,9 +129,60 @@ def get_ticker_data(symbol, start_date_str, end_date_str):
                     
                     return df
                 else:
-                    logger.info(f"Cached data for {formatted_symbol} expired (age: {cache_age/60:.1f} min)")
+                    logger.info(f"Disk cache expired for {formatted_symbol} (age: {cache_age/60:.1f} min)")
             except Exception as e:
                 logger.error(f"Error reading cache file for {formatted_symbol}: {e}")
+        
+        # For problematic symbols like EUR/USD, use different formats
+        if is_problematic:
+            # Try alternate symbol formats
+            alternate_formats = ['EURUSD=X', 'EUR=X']
+            
+            for alt_format in alternate_formats:
+                if alt_format != formatted_symbol:
+                    logger.info(f"Trying alternate format for {symbol}: {alt_format}")
+                    # Apply rate limiting before making the API call
+                    rate_limiter.wait_if_needed()
+                    
+                    try:
+                        stock = yf.Ticker(alt_format)
+                        # Parse string dates to datetime objects for yfinance
+                        start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+                        end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+                        
+                        # Add a small buffer to end date to ensure we get all data
+                        end_date_buffer = end_date + timedelta(days=1)
+                        
+                        hist = stock.history(start=start_date, end=end_date_buffer)
+                        
+                        if not hist.empty:
+                            logger.info(f"Successfully fetched data using alternate format {alt_format}, {len(hist)} data points")
+                            
+                            # Cache the result
+                            try:
+                                # Convert DataFrame to serializable format
+                                hist_dict = {
+                                    'data': hist.reset_index().to_dict('list'),
+                                    'timestamp': time.time()
+                                }
+                                
+                                # Cache to disk
+                                with open(cache_file, 'w') as f:
+                                    json.dump(hist_dict, f)
+                                
+                                # Cache to memory
+                                memory_cache[cache_key] = {
+                                    'data': hist,
+                                    'timestamp': time.time()
+                                }
+                                
+                                logger.info(f"Cached data for {formatted_symbol} using alternate format {alt_format}")
+                            except Exception as cache_error:
+                                logger.error(f"Error caching data: {cache_error}")
+                            
+                            return hist
+                    except Exception as e:
+                        logger.error(f"Failed to fetch data with alternate format {alt_format}: {e}")
         
         # Apply rate limiting before making the API call
         rate_limiter.wait_if_needed()
@@ -199,13 +262,18 @@ def is_active_symbol(symbol):
     # Major forex pairs
     active_forex = [
         'EURUSD=X', 'GBPUSD=X', 'USDJPY=X', 'USDCHF=X', 
-        'AUDUSD=X', 'USDCAD=X', 'NZDUSD=X'
+        'AUDUSD=X', 'USDCAD=X', 'NZDUSD=X',
+        'EUR/USD', 'GBP/USD', 'USD/JPY', 'USD/CHF',  # Add slash format
+        'AUD/USD', 'USD/CAD', 'NZD/USD',
+        'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF',      # Also add format without =X
+        'AUDUSD', 'USDCAD', 'NZDUSD'
     ]
     
     # Major stock indices
     active_indices = [
         '^GSPC', '^DJI', '^IXIC', '^NYA', '^XAX', '^RUT',  # US indices
-        '^FTSE', '^GDAXI', '^FCHI', '^N225'  # Major global indices
+        'GSPC', 'DJI', 'IXIC', 'NYA', 'XAX', 'RUT',        # Without ^ prefix
+        '^FTSE', '^GDAXI', '^FCHI', '^N225'                # Major global indices
     ]
     
     # Major tech stocks and other frequently traded stocks
@@ -218,56 +286,63 @@ def is_active_symbol(symbol):
 
 def format_symbol_for_yahoo(symbol):
     """
-    Format symbol properly for Yahoo Finance API
+    Format a symbol for use with Yahoo Finance API
     
     Args:
-        symbol (str): Original symbol format
+        symbol (str): The symbol to format, which can be a stock, forex pair, 
+                     cryptocurrency, or index
         
     Returns:
-        str: Properly formatted symbol for Yahoo Finance
+        str: The formatted symbol ready to use with Yahoo Finance API
     """
-    # Special cases for commonly used forex pairs that need exact format
-    forex_pairs_map = {
-        'EURUSD': 'EURUSD=X',
-        'EURUSD-X': 'EURUSD=X',
-        'GBPUSD': 'GBPUSD=X',
-        'GBPUSD-X': 'GBPUSD=X',
-        'USDJPY': 'USDJPY=X',
-        'USDJPY-X': 'USDJPY=X',
-        'USDCHF': 'USDCHF=X',
-        'USDCHF-X': 'USDCHF=X',
-        'AUDUSD': 'AUDUSD=X',
-        'AUDUSD-X': 'AUDUSD=X',
-        'USDCAD': 'USDCAD=X',
-        'USDCAD-X': 'USDCAD=X',
-        'NZDUSD': 'NZDUSD=X',
-        'NZDUSD-X': 'NZDUSD=X'
+    if not symbol:
+        return symbol
+    
+    # Clean the symbol first (remove spaces, etc.)
+    cleaned = symbol.strip().upper()
+    
+    # Special case handling for common forex pairs to ensure consistent formatting
+    common_forex_pairs = {
+        'EUR/USD': 'EURUSD=X', 'EUR-USD': 'EURUSD=X', 'EURUSD': 'EURUSD=X',
+        'GBP/USD': 'GBPUSD=X', 'GBP-USD': 'GBPUSD=X', 'GBPUSD': 'GBPUSD=X',
+        'USD/JPY': 'USDJPY=X', 'USD-JPY': 'USDJPY=X', 'USDJPY': 'USDJPY=X',
+        'USD/CAD': 'USDCAD=X', 'USD-CAD': 'USDCAD=X', 'USDCAD': 'USDCAD=X',
+        'AUD/USD': 'AUDUSD=X', 'AUD-USD': 'AUDUSD=X', 'AUDUSD': 'AUDUSD=X',
+        'USD/CHF': 'USDCHF=X', 'USD-CHF': 'USDCHF=X', 'USDCHF': 'USDCHF=X',
+        'NZD/USD': 'NZDUSD=X', 'NZD-USD': 'NZDUSD=X', 'NZDUSD': 'NZDUSD=X'
     }
     
-    # Direct mapping for known pairs
-    if symbol in forex_pairs_map:
-        return forex_pairs_map[symbol]
+    # Check if it's a common forex pair with direct mapping
+    if cleaned in common_forex_pairs:
+        return common_forex_pairs[cleaned]
+        
+    # Handle other forex pairs with slash format
+    if '/' in cleaned:
+        parts = cleaned.split('/')
+        if len(parts) == 2 and len(parts[0]) <= 3 and len(parts[1]) <= 3:
+            # Remove the slash and add =X suffix for Yahoo Finance
+            return cleaned.replace('/', '') + '=X'
     
-    # Handle Forex pairs with general rule
-    if len(symbol) == 6 and any(currency in symbol for currency in ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'NZD', 'CAD', 'CHF']):
-        # For Forex pairs, ensure it has the =X suffix
-        if not symbol.endswith('=X'):
-            # Remove -X suffix if present and replace with =X
-            if symbol.endswith('-X'):
-                return symbol.replace('-X', '=X')
-            # Otherwise just add =X
-            return f"{symbol}=X"
-    # Handle currency pairs with -X suffix (alternative format)
-    elif '-X' in symbol:
-        return symbol.replace('-X', '=X')
+    # Handle dash format for forex (e.g., USD-JPY)
+    if '-' in cleaned:
+        parts = cleaned.split('-')
+        if len(parts) == 2 and len(parts[0]) <= 3 and len(parts[1]) <= 3:
+            # Could be a forex pair in dash format
+            return cleaned.replace('-', '') + '=X'
     
-    # Handle indices - add ^ if needed for indices like GSPC (S&P 500)
-    if symbol in ['GSPC', 'DJI', 'IXIC', 'NYA', 'XAX', 'RUT']:
-        if not symbol.startswith('^'):
-            return f'^{symbol}'
+    # Handle existing =X notation (keep as is)
+    if cleaned.endswith('=X'):
+        return cleaned
+        
+    # Handle cryptos
+    if cleaned.endswith('-USD') or cleaned.startswith('USD-'):
+        return cleaned
     
-    # Keep other symbols as is
-    return symbol
+    # Handle indices
+    if cleaned.startswith('^'):
+        return cleaned
+        
+    return cleaned
 
 def store_price_data(symbol, historical_data):
     """Store price data in MySQL database"""
@@ -392,10 +467,10 @@ def generate_synthetic_data(symbol):
     Returns:
         dict: Synthetic market data
     """
-    # Define some base prices for common forex pairs - updated with accurate recent values
+    # Define some base prices for common forex pairs
     base_prices = {
         'EURUSD': 1.0782,
-        'GBPUSD': 1.2673,
+        'GBPUSD': 1.26734,
         'USDJPY': 151.68,
         'USDCAD': 1.3642,
         'AUDUSD': 0.6578,
@@ -403,35 +478,14 @@ def generate_synthetic_data(symbol):
         'USDCHF': 0.9014,
         'EURGBP': 0.8523,
         'EURJPY': 163.54,
-        'EURCHF': 0.9718,
-        'GBPJPY': 192.13,
-        'GBPCHF': 1.1402,
-        'CADJPY': 111.19,
-        'AUDNZD': 1.0712,
-        'AUDCAD': 0.8974,
-        'AUDCHF': 0.5926,
-        'EURAUD': 1.6395,
-        'EURCAD': 1.4712,
-        'NZDCAD': 0.8374,
-        'NZDCHF': 0.5532
+        'GBPJPY': 192.13
     }
     
-    # Clean symbol for lookup - handle both formats
+    # Clean symbol for lookup
     clean_symbol = symbol.replace('-X', '').replace('=X', '')
     
-    # Check if we need to swap the order for inverse pairs (some pairs are quoted differently)
-    if clean_symbol not in base_prices and len(clean_symbol) == 6:
-        # Try the reverse currency pair
-        reverse_symbol = clean_symbol[3:] + clean_symbol[:3]
-        if reverse_symbol in base_prices:
-            # Use the inverse of the base price
-            base_price = 1 / base_prices[reverse_symbol]
-        else:
-            # Use a reasonable default value
-            base_price = 100.0
-    else:
-        # Use base price if available, otherwise use a default
-        base_price = base_prices.get(clean_symbol, 100.0)
+    # Use base price if available, otherwise use a default
+    base_price = base_prices.get(clean_symbol, 100.0)
     
     # Add some randomness
     current_price = base_price * (1 + (np.random.random() * 0.02 - 0.01))
@@ -565,30 +619,15 @@ def analyze_stock(symbol):
     try:
         logger.info(f"Starting analysis for symbol: {symbol}")
         
-        # Special handling for EUR/USD which requires exact formatting
-        original_symbol = symbol
-        if symbol in ['EURUSD', 'EURUSD-X']:
-            logger.info(f"Special handling for EUR/USD")
-            symbol = 'EURUSD=X'
-        
         # Define problematic symbols that need synthetic data
         problematic_symbols = [
             'GBPUSD', 'GBPUSD-X', 'GBPUSD=X',
             'USDJPY', 'USDJPY-X', 'USDJPY=X',
-            'USDCAD', 'USDCAD-X', 'USDCAD=X',
-            'EURUSD', 'EURUSD-X', 'EURUSD=X',
-            'AUDUSD', 'AUDUSD-X', 'AUDUSD=X',
-            'NZDUSD', 'NZDUSD-X', 'NZDUSD=X',
-            'USDCHF', 'USDCHF-X', 'USDCHF=X',
-            'EURGBP', 'EURGBP-X', 'EURGBP=X',
-            'EURJPY', 'EURJPY-X', 'EURJPY=X',
-            'EURCHF', 'EURCHF-X', 'EURCHF=X',
-            'GBPJPY', 'GBPJPY-X', 'GBPJPY=X'
+            'USDCAD', 'USDCAD-X', 'USDCAD=X'
         ]
         
-        # Check if we should generate synthetic data
-        # For now, let's handle EUR/USD with real API data like GBP/USD
-        if any(ps in original_symbol for ps in problematic_symbols) and 'EURUSD' not in original_symbol and 'GBPUSD' not in original_symbol:
+        # Check if we need to use synthetic data
+        if any(ps in symbol for ps in problematic_symbols):
             logger.info(f"Using synthetic data for problematic symbol: {symbol}")
             return generate_synthetic_data(symbol)
         
@@ -747,4 +786,81 @@ def analyze_stock(symbol):
     except Exception as e:
         logger.error(f"Error in analyze_stock: {str(e)}")
         # Return synthetic data as a fallback
-        return generate_synthetic_data(symbol) 
+        return generate_synthetic_data(symbol)
+
+def clear_cache_for_symbol(symbol):
+    """
+    Force clear cache for a specific symbol
+    
+    Args:
+        symbol (str): Symbol to clear cache for
+        
+    Returns:
+        bool: True if cache was cleared
+    """
+    try:
+        # Format symbol for consistent cache keys
+        formatted_symbol = format_symbol_for_yahoo(symbol)
+        
+        # Look for any cache keys containing this symbol
+        cleared = False
+        
+        # Clear from memory cache
+        cache_keys_to_remove = []
+        for key in memory_cache.keys():
+            if formatted_symbol in key:
+                cache_keys_to_remove.append(key)
+                cleared = True
+                
+        # Remove keys from memory cache
+        for key in cache_keys_to_remove:
+            del memory_cache[key]
+            
+        # Clear from disk cache if exists
+        cache_dir_files = os.listdir(CACHE_DIR) if os.path.exists(CACHE_DIR) else []
+        for filename in cache_dir_files:
+            if formatted_symbol in filename and filename.endswith('.json'):
+                try:
+                    os.remove(os.path.join(CACHE_DIR, filename))
+                    cleared = True
+                except Exception as e:
+                    logger.error(f"Failed to remove cache file {filename}: {e}")
+        
+        # Also try with different symbol formats to be thorough
+        alt_symbols = []
+        
+        # Forex pairs are especially problematic, try different formats
+        if 'USD' in symbol or 'EUR' in symbol or 'GBP' in symbol or 'JPY' in symbol:
+            # Remove any special characters
+            clean_symbol = ''.join(c for c in symbol if c.isalnum())
+            
+            # Try with =X suffix
+            alt_symbols.append(f"{clean_symbol}=X")
+            
+            # Try without =X
+            alt_symbols.append(clean_symbol)
+            
+            # Try with slash format
+            if len(clean_symbol) == 6:
+                alt_symbols.append(f"{clean_symbol[:3]}/{clean_symbol[3:]}")
+        
+        # Clear cache for alternative formats
+        for alt_symbol in alt_symbols:
+            for key in list(memory_cache.keys()):
+                if alt_symbol in key:
+                    del memory_cache[key]
+                    cleared = True
+                    
+            for filename in cache_dir_files:
+                if alt_symbol in filename and filename.endswith('.json'):
+                    try:
+                        os.remove(os.path.join(CACHE_DIR, filename))
+                        cleared = True
+                    except Exception as e:
+                        logger.error(f"Failed to remove alt format cache file {filename}: {e}")
+        
+        logger.info(f"Cache cleared for symbol: {symbol} (formatted: {formatted_symbol})")
+        return cleared
+    except Exception as e:
+        logger.error(f"Error clearing cache for symbol {symbol}: {e}")
+        return False 

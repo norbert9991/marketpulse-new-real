@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from db_connection import db_manager
-from market_analysis import analyze_stock, generate_synthetic_data
+from market_analysis import analyze_stock, generate_synthetic_data, clear_cache_for_symbol
 import json
 import logging
 import concurrent.futures
@@ -549,4 +549,72 @@ def analyze_with_backoff(symbol, index):
         return analyze_stock(symbol)
     except Exception as e:
         logger.error(f"Error analyzing {symbol}: {e}")
-        return generate_synthetic_data(symbol) 
+        return generate_synthetic_data(symbol)
+
+@market_analysis_bp.route('/api/market-analysis/force-refresh/<symbol>', methods=['POST'])
+def force_refresh_market_analysis(symbol):
+    """Force a complete refresh of market analysis data by clearing cache and re-fetching data"""
+    try:
+        # Clean the symbol
+        clean_symbol = symbol.replace('-X', '').replace('=X', '')
+        if '/' in clean_symbol:
+            clean_symbol = ''.join(clean_symbol.split('/'))
+        
+        logger.info(f"Force refreshing market analysis for symbol: {symbol}, clean_symbol: {clean_symbol}")
+        
+        # Clear cache for this symbol
+        cache_cleared = clear_cache_for_symbol(symbol)
+        
+        # Also try to clear cache for the clean symbol
+        if clean_symbol != symbol:
+            cache_cleared = clear_cache_for_symbol(clean_symbol) or cache_cleared
+        
+        # Use the clean symbol for analysis
+        analysis_result = analyze_stock(clean_symbol)
+        
+        # Check if we need to clear database entries as well
+        conn = db_manager.get_connection()
+        cursor = conn.cursor()
+        
+        try:
+            # First delete existing entries for this symbol
+            cursor.execute("DELETE FROM market_data WHERE symbol = %s", (clean_symbol,))
+            cursor.execute("DELETE FROM technical_indicators WHERE symbol = %s", (clean_symbol,))
+            cursor.execute("DELETE FROM support_resistance WHERE symbol = %s", (clean_symbol,))
+            cursor.execute("DELETE FROM price_predictions WHERE symbol = %s", (clean_symbol,))
+            cursor.execute("DELETE FROM price_history WHERE symbol = %s", (clean_symbol,))
+            
+            # Also try with formatted symbol just to be thorough
+            cursor.execute("DELETE FROM market_data WHERE symbol = %s", (symbol,))
+            cursor.execute("DELETE FROM technical_indicators WHERE symbol = %s", (symbol,))
+            cursor.execute("DELETE FROM support_resistance WHERE symbol = %s", (symbol,))
+            cursor.execute("DELETE FROM price_predictions WHERE symbol = %s", (symbol,))
+            cursor.execute("DELETE FROM price_history WHERE symbol = %s", (symbol,))
+            
+            conn.commit()
+            logger.info(f"Cleared database entries for symbol: {clean_symbol}")
+        except Exception as db_error:
+            logger.error(f"Error clearing database entries: {db_error}")
+            conn.rollback()
+        finally:
+            cursor.close()
+            db_manager.release_connection(conn)
+        
+        if "error" in analysis_result:
+            return jsonify({
+                "error": analysis_result["error"],
+                "cache_cleared": cache_cleared
+            }), 400
+            
+        return jsonify({
+            "message": "Symbol data force refreshed successfully", 
+            "cache_cleared": cache_cleared,
+            "data": analysis_result
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error force refreshing market analysis for {symbol}: {str(e)}")
+        return jsonify({
+            "error": str(e),
+            "cache_cleared": False
+        }), 500 
