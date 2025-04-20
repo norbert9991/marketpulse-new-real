@@ -286,7 +286,7 @@ def analyze_stock(symbol, force_refresh=False):
                 cursor.execute("""
                     UPDATE market_data 
                     SET current_price = %s, trend = %s, rsi = %s, macd = %s, macd_signal = %s, 
-                        macd_hist = %s, sma20 = %s, sma50 = %s, sma200 = %s, last_updated = NOW()
+                        macd_hist = %s, sma20 = %s, sma50 = %s, sma200 = %s, updated_at = NOW()
                     WHERE symbol = %s
                 """, (
                     response["current_price"],
@@ -304,7 +304,7 @@ def analyze_stock(symbol, force_refresh=False):
                 # Insert new record
                 cursor.execute("""
                     INSERT INTO market_data 
-                    (symbol, current_price, trend, rsi, macd, macd_signal, macd_hist, sma20, sma50, sma200, last_updated)
+                    (symbol, current_price, trend, rsi, macd, macd_signal, macd_hist, sma20, sma50, sma200, updated_at)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
                 """, (
                     symbol,

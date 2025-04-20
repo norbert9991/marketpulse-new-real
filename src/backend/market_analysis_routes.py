@@ -3,6 +3,7 @@ from db_connection import db_manager
 from market_analysis import analyze_stock, get_historical_prices
 import json
 import logging
+from datetime import datetime
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -45,8 +46,7 @@ def get_market_analysis(symbol):
                 ti.macd_hist, 
                 ti.sma20, 
                 ti.sma50, 
-                ti.sma200,
-                md.last_updated
+                ti.sma200
             FROM market_data md
             LEFT JOIN technical_indicators ti ON md.symbol = ti.symbol
             WHERE md.symbol = %s
@@ -67,8 +67,7 @@ def get_market_analysis(symbol):
                     ti.macd_hist, 
                     ti.sma20, 
                     ti.sma50, 
-                    ti.sma200,
-                    md.last_updated
+                    ti.sma200
                 FROM market_data md
                 LEFT JOIN technical_indicators ti ON md.symbol = ti.symbol
                 WHERE md.symbol = %s
@@ -129,7 +128,7 @@ def get_market_analysis(symbol):
             },
             "predictions": [],
             "prediction_dates": [],
-            "last_updated": market_row[9].isoformat() if market_row[9] else None
+            "last_updated": datetime.now().isoformat()
         }
         
         # Process support and resistance levels

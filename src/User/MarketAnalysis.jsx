@@ -746,22 +746,29 @@ const MarketAnalysis = ({ selectedSymbol }) => {
         <Typography variant="h6" sx={{ color: colors.primaryText }}>
           Market Analysis: {selectedSymbol}
         </Typography>
-        <Button 
-          variant="outlined" 
-          startIcon={loading ? <CircularProgress size={20} /> : <RefreshIcon />}
-          onClick={handleRefresh}
-          disabled={loading}
-          sx={{ 
-            color: colors.accentBlue,
-            borderColor: colors.accentBlue,
-            '&:hover': {
-              backgroundColor: `${colors.accentBlue}22`,
-              borderColor: colors.accentBlue
-            }
-          }}
-        >
-          {loading ? 'Refreshing...' : 'Refresh Data'}
-        </Button>
+        <Box>
+          {analysisData && (
+            <Typography variant="caption" sx={{ color: colors.secondaryText, display: 'block', mb: 1, textAlign: 'right' }}>
+              Last updated: {analysisData.last_updated || analysisData.updated_at || new Date().toISOString()}
+            </Typography>
+          )}
+          <Button 
+            variant="outlined" 
+            startIcon={loading ? <CircularProgress size={20} /> : <RefreshIcon />}
+            onClick={handleRefresh}
+            disabled={loading}
+            sx={{ 
+              color: colors.accentBlue,
+              borderColor: colors.accentBlue,
+              '&:hover': {
+                backgroundColor: `${colors.accentBlue}22`,
+                borderColor: colors.accentBlue
+              }
+            }}
+          >
+            {loading ? 'Refreshing...' : 'Refresh Data'}
+          </Button>
+        </Box>
       </Box>
       
       {error && (
