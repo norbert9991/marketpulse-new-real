@@ -478,7 +478,23 @@ export const API = {
         const originalSymbol = data.symbol;
         let formattedSymbol = data.symbol;
         
-        if (typeof data.symbol === 'string') {
+        // Special handling for known forex pairs that need exact formatting
+        const forexPairsMap = {
+          'EURUSD': 'EURUSD=X',
+          'EURUSD-X': 'EURUSD=X',
+          'GBPUSD': 'GBPUSD=X',
+          'GBPUSD-X': 'GBPUSD=X',
+          'USDJPY': 'USDJPY=X',
+          'USDJPY-X': 'USDJPY=X'
+        };
+        
+        // Use direct mapping if available
+        if (formattedSymbol in forexPairsMap) {
+          formattedSymbol = forexPairsMap[formattedSymbol];
+          console.log(`[API] analyze - Using exact mapping for ${originalSymbol} -> ${formattedSymbol}`);
+        }
+        // Otherwise use general rules
+        else if (typeof data.symbol === 'string') {
           // Handle forex pairs - ensure consistent format for Yahoo Finance
           const isForexPair = (symbol) => {
             const currencies = ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'NZD', 'CAD', 'CHF'];
@@ -512,6 +528,10 @@ export const API = {
           }
         }
         
+        // Special exemptions for forex pairs that should use actual Yahoo Finance data
+        const useRealDataPairs = ['EURUSD=X', 'GBPUSD=X'];
+        const shouldUseRealData = useRealDataPairs.includes(formattedSymbol);
+        
         // Check local cache first
         const cacheKey = `market_analysis_${formattedSymbol}`;
         const cachedData = apiCache.get(cacheKey);
@@ -522,6 +542,7 @@ export const API = {
         
         console.log('[API] analyze - Original Symbol:', originalSymbol);
         console.log('[API] analyze - Formatted Symbol:', formattedSymbol);
+        console.log('[API] analyze - Will use real API data:', shouldUseRealData);
         console.log('[API] analyze - Full URL:', `${API_URL}/api/market-analysis/${formattedSymbol}`);
         
         return axiosInstance.get(`/api/market-analysis/${formattedSymbol}`)
@@ -632,116 +653,88 @@ export const API = {
     generateSyntheticData: (symbol) => {
       return generateBasicSyntheticData(symbol);
     },
-    getHistory: (symbol) => {
+    getHistory: (data) => {
       try {
-        // Get original symbol
-        const originalSymbol = symbol;
-        let formattedSymbol = symbol;
+        // Get the original symbol
+        const originalSymbol = data.symbol;
+        let formattedSymbol = data.symbol;
         
-        if (typeof symbol === 'string') {
-          // Handle forex pairs consistently - same logic as in analyze method
-          const isForexPair = (sym) => {
+        // Special handling for known forex pairs that need exact formatting
+        const forexPairsMap = {
+          'EURUSD': 'EURUSD=X',
+          'EURUSD-X': 'EURUSD=X',
+          'GBPUSD': 'GBPUSD=X',
+          'GBPUSD-X': 'GBPUSD=X',
+          'USDJPY': 'USDJPY=X',
+          'USDJPY-X': 'USDJPY=X'
+        };
+        
+        // Use direct mapping if available
+        if (formattedSymbol in forexPairsMap) {
+          formattedSymbol = forexPairsMap[formattedSymbol];
+          console.log(`[API] getHistory - Using exact mapping for ${originalSymbol} -> ${formattedSymbol}`);
+        }
+        // Otherwise use general rules
+        else if (typeof data.symbol === 'string') {
+          // Handle forex pairs - ensure consistent format for Yahoo Finance
+          const isForexPair = (symbol) => {
             const currencies = ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'NZD', 'CAD', 'CHF'];
-            return sym.length === 6 && currencies.some(curr => sym.includes(curr));
+            // Check if it's a 6-character string containing currency codes
+            return symbol.length === 6 && 
+                   currencies.some(curr => symbol.includes(curr));
           };
           
-          if (isForexPair(symbol)) {
+          if (isForexPair(data.symbol)) {
             // For forex pairs, ensure proper format with =X suffix
-            if (symbol.includes('-X')) {
-              formattedSymbol = symbol.replace('-X', '=X');
-            } else if (!symbol.endsWith('=X')) {
-              formattedSymbol = `${symbol}=X`;
+            if (data.symbol.includes('-X')) {
+              formattedSymbol = data.symbol.replace('-X', '=X');
+            } else if (!data.symbol.endsWith('=X')) {
+              formattedSymbol = `${data.symbol}=X`;
             }
-          } else if (symbol.includes('-X')) {
-            formattedSymbol = symbol.replace('-X', '=X');
+          } 
+          // Handle other formats like "-X" suffix
+          else if (data.symbol.includes('-X')) {
+            formattedSymbol = data.symbol.replace('-X', '=X');
           }
           
-          // Safety check: Make sure we don't send an empty string
-          if (!formattedSymbol) {
-            formattedSymbol = originalSymbol;
+          // Handle stock indices
+          const indices = ['GSPC', 'DJI', 'IXIC', 'NYA', 'XAX', 'RUT'];
+          if (indices.includes(data.symbol) && !data.symbol.startsWith('^')) {
+            formattedSymbol = `^${data.symbol}`;
           }
         }
         
-        // Check if this is one of the problematic pairs
-        const problematicPairs = [
-          'GBPUSD', 'GBPUSD=X', 'GBPUSD-X',
-          'USDJPY', 'USDJPY=X', 'USDJPY-X',
-          'USDCAD', 'USDCAD=X', 'USDCAD-X',
-          'EURUSD', 'EURUSD=X', 'EURUSD-X',
-          'AUDUSD', 'AUDUSD=X', 'AUDUSD-X',
-          'NZDUSD', 'NZDUSD=X', 'NZDUSD-X',
-          'USDCHF', 'USDCHF=X', 'USDCHF-X'
-        ];
+        // Special exemptions for forex pairs that should use actual Yahoo Finance data
+        const useRealDataPairs = ['EURUSD=X', 'GBPUSD=X'];
+        const shouldUseRealData = useRealDataPairs.includes(formattedSymbol);
         
-        const needsSyntheticData = problematicPairs.some(pair => formattedSymbol.includes(pair) || originalSymbol.includes(pair));
+        // Check local cache first
+        const cacheKey = `market_history_${formattedSymbol}`;
+        const cachedData = apiCache.get(cacheKey);
+        if (cachedData) {
+          console.log(`[API] Using cached history data for ${formattedSymbol}`);
+          return Promise.resolve({ data: cachedData });
+        }
         
-        // Log details for debugging
         console.log('[API] getHistory - Original Symbol:', originalSymbol);
         console.log('[API] getHistory - Formatted Symbol:', formattedSymbol);
-        console.log('[API] getHistory - Needs synthetic data:', needsSyntheticData);
-        console.log('[API] getHistory - Full URL:', `${API_URL}/api/market-analysis/${formattedSymbol}/history`);
+        console.log('[API] getHistory - Will use real API data:', shouldUseRealData);
+
+        // Adjust the URL based on the symbol
+        const apiUrl = `/api/market-history/${formattedSymbol}`;
+        console.log('[API] getHistory - Requesting from:', apiUrl);
         
-        // If it's a problematic pair, return synthetic data immediately
-        if (needsSyntheticData) {
-          console.log(`[API] Using synthetic history data for ${formattedSymbol} due to known API issues`);
-          
-          // Set appropriate base price based on currency pair
-          let basePrice;
-          if (formattedSymbol.includes('GBPUSD')) {
-            basePrice = 1.267;
-          } else if (formattedSymbol.includes('USDJPY')) {
-            basePrice = 151.5;
-          } else if (formattedSymbol.includes('USDCAD')) {
-            basePrice = 1.364;
-          } else if (formattedSymbol.includes('EURUSD')) {
-            basePrice = 1.078;
-          } else if (formattedSymbol.includes('AUDUSD')) {
-            basePrice = 0.658;
-          } else if (formattedSymbol.includes('NZDUSD')) {
-            basePrice = 0.614;
-          } else if (formattedSymbol.includes('USDCHF')) {
-            basePrice = 0.901;
-          } else {
-            // Default price for other forex pairs
-            basePrice = 1.000;
-          }
-          
-          // Determine if we need JPY-scale variations (JPY denominated pairs have larger pip values)
-          const isJpyPair = formattedSymbol.includes('JPY');
-          
-          // Generate synthetic history data
-          const history = [];
-          const today = new Date();
-          
-          // Generate 30 days of history
-          for (let i = 29; i >= 0; i--) {
-            const date = new Date(today);
-            date.setDate(today.getDate() - i);
-            const dateString = date.toISOString().split('T')[0];
+        return axiosInstance.get(apiUrl)
+          .then(response => {
+            console.log('[API] getHistory - Received data:', response.data ? 'Yes' : 'No');
             
-            // Base price with some variation
-            const variation = (Math.sin(i * 0.3) * 0.015) + (Math.random() * 0.006 - 0.003);
-            const close = basePrice + variation * (isJpyPair ? 10 : 1); // Larger variations for JPY pairs
-            
-            history.push({
-              date: dateString,
-              open: close - (Math.random() * 0.005 * (isJpyPair ? 10 : 1)),
-              high: close + (Math.random() * 0.008 * (isJpyPair ? 10 : 1)),
-              low: close - (Math.random() * 0.008 * (isJpyPair ? 10 : 1)),
-              close: close,
-              volume: Math.floor(Math.random() * 10000) + 5000
-            });
-          }
-          
-          return {
-            data: {
-              symbol: formattedSymbol,
-              history: history
+            // Cache the response for 10 minutes (600000 ms)
+            if (response.data) {
+              apiCache.set(cacheKey, response.data, 10 * 60 * 1000);
             }
-          };
-        }
-        
-        return axiosInstance.get(`/api/market-analysis/${formattedSymbol}/history`)
+            
+            return response;
+          })
           .catch(error => {
             // Handle 404 errors gracefully
             if (error.response && error.response.status === 404) {

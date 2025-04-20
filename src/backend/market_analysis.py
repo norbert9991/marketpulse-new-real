@@ -226,7 +226,29 @@ def format_symbol_for_yahoo(symbol):
     Returns:
         str: Properly formatted symbol for Yahoo Finance
     """
-    # Handle Forex pairs
+    # Special cases for commonly used forex pairs that need exact format
+    forex_pairs_map = {
+        'EURUSD': 'EURUSD=X',
+        'EURUSD-X': 'EURUSD=X',
+        'GBPUSD': 'GBPUSD=X',
+        'GBPUSD-X': 'GBPUSD=X',
+        'USDJPY': 'USDJPY=X',
+        'USDJPY-X': 'USDJPY=X',
+        'USDCHF': 'USDCHF=X',
+        'USDCHF-X': 'USDCHF=X',
+        'AUDUSD': 'AUDUSD=X',
+        'AUDUSD-X': 'AUDUSD=X',
+        'USDCAD': 'USDCAD=X',
+        'USDCAD-X': 'USDCAD=X',
+        'NZDUSD': 'NZDUSD=X',
+        'NZDUSD-X': 'NZDUSD=X'
+    }
+    
+    # Direct mapping for known pairs
+    if symbol in forex_pairs_map:
+        return forex_pairs_map[symbol]
+    
+    # Handle Forex pairs with general rule
     if len(symbol) == 6 and any(currency in symbol for currency in ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'NZD', 'CAD', 'CHF']):
         # For Forex pairs, ensure it has the =X suffix
         if not symbol.endswith('=X'):
@@ -543,6 +565,12 @@ def analyze_stock(symbol):
     try:
         logger.info(f"Starting analysis for symbol: {symbol}")
         
+        # Special handling for EUR/USD which requires exact formatting
+        original_symbol = symbol
+        if symbol in ['EURUSD', 'EURUSD-X']:
+            logger.info(f"Special handling for EUR/USD")
+            symbol = 'EURUSD=X'
+        
         # Define problematic symbols that need synthetic data
         problematic_symbols = [
             'GBPUSD', 'GBPUSD-X', 'GBPUSD=X',
@@ -558,8 +586,9 @@ def analyze_stock(symbol):
             'GBPJPY', 'GBPJPY-X', 'GBPJPY=X'
         ]
         
-        # Check if we need to use synthetic data
-        if any(ps in symbol for ps in problematic_symbols):
+        # Check if we should generate synthetic data
+        # For now, let's handle EUR/USD with real API data like GBP/USD
+        if any(ps in original_symbol for ps in problematic_symbols) and 'EURUSD' not in original_symbol and 'GBPUSD' not in original_symbol:
             logger.info(f"Using synthetic data for problematic symbol: {symbol}")
             return generate_synthetic_data(symbol)
         
