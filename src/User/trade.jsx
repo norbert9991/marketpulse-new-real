@@ -2432,27 +2432,28 @@ const Trade = () => {
           </Box>
         )}
         {step === 3 && tradingType === 'short-term' && (
-          <Box sx={{ maxWidth: '100%', mx: 'auto', p: 2 }}>
-            <Grid container spacing={3}>
-              {/* Chart Panel - Left Side (70%) */}
-              <Grid item xs={12} lg={8}>
+          <Box sx={{ maxWidth: '100%', mx: 'auto', p: { xs: 1, md: 2 } }}>
+            <Grid container spacing={2}>
+              {/* Chart Panel - Left Side */}
+              <Grid item xs={12} md={8}>
                 <Paper 
                   sx={{ 
-                    p: 3, 
+                    p: { xs: 1, md: 2 }, 
                     backgroundColor: colors.cardBg,
                     border: `1px solid ${colors.borderColor}`,
-                    borderRadius: '12px',
-                    mb: 3
+                    borderRadius: '10px',
+                    mb: 2,
+                    overflow: 'hidden'
                   }}
                 >
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                    <Typography variant="h6" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="h6" sx={{ color: colors.primaryText, fontWeight: 'bold', fontSize: { xs: '0.9rem', md: '1.1rem' } }}>
                       {selectedPair} - Advanced Chart
                     </Typography>
                     
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <FormControl size="small" variant="outlined" sx={{ minWidth: 120 }}>
-                        <InputLabel id="pair-select-label" sx={{ color: colors.secondaryText }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <FormControl size="small" variant="outlined" sx={{ minWidth: 100 }}>
+                        <InputLabel id="pair-select-label" sx={{ color: colors.secondaryText, fontSize: '0.8rem' }}>
                           Currency Pair
                         </InputLabel>
                         <Select
@@ -2463,6 +2464,7 @@ const Trade = () => {
                           sx={{ 
                             color: colors.primaryText,
                             backgroundColor: colors.panelBg,
+                            fontSize: '0.8rem',
                             '.MuiOutlinedInput-notchedOutline': {
                               borderColor: colors.borderColor
                             }
@@ -2480,7 +2482,7 @@ const Trade = () => {
                   <TradingViewWidget 
                     symbol={selectedPair} 
                     theme="dark" 
-                    height="500px" 
+                    height="450px" 
                   />
                 </Paper>
                 
@@ -2488,87 +2490,93 @@ const Trade = () => {
                 {position && (
                   <Paper 
                     sx={{ 
-                      p: 3, 
+                      p: { xs: 1.5, md: 2 }, 
                       backgroundColor: colors.cardBg,
                       border: `1px solid ${colors.borderColor}`,
-                      borderRadius: '12px',
-                      mb: 3
+                      borderRadius: '10px',
+                      mb: 2
                     }}
                   >
-                    <Typography variant="h6" sx={{ color: colors.primaryText, fontWeight: 'bold', mb: 2 }}>
+                    <Typography variant="h6" sx={{ color: colors.primaryText, fontWeight: 'bold', mb: 1.5, fontSize: { xs: '0.9rem', md: '1.1rem' } }}>
                       Active Trade - {selectedPair}
                     </Typography>
                     
-                    <Grid container spacing={3}>
+                    <Grid container spacing={2}>
                       {/* Left column */}
-                      <Grid item xs={12} md={6}>
-                        <Box sx={{ mb: 3 }}>
-                          <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 0.5 }}>
+                      <Grid item xs={6} sm={4}>
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 0.5, fontSize: '0.75rem' }}>
                             Direction
                           </Typography>
                           <Box sx={{ display: 'flex', alignItems: 'center' }}>
                             {position.type === 'buy' ? (
                               <>
-                                <TrendingUpIcon sx={{ color: colors.buyGreen, mr: 1 }} />
-                                <Typography sx={{ color: colors.buyGreen, fontWeight: 'bold' }}>
+                                <TrendingUpIcon sx={{ color: colors.buyGreen, mr: 0.5, fontSize: '1rem' }} />
+                                <Typography sx={{ color: colors.buyGreen, fontWeight: 'bold', fontSize: '0.9rem' }}>
                                   BUY
                                 </Typography>
                               </>
                             ) : (
                               <>
-                                <TrendingDownIcon sx={{ color: colors.sellRed, mr: 1 }} />
-                                <Typography sx={{ color: colors.sellRed, fontWeight: 'bold' }}>
+                                <TrendingDownIcon sx={{ color: colors.sellRed, mr: 0.5, fontSize: '1rem' }} />
+                                <Typography sx={{ color: colors.sellRed, fontWeight: 'bold', fontSize: '0.9rem' }}>
                                   SELL
                                 </Typography>
                               </>
                             )}
                           </Box>
                         </Box>
-                        
-                        <Box sx={{ mb: 3 }}>
-                          <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 0.5 }}>
+                      </Grid>
+                      
+                      <Grid item xs={6} sm={4}>
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 0.5, fontSize: '0.75rem' }}>
                             Entry Price
                           </Typography>
-                          <Typography variant="h6" sx={{ color: colors.primaryText }}>
+                          <Typography variant="body1" sx={{ color: colors.primaryText, fontWeight: 'medium', fontSize: '0.9rem' }}>
                             {position.price.toFixed(5)}
                           </Typography>
                         </Box>
-                        
-                        <Box>
-                          <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 0.5 }}>
+                      </Grid>
+                      
+                      <Grid item xs={6} sm={4}>
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 0.5, fontSize: '0.75rem' }}>
                             Amount
                           </Typography>
-                          <Typography variant="h6" sx={{ color: colors.primaryText }}>
+                          <Typography variant="body1" sx={{ color: colors.primaryText, fontWeight: 'medium', fontSize: '0.9rem' }}>
                             ${position.amount.toLocaleString()}
                           </Typography>
                         </Box>
                       </Grid>
                       
-                      {/* Right column */}
-                      <Grid item xs={12} md={6}>
-                        <Box sx={{ mb: 3 }}>
-                          <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 0.5 }}>
+                      <Grid item xs={6} sm={4}>
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 0.5, fontSize: '0.75rem' }}>
                             Current Price
                           </Typography>
-                          <Typography variant="h6" sx={{ color: colors.primaryText }}>
+                          <Typography variant="body1" sx={{ color: colors.primaryText, fontWeight: 'medium', fontSize: '0.9rem' }}>
                             {currentPrice ? currentPrice.toFixed(5) : "-"}
                           </Typography>
                         </Box>
-                        
-                        <Box sx={{ mb: 3 }}>
-                          <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 0.5 }}>
+                      </Grid>
+                      
+                      <Grid item xs={6} sm={4}>
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 0.5, fontSize: '0.75rem' }}>
                             Profit/Loss
                           </Typography>
-                          <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
                             <Typography 
-                              variant="h6" 
+                              variant="body1" 
                               sx={{ 
                                 color: tradeOutput.status === 'profit' 
                                   ? colors.buyGreen 
                                   : tradeOutput.status === 'loss' 
                                     ? colors.sellRed 
                                     : colors.primaryText,
-                                fontWeight: 'bold'
+                                fontWeight: 'bold',
+                                fontSize: '0.9rem'
                               }}
                             >
                               ${Math.abs(tradeOutput.profitLoss).toFixed(2)}
@@ -2580,19 +2588,22 @@ const Trade = () => {
                                   ? colors.buyGreen 
                                   : tradeOutput.status === 'loss' 
                                     ? colors.sellRed 
-                                    : colors.secondaryText
+                                    : colors.secondaryText,
+                                fontSize: '0.75rem'
                               }}
                             >
                               ({tradeOutput.profitLossPercentage.toFixed(2)}%)
                             </Typography>
                           </Box>
                         </Box>
-                        
-                        <Box>
-                          <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 0.5 }}>
+                      </Grid>
+                      
+                      <Grid item xs={6} sm={4}>
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 0.5, fontSize: '0.75rem' }}>
                             Time Elapsed
                           </Typography>
-                          <Typography variant="h6" sx={{ color: colors.primaryText }}>
+                          <Typography variant="body1" sx={{ color: colors.primaryText, fontWeight: 'medium', fontSize: '0.9rem' }}>
                             {Math.floor(tradeOutput.timeElapsed / 60)}m {Math.floor(tradeOutput.timeElapsed % 60)}s
                           </Typography>
                         </Box>
@@ -2600,17 +2611,18 @@ const Trade = () => {
                       
                       {/* Close position button */}
                       <Grid item xs={12}>
-                        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1 }}>
                           <Button
                             variant="contained"
                             color="primary"
-                            size="large"
                             onClick={() => closePosition()}
                             sx={{
                               bgcolor: tradeOutput.status === 'profit' ? colors.buyGreen : colors.sellRed,
-                              px: 4,
-                              py: 1,
+                              px: 3,
+                              py: 0.7,
+                              fontSize: '0.85rem',
                               fontWeight: 'bold',
+                              borderRadius: '8px',
                               '&:hover': {
                                 bgcolor: tradeOutput.status === 'profit' 
                                   ? 'rgba(0, 230, 118, 0.8)' 
@@ -2627,48 +2639,48 @@ const Trade = () => {
                 )}
               </Grid>
               
-              {/* Trading Controls - Right Side (30%) */}
-              <Grid item xs={12} lg={4}>
+              {/* Trading Controls - Right Side */}
+              <Grid item xs={12} md={4}>
                 {/* Account Summary */}
                 <Paper 
                   sx={{ 
-                    p: 3, 
+                    p: { xs: 1.5, md: 2 }, 
                     backgroundColor: colors.cardBg,
                     border: `1px solid ${colors.borderColor}`,
-                    borderRadius: '12px',
-                    mb: 3
+                    borderRadius: '10px',
+                    mb: 2
                   }}
                 >
-                  <Typography variant="h6" sx={{ color: colors.primaryText, fontWeight: 'bold', mb: 3 }}>
-                    <AccountBalanceWalletIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+                  <Typography variant="h6" sx={{ color: colors.primaryText, fontWeight: 'bold', mb: 1.5, fontSize: { xs: '0.9rem', md: '1.1rem' } }}>
+                    <AccountBalanceWalletIcon sx={{ mr: 1, verticalAlign: 'middle', fontSize: { xs: '1rem', md: '1.2rem' } }} />
                     Account Summary
                   </Typography>
                   
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 0.5 }}>
+                  <Box sx={{ mb: 1.5 }}>
+                    <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 0.5, fontSize: '0.75rem' }}>
                       Available Balance
                     </Typography>
-                    <Typography variant="h5" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                    <Typography variant="h6" sx={{ color: colors.primaryText, fontWeight: 'bold', fontSize: { xs: '1.1rem', md: '1.2rem' } }}>
                       ${availableBalance.toLocaleString()}
                     </Typography>
                   </Box>
                   
-                  <Divider sx={{ my: 2, borderColor: colors.borderColor }} />
+                  <Divider sx={{ my: 1.5, borderColor: colors.borderColor }} />
                   
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 0.5 }}>
+                  <Box sx={{ mb: 1.5 }}>
+                    <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 0.5, fontSize: '0.75rem' }}>
                       Locked in Positions
                     </Typography>
-                    <Typography variant="h6" sx={{ color: colors.accentBlue }}>
+                    <Typography variant="body1" sx={{ color: colors.accentBlue, fontWeight: 'medium', fontSize: '0.9rem' }}>
                       ${lockedMargin.toLocaleString()}
                     </Typography>
                   </Box>
                   
                   <Box>
-                    <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 0.5 }}>
+                    <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 0.5, fontSize: '0.75rem' }}>
                       Total Account Value
                     </Typography>
-                    <Typography variant="h6" sx={{ color: colors.buyGreen }}>
+                    <Typography variant="body1" sx={{ color: colors.buyGreen, fontWeight: 'medium', fontSize: '0.9rem' }}>
                       ${totalBalance.toLocaleString()}
                     </Typography>
                   </Box>
@@ -2677,20 +2689,20 @@ const Trade = () => {
                 {/* Trading Form */}
                 <Paper 
                   sx={{ 
-                    p: 3, 
+                    p: { xs: 1.5, md: 2 }, 
                     backgroundColor: colors.cardBg,
                     border: `1px solid ${colors.borderColor}`,
-                    borderRadius: '12px',
-                    mb: 3
+                    borderRadius: '10px',
+                    mb: 2
                   }}
                 >
-                  <Typography variant="h6" sx={{ color: colors.primaryText, fontWeight: 'bold', mb: 3 }}>
-                    <MonetizationOnIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+                  <Typography variant="h6" sx={{ color: colors.primaryText, fontWeight: 'bold', mb: 1.5, fontSize: { xs: '0.9rem', md: '1.1rem' } }}>
+                    <MonetizationOnIcon sx={{ mr: 1, verticalAlign: 'middle', fontSize: { xs: '1rem', md: '1.2rem' } }} />
                     Place Order
                   </Typography>
                   
-                  <FormControl fullWidth sx={{ mb: 3 }}>
-                    <InputLabel id="order-type-label" sx={{ color: colors.secondaryText }}>
+                  <FormControl fullWidth sx={{ mb: 1.5, minHeight: '60px' }}>
+                    <InputLabel id="order-type-label" sx={{ color: colors.secondaryText, fontSize: '0.8rem' }}>
                       Order Type
                     </InputLabel>
                     <Select
@@ -2698,9 +2710,11 @@ const Trade = () => {
                       value={orderType}
                       onChange={(e) => setOrderType(e.target.value)}
                       label="Order Type"
+                      size="small"
                       sx={{ 
                         color: colors.primaryText,
                         backgroundColor: colors.panelBg,
+                        fontSize: '0.8rem',
                         '.MuiOutlinedInput-notchedOutline': {
                           borderColor: colors.borderColor
                         }
@@ -2718,26 +2732,29 @@ const Trade = () => {
                     type="number"
                     value={amount}
                     onChange={(e) => setAmount(Math.max(0, parseFloat(e.target.value) || 0))}
+                    size="small"
                     InputProps={{
-                      startAdornment: <Typography sx={{ mr: 1, color: colors.secondaryText }}>$</Typography>
+                      startAdornment: <Typography sx={{ mr: 0.5, color: colors.secondaryText, fontSize: '0.8rem' }}>$</Typography>
                     }}
                     sx={{ 
-                      mb: 3,
+                      mb: 1.5,
                       '& .MuiInputBase-root': {
                         color: colors.primaryText,
                         backgroundColor: colors.panelBg,
+                        fontSize: '0.8rem'
                       },
                       '& .MuiOutlinedInput-notchedOutline': {
                         borderColor: colors.borderColor
                       },
                       '& .MuiInputLabel-root': {
-                        color: colors.secondaryText
+                        color: colors.secondaryText,
+                        fontSize: '0.8rem'
                       }
                     }}
                   />
                   
-                  <FormControl fullWidth sx={{ mb: 3 }}>
-                    <InputLabel id="leverage-label" sx={{ color: colors.secondaryText }}>
+                  <FormControl fullWidth sx={{ mb: 1.5, minHeight: '60px' }}>
+                    <InputLabel id="leverage-label" sx={{ color: colors.secondaryText, fontSize: '0.8rem' }}>
                       Leverage
                     </InputLabel>
                     <Select
@@ -2745,9 +2762,11 @@ const Trade = () => {
                       value={leverage}
                       onChange={(e) => setLeverage(e.target.value)}
                       label="Leverage"
+                      size="small"
                       sx={{ 
                         color: colors.primaryText,
                         backgroundColor: colors.panelBg,
+                        fontSize: '0.8rem',
                         '.MuiOutlinedInput-notchedOutline': {
                           borderColor: colors.borderColor
                         }
@@ -2760,18 +2779,21 @@ const Trade = () => {
                   </FormControl>
                   
                   {/* Quick amounts */}
-                  <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
+                  <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 0.5, fontSize: '0.75rem' }}>
                     Quick Amount
                   </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.7, mb: 1.5 }}>
                     {quickAmounts.map(amt => (
                       <Chip
                         key={amt}
                         label={`$${amt}`}
                         onClick={() => setAmount(amt)}
+                        size="small"
                         sx={{
                           backgroundColor: amount === amt ? colors.accentBlue : colors.panelBg,
                           color: colors.primaryText,
+                          fontSize: '0.75rem',
+                          height: '24px',
                           '&:hover': {
                             backgroundColor: amount === amt ? colors.accentBlue : colors.hoverBg,
                           }
@@ -2781,17 +2803,19 @@ const Trade = () => {
                   </Box>
                   
                   {/* Buy/Sell buttons */}
-                  <Grid container spacing={2}>
+                  <Grid container spacing={1.5}>
                     <Grid item xs={6}>
                       <Button
                         fullWidth
                         variant="contained"
-                        size="large"
-                        startIcon={<ShoppingCartIcon />}
+                        startIcon={<ShoppingCartIcon sx={{ fontSize: '1rem' }} />}
                         disabled={!amount || amount <= 0 || amount > availableBalance || position !== null}
                         onClick={() => quickTrade(amount, true)}
                         sx={{
                           backgroundColor: colors.buyGreen,
+                          fontSize: '0.85rem',
+                          py: 0.7,
+                          borderRadius: '8px',
                           '&:hover': {
                             backgroundColor: 'rgba(0, 230, 118, 0.8)',
                           },
@@ -2808,12 +2832,14 @@ const Trade = () => {
                       <Button
                         fullWidth
                         variant="contained"
-                        size="large"
-                        startIcon={<SellIcon />}
+                        startIcon={<SellIcon sx={{ fontSize: '1rem' }} />}
                         disabled={!amount || amount <= 0 || amount > availableBalance || position !== null}
                         onClick={() => quickTrade(amount, false)}
                         sx={{
                           backgroundColor: colors.sellRed,
+                          fontSize: '0.85rem',
+                          py: 0.7,
+                          borderRadius: '8px',
                           '&:hover': {
                             backgroundColor: 'rgba(255, 61, 87, 0.8)',
                           },
@@ -2832,46 +2858,47 @@ const Trade = () => {
                 {/* Market Data */}
                 <Paper 
                   sx={{ 
-                    p: 3, 
+                    p: { xs: 1.5, md: 2 }, 
                     backgroundColor: colors.cardBg,
                     border: `1px solid ${colors.borderColor}`,
-                    borderRadius: '12px'
+                    borderRadius: '10px'
                   }}
                 >
-                  <Typography variant="h6" sx={{ color: colors.primaryText, fontWeight: 'bold', mb: 2 }}>
-                    <InfoIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+                  <Typography variant="h6" sx={{ color: colors.primaryText, fontWeight: 'bold', mb: 1.5, fontSize: { xs: '0.9rem', md: '1.1rem' } }}>
+                    <InfoIcon sx={{ mr: 1, verticalAlign: 'middle', fontSize: { xs: '1rem', md: '1.2rem' } }} />
                     Market Data
                   </Typography>
                   
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 0.5 }}>
+                  <Box sx={{ mb: 1.5 }}>
+                    <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 0.5, fontSize: '0.75rem' }}>
                       Current Price
                     </Typography>
-                    <Typography variant="h5" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                    <Typography variant="h6" sx={{ color: colors.primaryText, fontWeight: 'bold', fontSize: { xs: '1.1rem', md: '1.2rem' } }}>
                       {currentPrice ? currentPrice.toFixed(5) : "-"}
                     </Typography>
                   </Box>
                   
                   <Grid container spacing={2}>
                     <Grid item xs={6}>
-                      <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 0.5 }}>
+                      <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 0.5, fontSize: '0.75rem' }}>
                         24h Change
                       </Typography>
                       <Typography 
                         variant="body1" 
                         sx={{ 
                           color: Math.random() > 0.5 ? colors.buyGreen : colors.sellRed,
-                          fontWeight: 'medium'
+                          fontWeight: 'medium',
+                          fontSize: '0.9rem'
                         }}
                       >
                         {(Math.random() * 2 - 1).toFixed(2)}%
                       </Typography>
                     </Grid>
                     <Grid item xs={6}>
-                      <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 0.5 }}>
+                      <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 0.5, fontSize: '0.75rem' }}>
                         24h Volume
                       </Typography>
-                      <Typography variant="body1" sx={{ color: colors.primaryText, fontWeight: 'medium' }}>
+                      <Typography variant="body1" sx={{ color: colors.primaryText, fontWeight: 'medium', fontSize: '0.9rem' }}>
                         ${(Math.random() * 500 + 100).toFixed(2)}M
                       </Typography>
                     </Grid>
