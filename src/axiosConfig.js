@@ -505,7 +505,7 @@ export const API = {
           
           if (isForexPair(data.symbol)) {
             // For forex pairs, ensure proper format with =X suffix
-            if (data.symbol.includes('-X')) {
+          if (data.symbol.includes('-X')) {
               formattedSymbol = data.symbol.replace('-X', '=X');
             } else if (!data.symbol.endsWith('=X')) {
               formattedSymbol = `${data.symbol}=X`;

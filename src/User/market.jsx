@@ -223,7 +223,54 @@ const Market = () => {
 
   const fetchMarketAnalysis = async (symbolToFetch = selectedPair) => {
     try {
-    setLoading(true);
+      setLoading(true);
+      
+      // --- Cache Clearing Logic ---
+      // Construct the cache key based on the formatted symbol (same logic as in axiosConfig.js)
+      let formattedSymbolForCache = symbolToFetch;
+      const forexPairsMap = {
+        'EURUSD': 'EURUSD=X',
+        'EURUSD-X': 'EURUSD=X',
+        'GBPUSD': 'GBPUSD=X',
+        'GBPUSD-X': 'GBPUSD=X',
+        'USDJPY': 'USDJPY=X',
+        'USDJPY-X': 'USDJPY=X'
+      };
+      
+      if (formattedSymbolForCache in forexPairsMap) {
+        formattedSymbolForCache = forexPairsMap[formattedSymbolForCache];
+      } else if (typeof symbolToFetch === 'string') {
+        const isForexPair = (symbol) => {
+          const currencies = ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'NZD', 'CAD', 'CHF'];
+          return symbol.length === 6 && currencies.some(curr => symbol.includes(curr));
+        };
+        if (isForexPair(symbolToFetch)) {
+          if (symbolToFetch.includes('-X')) {
+            formattedSymbolForCache = symbolToFetch.replace('-X', '=X');
+          } else if (!symbolToFetch.endsWith('=X')) {
+            formattedSymbolForCache = `${symbolToFetch}=X`;
+          }
+        } else if (symbolToFetch.includes('-X')) {
+          formattedSymbolForCache = symbolToFetch.replace('-X', '=X');
+        }
+        const indices = ['GSPC', 'DJI', 'IXIC', 'NYA', 'XAX', 'RUT'];
+        if (indices.includes(symbolToFetch) && !symbolToFetch.startsWith('^')) {
+          formattedSymbolForCache = `^${symbolToFetch}`;
+        }
+      }
+      
+      const analysisCacheKey = `market_analysis_${formattedSymbolForCache}`;
+      const historyCacheKey = `market_history_${formattedSymbolForCache}`;
+      
+      // Access the global cache object (assuming it's exposed as window.marketPulseApiCache)
+      if (window.marketPulseApiCache) {
+        console.log(`Clearing cache for keys: ${analysisCacheKey}, ${historyCacheKey}`);
+        window.marketPulseApiCache.clear(analysisCacheKey);
+        window.marketPulseApiCache.clear(historyCacheKey);
+      } else {
+        console.warn('Global API cache object not found, cannot clear cache.');
+      }
+      // --- End Cache Clearing Logic ---
       
       // Try to fetch market analysis
       console.log(`Attempting to analyze symbol: ${symbolToFetch}`);
