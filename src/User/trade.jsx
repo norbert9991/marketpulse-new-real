@@ -2491,6 +2491,518 @@ const Trade = () => {
           </Paper>
         </Box>
         )}
+        {step === 3 && tradingType === 'short-term' && (
+          <Box sx={{ maxWidth: '1400px', mx: 'auto' }}>
+            <Paper 
+              sx={{ 
+                p: 4, 
+                backgroundColor: colors.cardBg,
+                border: `1px solid ${colors.borderColor}`,
+                borderRadius: '16px',
+                boxShadow: `0 12px 24px ${colors.shadowColor}`,
+                mb: 4
+              }}
+            >
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+                <Typography 
+                  variant="h4" 
+                  sx={{ 
+                    color: colors.primaryText,
+                    fontWeight: 'bold'
+                  }}
+                >
+                  {selectedPair} Trading
+                </Typography>
+                
+                <Box>
+                  <Button 
+                    variant="outlined" 
+                    onClick={() => setStep(2)}
+                    sx={{ 
+                      borderColor: colors.borderColor,
+                      color: colors.secondaryText,
+                      mr: 2,
+                      '&:hover': {
+                        borderColor: colors.accentBlue,
+                        backgroundColor: 'transparent',
+                      }
+                    }}
+                  >
+                    Back
+                  </Button>
+                </Box>
+              </Box>
+              
+              {/* Chart Container */}
+              <Box sx={{ height: '400px', mb: 4, position: 'relative' }} ref={chartContainerRef}></Box>
+              
+              {/* Trading Interface */}
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={4}>
+                  <Paper
+                    sx={{
+                      p: 3,
+                      backgroundColor: colors.panelBg,
+                      border: `1px solid ${colors.borderColor}`,
+                      borderRadius: '12px'
+                    }}
+                  >
+                    <Typography variant="h6" sx={{ color: colors.primaryText, mb: 3, fontWeight: 'bold' }}>
+                      Place Order
+                    </Typography>
+                    
+                    <Box sx={{ mb: 3 }}>
+                      <FormControl fullWidth variant="outlined" sx={{ mb: 2 }}>
+                        <InputLabel id="pair-select-label" sx={{ color: colors.secondaryText }}>Currency Pair</InputLabel>
+                        <Select
+                          labelId="pair-select-label"
+                          value={selectedPair}
+                          onChange={(e) => setSelectedPair(e.target.value)}
+                          label="Currency Pair"
+                          sx={{ 
+                            color: colors.primaryText,
+                            backgroundColor: colors.panelBg, 
+                            '.MuiOutlinedInput-notchedOutline': {
+                              borderColor: colors.borderColor
+                            },
+                            '&:hover .MuiOutlinedInput-notchedOutline': {
+                              borderColor: colors.accentBlue
+                            },
+                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                              borderColor: colors.accentBlue
+                            }
+                          }}
+                        >
+                          {forexPairs.map(pair => (
+                            <MenuItem key={pair} value={pair}>{pair}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      
+                      <FormControl fullWidth variant="outlined" sx={{ mb: 2 }}>
+                        <InputLabel id="order-type-label" sx={{ color: colors.secondaryText }}>Order Type</InputLabel>
+                        <Select
+                          labelId="order-type-label"
+                          value={orderType}
+                          onChange={(e) => setOrderType(e.target.value)}
+                          label="Order Type"
+                          sx={{ 
+                            color: colors.primaryText,
+                            backgroundColor: colors.panelBg, 
+                            '.MuiOutlinedInput-notchedOutline': {
+                              borderColor: colors.borderColor
+                            },
+                            '&:hover .MuiOutlinedInput-notchedOutline': {
+                              borderColor: colors.accentBlue
+                            },
+                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                              borderColor: colors.accentBlue
+                            }
+                          }}
+                        >
+                          <MenuItem value="market">Market Order</MenuItem>
+                          <MenuItem value="limit">Limit Order</MenuItem>
+                          <MenuItem value="stop">Stop Order</MenuItem>
+                        </Select>
+                      </FormControl>
+                      
+                      <TextField
+                        fullWidth
+                        label="Amount"
+                        type="number"
+                        value={amount}
+                        onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+                        variant="outlined"
+                        sx={{ 
+                          mb: 2,
+                          '& .MuiOutlinedInput-root': {
+                            color: colors.primaryText,
+                            backgroundColor: colors.panelBg,
+                            '& fieldset': {
+                              borderColor: colors.borderColor,
+                            },
+                            '&:hover fieldset': {
+                              borderColor: colors.accentBlue,
+                            },
+                            '&.Mui-focused fieldset': {
+                              borderColor: colors.accentBlue,
+                            },
+                          },
+                          '& .MuiInputLabel-root': {
+                            color: colors.secondaryText,
+                          },
+                        }}
+                      />
+                      
+                      <TextField
+                        fullWidth
+                        label="Leverage"
+                        type="number"
+                        value={leverage}
+                        onChange={(e) => setLeverage(parseFloat(e.target.value) || 1)}
+                        variant="outlined"
+                        sx={{ 
+                          mb: 2,
+                          '& .MuiOutlinedInput-root': {
+                            color: colors.primaryText,
+                            backgroundColor: colors.panelBg,
+                            '& fieldset': {
+                              borderColor: colors.borderColor,
+                            },
+                            '&:hover fieldset': {
+                              borderColor: colors.accentBlue,
+                            },
+                            '&.Mui-focused fieldset': {
+                              borderColor: colors.accentBlue,
+                            },
+                          },
+                          '& .MuiInputLabel-root': {
+                            color: colors.secondaryText,
+                          },
+                        }}
+                      />
+                    </Box>
+                    
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+                      <Button
+                        fullWidth
+                        variant="contained"
+                        onClick={() => quickTrade(amount, true)}
+                        sx={{
+                          backgroundColor: colors.buyGreen,
+                          color: colors.primaryText,
+                          '&:hover': {
+                            backgroundColor: colors.buyGreen,
+                            opacity: 0.9,
+                          },
+                        }}
+                      >
+                        Buy / Long
+                      </Button>
+                      
+                      <Button
+                        fullWidth
+                        variant="contained"
+                        onClick={() => quickTrade(amount, false)}
+                        sx={{
+                          backgroundColor: colors.sellRed,
+                          color: colors.primaryText,
+                          '&:hover': {
+                            backgroundColor: colors.sellRed,
+                            opacity: 0.9,
+                          },
+                        }}
+                      >
+                        Sell / Short
+                      </Button>
+                    </Box>
+                  </Paper>
+                </Grid>
+                
+                <Grid item xs={12} md={4}>
+                  <Paper
+                    sx={{
+                      p: 3,
+                      backgroundColor: colors.panelBg,
+                      border: `1px solid ${colors.borderColor}`,
+                      borderRadius: '12px'
+                    }}
+                  >
+                    <Typography variant="h6" sx={{ color: colors.primaryText, mb: 3, fontWeight: 'bold' }}>
+                      Market Overview
+                    </Typography>
+                    
+                    {/* Display current price */}
+                    <Box sx={{ mb: 4 }}>
+                      <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 1 }}>
+                        Current Price
+                      </Typography>
+                      <Typography variant="h4" sx={{ 
+                        color: colors.primaryText, 
+                        fontWeight: 'bold',
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}>
+                        {currentPrice ? currentPrice.toFixed(5) : "---.-----"}
+                        <Box 
+                          sx={{ 
+                            ml: 1, 
+                            display: 'inline-flex', 
+                            bgcolor: indicators.rsi.value > 50 ? colors.buyGreen : colors.sellRed,
+                            color: colors.primaryText,
+                            p: 0.5,
+                            px: 1,
+                            borderRadius: 1,
+                            fontSize: '0.875rem'
+                          }}
+                        >
+                          {indicators.rsi.value > 50 ? "Bullish" : "Bearish"}
+                        </Box>
+                      </Typography>
+                    </Box>
+                    
+                    {/* Display technical indicators */}
+                    <Grid container spacing={2} sx={{ mb: 3 }}>
+                      <Grid item xs={6}>
+                        <Paper sx={{ p: 2, bgcolor: colors.cardBg, border: `1px solid ${colors.borderColor}` }}>
+                          <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 1 }}>
+                            RSI
+                          </Typography>
+                          <Typography variant="h6" sx={{ 
+                            color: indicators.rsi.value > 70 ? colors.sellRed : 
+                                  indicators.rsi.value < 30 ? colors.buyGreen : 
+                                  colors.primaryText,
+                            fontWeight: 'bold'
+                          }}>
+                            {indicators.rsi.value.toFixed(2)}
+                          </Typography>
+                        </Paper>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Paper sx={{ p: 2, bgcolor: colors.cardBg, border: `1px solid ${colors.borderColor}` }}>
+                          <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 1 }}>
+                            MACD
+                          </Typography>
+                          <Typography variant="h6" sx={{ 
+                            color: indicators.macd.histogram > 0 ? colors.buyGreen : colors.sellRed,
+                            fontWeight: 'bold'
+                          }}>
+                            {indicators.macd.histogram.toFixed(5)}
+                          </Typography>
+                        </Paper>
+                      </Grid>
+                    </Grid>
+                    
+                    {/* Buy/Sell signals */}
+                    <Box sx={{ p: 2, bgcolor: colors.cardBg, border: `1px solid ${colors.borderColor}`, borderRadius: 1, mb: 3 }}>
+                      <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 1 }}>
+                        Signal
+                      </Typography>
+                      <Typography variant="body1" sx={{ 
+                        color: indicators.rsi.value > 50 ? colors.buyGreen : colors.sellRed,
+                        fontWeight: 'bold'
+                      }}>
+                        {indicators.rsi.value > 70 ? "Overbought - Consider Selling" : 
+                         indicators.rsi.value < 30 ? "Oversold - Consider Buying" :
+                         indicators.rsi.value > 50 ? "Bullish Trend - Buy Signal" : "Bearish Trend - Sell Signal"}
+                      </Typography>
+                    </Box>
+                    
+                    {/* Support/Resistance levels */}
+                    <Box>
+                      <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 1 }}>
+                        Support/Resistance
+                      </Typography>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          Resistance
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: colors.sellRed, fontWeight: 'bold' }}>
+                          {indicators.supportResistance.resistance[0].toFixed(5)}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          Support
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: colors.buyGreen, fontWeight: 'bold' }}>
+                          {indicators.supportResistance.support[0].toFixed(5)}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Paper>
+                </Grid>
+                
+                <Grid item xs={12} md={4}>
+                  <Paper
+                    sx={{
+                      p: 3,
+                      backgroundColor: colors.panelBg,
+                      border: `1px solid ${colors.borderColor}`,
+                      borderRadius: '12px'
+                    }}
+                  >
+                    <Typography variant="h6" sx={{ color: colors.primaryText, mb: 3, fontWeight: 'bold' }}>
+                      Account Information
+                    </Typography>
+                    
+                    {/* Balance info */}
+                    <Box sx={{ mb: 3 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          Available Balance
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                          ${availableBalance.toLocaleString()}
+                        </Typography>
+                      </Box>
+                      
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          Locked Margin
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                          ${lockedMargin.toLocaleString()}
+                        </Typography>
+                      </Box>
+                      
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, pt: 1, borderTop: `1px dashed ${colors.borderColor}` }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          Total Balance
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                          ${totalBalance.toLocaleString()}
+                        </Typography>
+                      </Box>
+                    </Box>
+                    
+                    {/* Current position */}
+                    <Typography variant="subtitle2" sx={{ color: colors.primaryText, mb: 2 }}>
+                      Current Position
+                    </Typography>
+                    
+                    {position ? (
+                      <Box sx={{ 
+                        p: 2, 
+                        bgcolor: colors.cardBg, 
+                        border: `1px solid ${colors.borderColor}`,
+                        borderRadius: '8px',
+                        mb: 3
+                      }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                          <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                            {position.pair}
+                          </Typography>
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              color: position.type === 'buy' ? colors.buyGreen : colors.sellRed,
+                              fontWeight: 'bold'
+                            }}
+                          >
+                            {position.type.toUpperCase()}
+                          </Typography>
+                        </Box>
+                        
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                          <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                            Entry Price
+                          </Typography>
+                          <Typography variant="body2" sx={{ color: colors.primaryText }}>
+                            {position.price.toFixed(5)}
+                          </Typography>
+                        </Box>
+                        
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                          <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                            Amount
+                          </Typography>
+                          <Typography variant="body2" sx={{ color: colors.primaryText }}>
+                            ${position.amount.toLocaleString()}
+                          </Typography>
+                        </Box>
+                        
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                          <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                            P/L
+                          </Typography>
+                          {currentPrice && (
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                color: calculatePnl(position, currentPrice) >= 0 ? colors.profitGreen : colors.lossRed,
+                                fontWeight: 'bold'
+                              }}
+                            >
+                              ${calculatePnl(position, currentPrice).toFixed(2)}
+                            </Typography>
+                          )}
+                        </Box>
+                        
+                        <Button
+                          fullWidth
+                          variant="contained"
+                          onClick={() => closePosition()}
+                          sx={{
+                            mt: 1,
+                            backgroundColor: colors.borderColor,
+                            color: colors.primaryText,
+                            '&:hover': {
+                              backgroundColor: colors.sellRed,
+                            },
+                          }}
+                        >
+                          Close Position
+                        </Button>
+                      </Box>
+                    ) : (
+                      <Box sx={{ 
+                        p: 2, 
+                        bgcolor: colors.cardBg, 
+                        border: `1px solid ${colors.borderColor}`,
+                        borderRadius: '8px',
+                        mb: 3,
+                        textAlign: 'center',
+                        color: colors.secondaryText
+                      }}>
+                        No active positions
+                      </Box>
+                    )}
+                    
+                    {/* Quick trade buttons */}
+                    <Typography variant="subtitle2" sx={{ color: colors.primaryText, mb: 2 }}>
+                      Quick Trade
+                    </Typography>
+                    
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
+                      {quickAmounts.map(quickAmount => (
+                        <React.Fragment key={quickAmount}>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() => quickTrade(quickAmount, true)}
+                            sx={{
+                              borderColor: colors.buyGreen,
+                              color: colors.buyGreen,
+                              minWidth: 0,
+                              p: 1,
+                              flex: '1 0 calc(25% - 8px)',
+                              '&:hover': {
+                                backgroundColor: 'rgba(0, 230, 118, 0.1)',
+                                borderColor: colors.buyGreen,
+                              },
+                            }}
+                          >
+                            ${quickAmount} Buy
+                          </Button>
+                          
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() => quickTrade(quickAmount, false)}
+                            sx={{
+                              borderColor: colors.sellRed,
+                              color: colors.sellRed,
+                              minWidth: 0,
+                              p: 1,
+                              flex: '1 0 calc(25% - 8px)',
+                              '&:hover': {
+                                backgroundColor: 'rgba(255, 61, 87, 0.1)',
+                                borderColor: colors.sellRed,
+                              },
+                            }}
+                          >
+                            ${quickAmount} Sell
+                          </Button>
+                        </React.Fragment>
+                      ))}
+                    </Box>
+                  </Paper>
+                </Grid>
+              </Grid>
+            </Paper>
+          </Box>
+        )}
       </Box>
     </Box>
   );
