@@ -7,6 +7,7 @@ from dashboard_routes import dashboard_bp
 from user_settings_routes import settings_bp  # Import the settings blueprint
 from market_analysis_routes import market_analysis_bp  # Import the market analysis blueprint
 from admin_settings_routes import admin_settings_bp  # Import the admin settings blueprint
+from news_routes import news_bp  # Import the news blueprint
 from db_connection import db_manager
 from market_analysis import analyze_stock
 import os
@@ -41,6 +42,7 @@ app.register_blueprint(dashboard_bp)
 app.register_blueprint(settings_bp)  # Register the settings blueprint
 app.register_blueprint(market_analysis_bp)  # Register the market analysis blueprint
 app.register_blueprint(admin_settings_bp)  # Register the admin settings blueprint
+app.register_blueprint(news_bp)  # Register the news blueprint
 
 # Root route for testing
 @app.route('/', methods=['GET'])
@@ -53,6 +55,7 @@ def index():
             "dashboard": "/api/dashboard",
             "settings": "/api/settings",
             "market_analysis": "/api/market-analysis",
+            "news": "/api/news",
             "health": "/health"
         }
     })
