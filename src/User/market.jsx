@@ -542,31 +542,14 @@ const Market = () => {
     // Safely extract sentiment data with defaults for missing values
     const sentiment = analysisData.sentiment || {};
     
-    // Debug sentiment data in console
-    console.log('Current pair:', selectedPair);
-    console.log('Sentiment data received:', sentiment);
-    
-    // Check for valid sentiment data - we need at least overall field or other fields
-    const hasSentimentData = sentiment.overall || 
-                              (sentiment.news_sentiment !== undefined && 
-                               sentiment.social_sentiment !== undefined);
-                               
-    if (!hasSentimentData) {
-      console.log('Sentiment data is missing required fields, using mock data');
-      
-      // Generate sentiment data based on current price and trend
-      const trend = analysisData.trend || 'Neutral';
-      const isBullish = trend === 'Bullish';
-      
-      return {
-        overall: trend,
-        confidence: Math.floor(Math.random() * 30 + 50), // 50-80 range
-        newsSentiment: isBullish ? Math.random() * 0.5 + 0.3 : Math.random() * 0.3,  // 0.3-0.8 for bullish, 0-0.3 for bearish
-        socialSentiment: isBullish ? Math.random() * 0.5 + 0.3 : Math.random() * 0.3,
-        marketMood: isBullish ? 'Positive' : 'Negative',
-        newsCount: Math.floor(Math.random() * 50 + 10),
-        socialCount: Math.floor(Math.random() * 200 + 50)
-      };
+    // Check that all required properties exist, if not use mock data
+    if (typeof sentiment.news_sentiment === 'undefined' || 
+        typeof sentiment.social_sentiment === 'undefined') {
+      if (!sentimentLoggedRef.current) {
+        console.log('Sentiment data is incomplete, using mock data');
+        sentimentLoggedRef.current = true;
+      }
+      return mockData.sentimentAnalysis;
     }
     
     // Reset the logging flag when we get valid data
@@ -576,7 +559,6 @@ const Market = () => {
     return {
       overall: sentiment.overall || 'Neutral',
       confidence: sentiment.confidence || 50,
-      // Make sure we properly scale the sentiment values to 0-1 range for visualization
       newsSentiment: typeof sentiment.news_sentiment === 'number' ? 
         (sentiment.news_sentiment + 1) / 2 : 0.5, // Convert from -1 to 1 range to 0 to 1
       socialSentiment: typeof sentiment.social_sentiment === 'number' ? 
