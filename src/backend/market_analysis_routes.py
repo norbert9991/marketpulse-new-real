@@ -3,6 +3,9 @@ from db_connection import db_manager
 from market_analysis import analyze_stock, generate_synthetic_data
 import json
 import logging
+import concurrent.futures
+import time
+import random
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -374,3 +377,176 @@ def get_synthetic_market_analysis(symbol):
     except Exception as e:
         logger.error(f"Error generating synthetic data: {str(e)}")
         return jsonify({"error": str(e)}), 500 
+
+@market_analysis_bp.route('/api/market-analysis/batch', methods=['POST'])
+def batch_market_analysis():
+    """Process multiple symbols in a single request to optimize caching and reduce API calls"""
+    try:
+        # Get symbols from request
+        data = request.get_json()
+        if not data or 'symbols' not in data:
+            return jsonify({"error": "No symbols provided"}), 400
+            
+        symbols = data.get('symbols', [])
+        if not symbols or not isinstance(symbols, list):
+            return jsonify({"error": "Invalid symbols format"}), 400
+            
+        # Limit number of symbols per batch
+        max_symbols = 10
+        if len(symbols) > max_symbols:
+            logger.warning(f"Too many symbols requested: {len(symbols)}. Limiting to {max_symbols}")
+            symbols = symbols[:max_symbols]
+        
+        logger.info(f"Processing batch request for {len(symbols)} symbols")
+        
+        # Process symbols
+        results = {}
+        db_loaded = set()  # Keep track of symbols loaded from DB
+        
+        # First try to get data from database for all symbols
+        conn = db_manager.get_connection()
+        cursor = conn.cursor()
+        
+        try:
+            # Create placeholders for SQL query
+            placeholders = ','.join(['%s'] * len(symbols))
+            cursor.execute(f"""
+                SELECT 
+                    md.symbol,
+                    md.current_price, 
+                    md.trend,
+                    ti.rsi, 
+                    ti.macd, 
+                    ti.macd_signal, 
+                    ti.macd_hist, 
+                    ti.sma20, 
+                    ti.sma50, 
+                    ti.sma200
+                FROM market_data md
+                LEFT JOIN technical_indicators ti ON md.symbol = ti.symbol
+                WHERE md.symbol IN ({placeholders})
+            """, symbols)
+            
+            market_rows = cursor.fetchall()
+            
+            # Process database results
+            for row in market_rows:
+                if len(row) < 10:
+                    continue
+                    
+                symbol = row[0]
+                db_loaded.add(symbol)
+                
+                # Extract support and resistance levels for this symbol
+                cursor.execute("""
+                    SELECT level_type, level_value
+                    FROM support_resistance
+                    WHERE symbol = %s
+                """, (symbol,))
+                
+                sr_rows = cursor.fetchall()
+                
+                # Extract price predictions
+                cursor.execute("""
+                    SELECT prediction_date, predicted_price
+                    FROM price_predictions
+                    WHERE symbol = %s
+                    ORDER BY prediction_date ASC
+                """, (symbol,))
+                
+                prediction_rows = cursor.fetchall()
+                
+                # Build response
+                response = {
+                    "symbol": symbol,
+                    "current_price": float(row[1]) if row[1] else 0.0,
+                    "trend": row[2] if row[2] else "Neutral",
+                    "technical_indicators": {
+                        "rsi": float(row[3]) if row[3] else 0.0,
+                        "macd": float(row[4]) if row[4] else 0.0,
+                        "macd_signal": float(row[5]) if row[5] else 0.0,
+                        "macd_hist": float(row[6]) if row[6] else 0.0,
+                        "sma20": float(row[7]) if row[7] else 0.0,
+                        "sma50": float(row[8]) if row[8] else 0.0,
+                        "sma200": float(row[9]) if row[9] else 0.0
+                    },
+                    "support_resistance": {
+                        "support": [],
+                        "resistance": []
+                    },
+                    "predictions": [],
+                    "prediction_dates": []
+                }
+                
+                # Process support and resistance levels
+                for sr_row in sr_rows:
+                    level_type, level_value = sr_row
+                    if level_type == 'support':
+                        response["support_resistance"]["support"].append(float(level_value))
+                    elif level_type == 'resistance':
+                        response["support_resistance"]["resistance"].append(float(level_value))
+                
+                # Process predictions
+                for pred_row in prediction_rows:
+                    date, price = pred_row
+                    response["prediction_dates"].append(date.strftime('%Y-%m-%d'))
+                    response["predictions"].append(float(price) if price else 0.0)
+                
+                # Store in results
+                results[symbol] = response
+            
+            # Close cursor and release connection
+            cursor.close()
+            db_manager.release_connection(conn)
+            
+        except Exception as db_error:
+            logger.error(f"Database error in batch processing: {db_error}")
+            if cursor:
+                cursor.close()
+            if 'conn' in locals() and conn:
+                db_manager.release_connection(conn)
+        
+        # Process symbols not found in database using a thread pool
+        symbols_to_analyze = [s for s in symbols if s not in db_loaded]
+        
+        if symbols_to_analyze:
+            logger.info(f"Analyzing {len(symbols_to_analyze)} symbols not found in database")
+            
+            # Process in parallel with a maximum of 3 workers to avoid rate limits
+            with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+                # Submit all tasks
+                future_to_symbol = {
+                    executor.submit(analyze_with_backoff, symbol, i): symbol 
+                    for i, symbol in enumerate(symbols_to_analyze)
+                }
+                
+                # Collect results as they complete
+                for future in concurrent.futures.as_completed(future_to_symbol):
+                    symbol = future_to_symbol[future]
+                    try:
+                        data = future.result()
+                        if data:
+                            results[symbol] = data
+                    except Exception as e:
+                        logger.error(f"Error analyzing symbol {symbol}: {e}")
+                        # Use synthetic data as fallback
+                        results[symbol] = generate_synthetic_data(symbol)
+        
+        return jsonify({"results": results}), 200
+        
+    except Exception as e:
+        logger.error(f"Error in batch market analysis: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+def analyze_with_backoff(symbol, index):
+    """Analyze stock with exponential backoff to avoid rate limits"""
+    # Add a small delay based on index to stagger requests
+    delay = index * random.uniform(0.5, 1.5)
+    if delay > 0:
+        time.sleep(delay)
+    
+    try:
+        return analyze_stock(symbol)
+    except Exception as e:
+        logger.error(f"Error analyzing {symbol}: {e}")
+        return generate_synthetic_data(symbol) 

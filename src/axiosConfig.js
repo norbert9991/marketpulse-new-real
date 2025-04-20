@@ -135,6 +135,71 @@ axiosInstance.interceptors.response.use(
   }
 );
 
+// Helper function for generating basic synthetic data when all else fails
+function generateBasicSyntheticData(symbol) {
+  const syntheticPrice = 1.0;
+  
+  // Determine if this is a forex pair
+  let isForex = false;
+  if (symbol.includes('-X') || symbol.includes('=X') || 
+      (symbol.length === 6 && 
+       ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'NZD', 'CAD', 'CHF'].some(curr => 
+         symbol.includes(curr)))) {
+    isForex = true;
+  }
+  
+  // More realistic base price for known symbols
+  let basePrice = syntheticPrice;
+  if (isForex) {
+    if (symbol.includes('USD') && symbol.includes('JPY')) {
+      basePrice = 150.0;
+    } else if (symbol.includes('GBP') && symbol.includes('USD')) {
+      basePrice = 1.25;
+    } else if (symbol.includes('EUR') && symbol.includes('USD')) {
+      basePrice = 1.09;
+    }
+  }
+  
+  return {
+    symbol: symbol,
+    current_price: basePrice,
+    trend: Math.random() > 0.5 ? 'Bullish' : 'Bearish',
+    technical_indicators: {
+      rsi: 50,
+      macd: 0,
+      macd_signal: 0,
+      macd_hist: 0,
+      sma20: basePrice,
+      sma50: basePrice,
+      sma200: basePrice
+    },
+    support_resistance: {
+      support: [basePrice * 0.98, basePrice * 0.97, basePrice * 0.95],
+      resistance: [basePrice * 1.02, basePrice * 1.03, basePrice * 1.05]
+    },
+    sentiment: {
+      overall: 'Neutral',
+      confidence: 50,
+      news_sentiment: 0,
+      social_sentiment: 0,
+      market_mood: 'Neutral',
+      news_count: 0,
+      social_count: 0
+    },
+    predictions: [
+      basePrice,
+      basePrice * (1 + (Math.random() * 0.02 - 0.01)),
+      basePrice * (1 + (Math.random() * 0.03 - 0.015)),
+      basePrice * (1 + (Math.random() * 0.04 - 0.02)),
+      basePrice * (1 + (Math.random() * 0.05 - 0.025))
+    ],
+    prediction_dates: [
+      'Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5'
+    ],
+    last_updated: new Date().toISOString()
+  };
+}
+
 // Helper API functions
 export const API = {
   // Auth endpoints
@@ -431,28 +496,27 @@ export const API = {
           }
         }
         
-        // Check if this is one of the problematic pairs that need synthetic data
-        const problematicSymbols = [
-          'GBPUSD', 'GBPUSD-X', 'GBPUSD=X',
-          'USDJPY', 'USDJPY-X', 'USDJPY=X',
-          'USDCAD', 'USDCAD-X', 'USDCAD=X'
-        ];
+        // Check local cache first
+        const cacheKey = `market_analysis_${formattedSymbol}`;
+        const cachedData = apiCache.get(cacheKey);
+        if (cachedData) {
+          console.log(`[API] Using cached analysis data for ${formattedSymbol}`);
+          return Promise.resolve({ data: cachedData });
+        }
         
-        const needsSyntheticData = problematicSymbols.some(ps => 
-          formattedSymbol.includes(ps) || originalSymbol.includes(ps)
-        );
-        
-        // Extensive debug logging
         console.log('[API] analyze - Original Symbol:', originalSymbol);
         console.log('[API] analyze - Formatted Symbol:', formattedSymbol);
-        console.log('[API] analyze - Needs synthetic data:', needsSyntheticData);
         console.log('[API] analyze - Full URL:', `${API_URL}/api/market-analysis/${formattedSymbol}`);
         
-        // If it's a problematic pair, we'll still send the request since
-        // the backend is now capable of generating synthetic data for these symbols
         return axiosInstance.get(`/api/market-analysis/${formattedSymbol}`)
           .then(response => {
             console.log('[API] analyze - Received data:', response.data ? 'Yes' : 'No');
+            
+            // Cache the response for 10 minutes (600000 ms)
+            if (response.data) {
+              apiCache.set(cacheKey, response.data, 10 * 60 * 1000);
+            }
+            
             return response;
           })
           .catch(error => {
@@ -462,38 +526,19 @@ export const API = {
               
               // Request synthetic data from the backend instead of generating it here
               return axiosInstance.get(`/api/market-analysis/${formattedSymbol}/synthetic`)
+                .then(syntheticResponse => {
+                  // Cache synthetic data too, but for less time (5 minutes)
+                  if (syntheticResponse.data) {
+                    apiCache.set(cacheKey, syntheticResponse.data, 5 * 60 * 1000);
+                  }
+                  return syntheticResponse;
+                })
                 .catch(syntheticError => {
                   console.error('[API] Synthetic data generation also failed:', syntheticError);
                   
                   // Fall back to basic synthetic data structure if both backend options fail
-                  const syntheticPrice = 1.0;
-                  return {
-                    data: {
-                      symbol: originalSymbol,
-                      current_price: syntheticPrice,
-                      trend: 'Neutral',
-                      technical_indicators: {
-                        rsi: 50,
-                        macd: 0,
-                        macd_signal: 0,
-                        macd_hist: 0,
-                        sma20: syntheticPrice,
-                        sma50: syntheticPrice,
-                        sma200: syntheticPrice
-                      },
-                      support_resistance: {
-                        support: [],
-                        resistance: []
-                      },
-                      sentiment: {
-                        overall: 'Neutral',
-                        confidence: 50
-                      },
-                      predictions: [syntheticPrice, syntheticPrice, syntheticPrice, syntheticPrice, syntheticPrice],
-                      prediction_dates: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5'],
-                      last_updated: new Date().toISOString()
-                    }
-                  };
+                  const syntheticData = generateBasicSyntheticData(originalSymbol);
+                  return { data: syntheticData };
                 });
             }
             // For other errors, continue with the rejection
@@ -503,6 +548,73 @@ export const API = {
         console.error('[API] Error in analyze:', error);
         return Promise.reject(error);
       }
+    },
+    
+    batchAnalyze: (symbols) => {
+      try {
+        // Validate input
+        if (!symbols || !Array.isArray(symbols) || symbols.length === 0) {
+          return Promise.reject(new Error('Invalid symbols array'));
+        }
+        
+        // Limit to 10 symbols per batch to avoid overloading the server
+        const symbolsToProcess = symbols.slice(0, 10);
+        
+        // Generate cache key for the batch
+        const symbolsKey = symbolsToProcess.sort().join(',');
+        const cacheKey = `market_batch_${symbolsKey}`;
+        
+        // Check cache first
+        const cachedData = apiCache.get(cacheKey);
+        if (cachedData) {
+          console.log(`[API] Using cached batch analysis data for ${symbolsToProcess.length} symbols`);
+          return Promise.resolve({ data: cachedData });
+        }
+        
+        console.log(`[API] Batch analyzing ${symbolsToProcess.length} symbols`);
+        
+        return axiosInstance.post('/api/market-analysis/batch', { symbols: symbolsToProcess })
+          .then(response => {
+            console.log('[API] Batch analyze - Received data for', 
+                        response.data && response.data.results ? 
+                        Object.keys(response.data.results).length : 0,
+                        'symbols');
+            
+            // Cache the response (8 minutes for batch data)
+            if (response.data) {
+              apiCache.set(cacheKey, response.data, 8 * 60 * 1000);
+              
+              // Also cache individual symbols from the batch
+              if (response.data.results) {
+                Object.entries(response.data.results).forEach(([symbol, data]) => {
+                  const symCacheKey = `market_analysis_${symbol}`;
+                  apiCache.set(symCacheKey, data, 10 * 60 * 1000);
+                });
+              }
+            }
+            
+            return response;
+          })
+          .catch(error => {
+            console.error('[API] Error in batch analyze:', error);
+            
+            // Generate fallback data for all symbols
+            const fallbackResults = {};
+            symbolsToProcess.forEach(symbol => {
+              fallbackResults[symbol] = generateBasicSyntheticData(symbol);
+            });
+            
+            return { data: { results: fallbackResults } };
+          });
+      } catch (error) {
+        console.error('[API] Error in batchAnalyze:', error);
+        return Promise.reject(error);
+      }
+    },
+    
+    // Helper function to generate basic synthetic data
+    generateSyntheticData: (symbol) => {
+      return generateBasicSyntheticData(symbol);
     },
     getHistory: (symbol) => {
       try {
