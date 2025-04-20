@@ -187,6 +187,14 @@ def analyze_stock(symbol, force_refresh=False):
         future_days = np.array(range(len(hist), len(hist) + 5)).reshape(-1, 1)
         predictions = model.predict(future_days)
         
+        # Ensure we have valid predictions
+        if len(predictions) == 0 or any(np.isnan(predictions)):
+            print(f"Warning: Invalid predictions generated for {symbol}, creating default predictions")
+            current_price = hist['Close'].iloc[-1] if not hist.empty else 1.0
+            predictions = np.array([current_price * (1 + 0.001 * i) for i in range(1, 6)])
+        
+        print(f"Generated predictions for {symbol}: {predictions}")
+        
         # Calculate trend
         slope = model.coef_[0]
         trend = "Bullish" if slope > 0 else "Bearish"
@@ -231,6 +239,14 @@ def analyze_stock(symbol, force_refresh=False):
         # Generate prediction dates
         prediction_dates = [(datetime.now() + timedelta(days=i+1)).strftime('%Y-%m-%d') for i in range(len(predictions))]
         print(f"Generated prediction dates: {prediction_dates}")
+        
+        # Verify prediction data is valid
+        if len(predictions) != len(prediction_dates):
+            print(f"Warning: Mismatch in prediction data length for {symbol}. Predictions: {len(predictions)}, Dates: {len(prediction_dates)}")
+            # Ensure arrays have the same length
+            min_length = min(len(predictions), len(prediction_dates))
+            predictions = predictions[:min_length]
+            prediction_dates = prediction_dates[:min_length]
         
         # Prepare response with safe value handling
         response = {

@@ -160,21 +160,118 @@ const MarketAnalysis = ({ selectedSymbol }) => {
   };
 
   const renderPredictionChart = () => {
-    if (!analysisData || !analysisData.predictions || !analysisData.prediction_dates) return null;
+    console.log('Rendering prediction chart with data:', analysisData);
+    
+    if (!analysisData) {
+      console.log('No analysis data available');
+      return null;
+    }
+    
+    if (!analysisData.predictions) {
+      console.log('No predictions array in analysis data');
+      return (
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          py: 4 
+        }}>
+          <Typography sx={{ color: colors.secondaryText, mb: 2 }}>
+            No prediction data available for this symbol
+          </Typography>
+          <Button 
+            variant="outlined" 
+            startIcon={<RefreshIcon />}
+            onClick={() => fetchMarketAnalysis(selectedSymbol, true)}
+            sx={{ 
+              color: colors.accentBlue,
+              borderColor: colors.accentBlue
+            }}
+          >
+            Refresh Data
+          </Button>
+        </Box>
+      );
+    }
+    
+    if (!analysisData.prediction_dates) {
+      console.log('No prediction_dates array in analysis data');
+      // If we have predictions but no dates, create generic dates
+      analysisData.prediction_dates = Array(analysisData.predictions.length)
+        .fill(0)
+        .map((_, i) => `Day ${i+1}`);
+      console.log('Created generic dates:', analysisData.prediction_dates);
+    }
+    
+    console.log('Predictions array:', analysisData.predictions);
+    console.log('Prediction dates array:', analysisData.prediction_dates);
 
-    // Ensure predictions are numbers
-    const numericPredictions = analysisData.predictions.map(pred => 
-      typeof pred === 'number' ? pred : parseFloat(pred)
-    );
+    // Check if arrays are empty or contain invalid data
+    if (analysisData.predictions.length === 0) {
+      console.log('Predictions array is empty');
+      return (
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          py: 4 
+        }}>
+          <Typography sx={{ color: colors.secondaryText, mb: 2 }}>
+            No price predictions available for this symbol
+          </Typography>
+          <Button 
+            variant="outlined" 
+            startIcon={<RefreshIcon />}
+            onClick={() => fetchMarketAnalysis(selectedSymbol, true)}
+            sx={{ 
+              color: colors.accentBlue,
+              borderColor: colors.accentBlue
+            }}
+          >
+            Refresh Data
+          </Button>
+        </Box>
+      );
+    }
 
+    // Ensure predictions are numbers, filter out null/undefined/NaN values
+    const numericPredictions = analysisData.predictions
+      .filter(pred => pred !== null && pred !== undefined && !isNaN(Number(pred)))
+      .map(pred => typeof pred === 'number' ? pred : parseFloat(pred));
+    
+    console.log('Numeric predictions:', numericPredictions);
+    
+    // If all predictions filtered out, show error
+    if (numericPredictions.length === 0) {
+      return (
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          py: 4 
+        }}>
+          <Typography sx={{ color: colors.secondaryText }}>
+            Invalid prediction data. Please try refreshing.
+          </Typography>
+        </Box>
+      );
+    }
+
+    // Ensure dates and predictions arrays match in length
+    const predictionDates = analysisData.prediction_dates.slice(0, numericPredictions.length);
+    
     // Format the dates to display in a readable format (MM-DD)
-    const formattedDates = analysisData.prediction_dates.map(date => {
+    const formattedDates = predictionDates.map(date => {
       // Handle both "2025-04-06" format and "Day 1" format
-      if (date.includes('-')) {
+      if (date && typeof date === 'string' && date.includes('-')) {
         return date.replace(/^\d{4}-/, ''); // Remove year prefix
       }
-      return date;
+      return date || '';
     });
+    console.log('Formatted dates:', formattedDates);
 
     const chartData = {
       labels: formattedDates,
@@ -193,6 +290,7 @@ const MarketAnalysis = ({ selectedSymbol }) => {
         }
       ]
     };
+    console.log('Chart data prepared:', chartData);
 
     const options = {
       responsive: true,
