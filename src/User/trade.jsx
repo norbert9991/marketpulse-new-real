@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Box, Typography, Button, Paper, TextField, Select, MenuItem, FormControl, InputLabel, Tabs, Tab, Grid, Divider, IconButton, Chip, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Switch, Tooltip } from '@mui/material';
 import { createChart, CrosshairMode, LineStyle } from 'lightweight-charts';
+import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { API } from '../axiosConfig';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -34,6 +35,9 @@ const colors = {
 };
 
 const Trade = () => {
+  // Add navigate function
+  const navigate = useNavigate();
+  
   // Chart references
   const chartContainerRef = useRef(null);
   const chartRef = useRef(null);
@@ -1242,6 +1246,14 @@ const Trade = () => {
     })));
     setStep(3);
   };
+
+  // Add effect to navigate to ShortTermTrading when selected
+  useEffect(() => {
+    if (step === 3 && tradingType === 'short-term') {
+      // Navigate to ShortTermTrading component
+      navigate('/short-term-trading');
+    }
+  }, [step, tradingType, navigate]);
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: colors.darkBg }}>
