@@ -492,7 +492,7 @@ const ShortTermTrading = () => {
     }
   }, [price]);
   
-  // Handle amount percentage buttons
+  // Handler for amount percentage buttons
   const handleAmountPercentage = (percent) => {
     if (orderSide === 'buy') {
       // Calculate amount based on available balance
@@ -516,6 +516,36 @@ const ShortTermTrading = () => {
         total: newAmount * orderForm.price
       });
     }
+  };
+  
+  // Add the missing handler functions
+  const handlePriceChange = (e) => {
+    const newPrice = parseFloat(e.target.value) || 0;
+    setOrderForm({
+      ...orderForm,
+      price: newPrice,
+      total: newPrice * orderForm.amount
+    });
+  };
+
+  const handleAmountChange = (e) => {
+    const newAmount = parseFloat(e.target.value) || 0;
+    const currentPrice = orderType === 'market' ? price : orderForm.price;
+    setOrderForm({
+      ...orderForm,
+      amount: newAmount,
+      total: newAmount * currentPrice
+    });
+  };
+
+  const handleTotalChange = (e) => {
+    const newTotal = parseFloat(e.target.value) || 0;
+    const currentPrice = orderType === 'market' ? price : orderForm.price;
+    setOrderForm({
+      ...orderForm,
+      total: newTotal,
+      amount: currentPrice > 0 ? newTotal / currentPrice : 0
+    });
   };
   
   // Update the JSX for percentage buttons to use the handler
