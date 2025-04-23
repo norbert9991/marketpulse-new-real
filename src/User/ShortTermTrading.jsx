@@ -23,7 +23,9 @@ import {
   Chip,
   Divider,
   IconButton,
-  Tooltip
+  Tooltip,
+  Alert,
+  Snackbar
 } from '@mui/material';
 import Sidebar from './Sidebar';
 import { API } from '../axiosConfig';
@@ -33,8 +35,10 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import DeleteIcon from '@mui/icons-material/Delete';
 import HistoryIcon from '@mui/icons-material/History';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { createChart } from 'lightweight-charts';
-import CloseIcon from '@mui/icons-material/Close';
 
 // Color palette matching the system
 const colors = {
@@ -64,7 +68,7 @@ const ShortTermTrading = () => {
   const lastCandleTimeRef = useRef(null);
   
   // State variables
-  const [selectedPair, setSelectedPair] = useState('EURUSD');
+  const [selectedPair, setSelectedPair] = useState('EURUSD=X');
   const [orderType, setOrderType] = useState('market');
   const [tabValue, setTabValue] = useState(0);
   const [amount, setAmount] = useState(1000);
@@ -75,354 +79,332 @@ const ShortTermTrading = () => {
   const [orderHistory, setOrderHistory] = useState([]);
   const [tradeHistory, setTradeHistory] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
   const [balance, setBalance] = useState(10000);
   const [currentPrice, setCurrentPrice] = useState({ bid: 0, ask: 0 });
-  const [sessionId, setSessionId] = useState(null);
-  const [error, setError] = useState(null);
-  const [sessionLoading, setSessionLoading] = useState(true);
-  const [initialBalance, setInitialBalance] = useState(10000);
   const [marketData, setMarketData] = useState(null);
+  const [priceHistory, setPriceHistory] = useState([]);
+  const [supportLevels, setSupportLevels] = useState([]);
+  const [resistanceLevels, setResistanceLevels] = useState([]);
+  const [technicalIndicators, setTechnicalIndicators] = useState(null);
+  const [user, setUser] = useState(null);
+  const [error, setError] = useState(null);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'info'
+  });
+  const [isFavorite, setIsFavorite] = useState(false);
+  
+  // New state variables for enhanced position management
+  const [positions, setPositions] = useState([]);
+  const [totalPnL, setTotalPnL] = useState(0);
+  const [unrealizedPnL, setUnrealizedPnL] = useState(0);
+  const [sessionId, setSessionId] = useState(null);
+  const [quantity, setQuantity] = useState(1);
+  const [leverage, setLeverage] = useState(1);
+  const [stopLossPrice, setStopLossPrice] = useState(0);
+  const [takeProfitPrice, setTakeProfitPrice] = useState(0);
+  const [riskPerTrade, setRiskPerTrade] = useState(2); // Default risk: 2% per trade
 
   // Available currency pairs
   const currencyPairs = [
-    { value: 'EURUSD', label: 'EUR/USD' },
-    { value: 'GBPUSD', label: 'GBP/USD' },
-    { value: 'USDJPY', label: 'USD/JPY' },
-    { value: 'AUDUSD', label: 'AUD/USD' },
-    { value: 'USDCAD', label: 'USD/CAD' },
-    { value: 'NZDUSD', label: 'NZD/USD' },
-    { value: 'USDCHF', label: 'USD/CHF' }
+    { value: 'EURUSD=X', label: 'EUR/USD' },
+    { value: 'GBPUSD=X', label: 'GBP/USD' },
+    { value: 'USDJPY=X', label: 'USD/JPY' },
+    { value: 'AUDUSD=X', label: 'AUD/USD' },
+    { value: 'USDCAD=X', label: 'USD/CAD' },
+    { value: 'NZDUSD=X', label: 'NZD/USD' },
+    { value: 'USDCHF=X', label: 'USD/CHF' }
   ];
 
-  // Load open orders from the API
-  const loadOpenOrders = async () => {
-    if (!sessionId) return;
+  // Fetch user data
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const response = await API.auth.me();
+        setUser(response.data.user);
+        if (response.data.user && response.data.user.balance) {
+          setBalance(response.data.user.balance);
+        }
+        
+        // Initialize or retrieve trading session after getting user data
+        if (response.data.user) {
+          initializeSession(response.data.user.user_id);
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+        showSnackbar('Failed to fetch user data', 'error');
+      }
+    };
     
+    fetchUserData();
+  }, []);
+
+  // Initialize or retrieve active trading session
+  const initializeSession = async (userId) => {
     try {
-      setLoading(true);
-      const response = await API.simulation.getOpenOrders(sessionId);
+      // Try to get existing active session
+      const response = await API.trading.getActiveSession();
       
-      if (response.data && response.data.orders) {
-        setOpenOrders(response.data.orders);
+      if (response.data && response.data.session) {
+        // Use existing session
+        const activeSession = response.data.session;
+        setSessionId(activeSession.session_id);
+        
+        // Load existing orders and positions
+        if (activeSession.session_id) {
+          await loadSessionData(activeSession.session_id);
+        }
+        
+        showSnackbar('Resumed existing trading session', 'info');
+      } else {
+        // Create new session
+        const newSessionResponse = await API.trading.createSession({
+          user_id: userId,
+          trading_type: 'short-term',
+          simulation_amount: balance
+        });
+        
+        if (newSessionResponse.data && newSessionResponse.data.session_id) {
+          setSessionId(newSessionResponse.data.session_id);
+          showSnackbar('New trading session started', 'success');
+        }
       }
     } catch (error) {
-      console.error("Error loading open orders:", error);
-      setError("Failed to load open orders: " + (error.response?.data?.error || error.message));
-    } finally {
-      setLoading(false);
+      console.error('Error initializing session:', error);
+      
+      // Fallback to local session if API call fails
+      setSessionId(`local-${Date.now()}`);
+      showSnackbar('Using local session mode', 'warning');
     }
   };
   
-  // Load order history from the API
-  const loadOrderHistory = async () => {
-    if (!sessionId) return;
-    
+  // Load data for existing session
+  const loadSessionData = async (sessionId) => {
     try {
-      setLoading(true);
-      const response = await API.simulation.getOrderHistory(sessionId);
+      // Load open orders
+      const ordersResponse = await API.trading.getOpenOrders(sessionId);
+      if (ordersResponse.data && ordersResponse.data.orders) {
+        setOpenOrders(ordersResponse.data.orders);
+      }
       
-      if (response.data && response.data.orders) {
-        setOrderHistory(response.data.orders);
+      // Load positions
+      const positionsResponse = await API.trading.getPositions(sessionId);
+      if (positionsResponse.data && positionsResponse.data.positions) {
+        setPositions(positionsResponse.data.positions);
+      }
+      
+      // Load order history
+      const historyResponse = await API.trading.getOrderHistory(sessionId);
+      if (historyResponse.data && historyResponse.data.history) {
+        setOrderHistory(historyResponse.data.history);
+      }
+      
+      // Load trade history
+      const tradesResponse = await API.trading.getTradeHistory(sessionId);
+      if (tradesResponse.data && tradesResponse.data.trades) {
+        setTradeHistory(tradesResponse.data.trades);
       }
     } catch (error) {
-      console.error("Error loading order history:", error);
-      setError("Failed to load order history: " + (error.response?.data?.error || error.message));
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  // Load trade history from the API
-  const loadTradeHistory = async () => {
-    if (!sessionId) return;
-    
-    try {
-      setLoading(true);
-      const response = await API.simulation.getTradeHistory(sessionId);
-      
-      if (response.data && response.data.trades) {
-        setTradeHistory(response.data.trades);
-      }
-    } catch (error) {
-      console.error("Error loading trade history:", error);
-      setError("Failed to load trade history: " + (error.response?.data?.error || error.message));
-    } finally {
-      setLoading(false);
+      console.error('Error loading session data:', error);
+      showSnackbar('Failed to load previous trading data', 'error');
     }
   };
 
-  // Initialize trading session
+  // Check if the current pair is favorited
   useEffect(() => {
-    const initSession = async () => {
+    const checkIfFavorite = async () => {
+      if (!user) return;
+      
       try {
-        setSessionLoading(true);
+        const response = await API.favorites.check(selectedPair);
+        setIsFavorite(response.data.isFavorite);
+      } catch (error) {
+        console.error('Error checking favorite status:', error);
+      }
+    };
+    
+    checkIfFavorite();
+  }, [selectedPair, user]);
+
+  // Show snackbar notifications
+  const showSnackbar = (message, severity = 'info') => {
+    setSnackbar({
+      open: true,
+      message,
+      severity
+    });
+  };
+
+  // Handle snackbar close
+  const handleSnackbarClose = () => {
+    setSnackbar({...snackbar, open: false});
+  };
+
+  // Toggle favorite status
+  const toggleFavorite = async () => {
+    if (!user) return;
+    
+    try {
+      const pairName = currencyPairs.find(pair => pair.value === selectedPair)?.label || selectedPair;
+      
+      const response = await API.favorites.toggle({
+        symbol: selectedPair,
+        pair_name: pairName
+      });
+      
+      setIsFavorite(response.data.isFavorite);
+      showSnackbar(response.data.message);
+    } catch (error) {
+      console.error('Error toggling favorite status:', error);
+      showSnackbar('Failed to update favorites', 'error');
+    }
+  };
+
+  // Fetch market data for selected pair
+  useEffect(() => {
+    const fetchMarketData = async () => {
+      setDataLoading(true);
+      setError(null);
+      
+      try {
+        // Fetch market analysis data
+        const response = await API.market.analyze({ symbol: selectedPair });
+        setMarketData(response.data);
         
-        // Try to get an active session first
-        const activeSessionResponse = await API.simulation.getActiveSession();
-        
-        if (activeSessionResponse.data && activeSessionResponse.data.session) {
-          // Use existing session
-          const session = activeSessionResponse.data.session;
-          setSessionId(session.id || session.session_id);
-          setBalance(session.current_balance || 10000);
-          setInitialBalance(session.initial_balance || 10000);
+        // Update current price
+        if (response.data && response.data.current_price) {
+          const price = parseFloat(response.data.current_price);
+          const spread = 0.0002; // 2 pips spread
           
-          // Load session data
-          loadOpenOrders();
-          loadOrderHistory();
-          loadTradeHistory();
-        } else {
-          // Create a new session
-          const sessionResponse = await API.simulation.createSession({
-            amount: 10000,
-            trading_type: 'short-term'
-          });
-          
-          if (sessionResponse.data && sessionResponse.data.session) {
-            const newSession = sessionResponse.data.session;
-            setSessionId(newSession.id || newSession.session_id);
-            setBalance(newSession.current_balance || 10000);
-            setInitialBalance(newSession.initial_balance || 10000);
-          } else {
-            setError("Failed to create a trading session");
-          }
-        }
-        
-        // Initialize market data
-        const marketResponse = await API.market.analyze({ symbol: `${selectedPair}=X` });
-        if (marketResponse.data) {
-          setMarketData({
-            current_price: marketResponse.data.current_price || 0,
-            change_percentage: marketResponse.data.change_percentage || 0,
-            trend: marketResponse.data.trend || 'Neutral'
-          });
-          
-          // Set initial price data
-          const spread = 0.0002; // 2 pips
-          const price = marketResponse.data.current_price || 0;
           setCurrentPrice({
             bid: price - spread / 2,
             ask: price + spread / 2
           });
-          
-          // Set initial limit prices
-          setStopPrice(price);
-          setLimitPrice(price);
+        }
+        
+        // Extract support and resistance levels
+        if (response.data && response.data.support_resistance) {
+          setSupportLevels(response.data.support_resistance.support || []);
+          setResistanceLevels(response.data.support_resistance.resistance || []);
+        }
+        
+        // Extract technical indicators
+        if (response.data && response.data.technical_indicators) {
+          setTechnicalIndicators(response.data.technical_indicators);
+        }
+        
+        // Fetch price history
+        const historyResponse = await API.market.getHistory(selectedPair);
+        
+        if (historyResponse.data && historyResponse.data.history) {
+          setPriceHistory(historyResponse.data.history);
         }
       } catch (error) {
-        console.error("Error initializing session:", error);
-        setError("Failed to initialize trading session: " + (error.response?.data?.error || error.message));
+        console.error('Error fetching market data:', error);
+        setError('Failed to load market data. Please try again later.');
       } finally {
-        setSessionLoading(false);
+        setDataLoading(false);
       }
     };
     
-    initSession();
-  }, [selectedPair]); // Re-run when selected pair changes
+    fetchMarketData();
+  }, [selectedPair]);
 
   // Handle tab changes
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
-    
-    // Update order type based on tab
-    if (newValue === 0) {
-      setOrderType('market');
-    } else if (newValue === 1) {
-      setOrderType('limit');
-    } else if (newValue === 2) {
-      setOrderType('stop-limit');
-    }
   };
 
-  // Place an order
-  const placeOrder = async (direction) => {
-    if (!sessionId) {
-      setError("No active trading session");
-      return;
-    }
+  // Simulated real-time price updates
+  useEffect(() => {
+    if (!candleSeriesRef.current || !lastCandleTimeRef.current) return;
     
-    // Validate input
-    if (amount <= 0) {
-      setError("Amount must be greater than 0");
-      return;
-    }
-    
-    // For limit and stop-limit orders, validate prices
-    if (orderType === 'limit' && (!limitPrice || limitPrice <= 0)) {
-      setError("Limit price must be set");
-      return;
-    }
-    
-    if (orderType === 'stop-limit' && (!stopPrice || stopPrice <= 0 || !limitPrice || limitPrice <= 0)) {
-      setError("Stop and limit prices must be set");
-      return;
-    }
-    
-    try {
-      setLoading(true);
+    // Function to update the latest candle or create a new one
+    const updateCandles = () => {
+      const now = new Date().getTime() / 1000;
+      const lastCandleTime = lastCandleTimeRef.current;
       
-      // Prepare order data
-      const orderData = {
-        symbol: selectedPair,
-        order_type: orderType,
-        direction,
-        amount,
-        price: currentPrice.ask, // Current market price
-        status: 'open'
-      };
-      
-      // Add additional fields based on order type
-      if (orderType === 'limit') {
-        orderData.target_price = limitPrice;
-      } else if (orderType === 'stop-limit') {
-        orderData.stop_price = stopPrice;
-        orderData.target_price = limitPrice;
-      }
-      
-      // Create order in database
-      const response = await API.simulation.createOrder(sessionId, orderData);
-      
-      if (response.data && response.data.order) {
-        const newOrder = response.data.order;
+      // If more than 5 minutes have passed, create a new candle
+      if (now - lastCandleTime > 300) {
+        // New candle time (rounded to minute)
+        const newTime = Math.floor(now / 60) * 60;
+        lastCandleTimeRef.current = newTime;
         
-        // Add to open orders if not a market order (which executes immediately)
-        if (orderType !== 'market') {
-          setOpenOrders([...openOrders, newOrder]);
-        }
+        // Generate a new candle based on the last price
+        const lastPrice = currentPrice.ask;
+        const volatility = 0.0005;
+        const open = lastPrice;
+        const high = open + Math.random() * volatility;
+        const low = open - Math.random() * volatility;
+        const close = open + (Math.random() - 0.5) * volatility;
         
-        // Add to order history
-        setOrderHistory([newOrder, ...orderHistory]);
+        // Add the new candle
+        candleSeriesRef.current.update({
+          time: newTime,
+          open,
+          high,
+          low,
+          close
+        });
         
-        // If it's a market order, execute immediately
-        if (orderType === 'market') {
-          await executeMarketOrder(newOrder);
-        }
-        
-        // Reset form fields
-        if (orderType === 'limit') {
-          setLimitPrice(currentPrice.ask);
-        } else if (orderType === 'stop-limit') {
-          setStopPrice(currentPrice.ask);
-          setLimitPrice(currentPrice.ask);
-        }
-        
-        // Refresh data
-        loadOpenOrders();
-        loadOrderHistory();
-        loadTradeHistory();
-        
-        // Refresh balance
-        updateBalance();
+        // Update current price
+        setCurrentPrice({
+          bid: close - 0.0001,
+          ask: close + 0.0001
+        });
       } else {
-        setError("Failed to place order");
-      }
-    } catch (error) {
-      console.error("Error placing order:", error);
-      setError("Failed to place order: " + (error.response?.data?.error || error.message));
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  // Execute a market order
-  const executeMarketOrder = async (order) => {
-    if (!sessionId) return;
-    
-    try {
-      // Determine execution price based on direction
-      const executionPrice = order.direction === 'buy' ? currentPrice.ask : currentPrice.bid;
-      
-      // Calculate profit/loss for already executed orders
-      let profitLoss = 0;
-      
-      // Create trade record in database
-      const tradeData = {
-        order_id: order.order_id,
-        symbol: order.symbol,
-        direction: order.direction,
-        order_type: order.order_type,
-        open_price: executionPrice,
-        close_price: executionPrice, // Same for market orders
-        amount: order.amount,
-        profit_loss: profitLoss
-      };
-      
-      // Record the trade
-      const tradeResponse = await API.simulation.createTrade(sessionId, tradeData);
-      
-      if (tradeResponse.data && tradeResponse.data.trade) {
-        const newTrade = tradeResponse.data.trade;
+        // Update the current candle
+        const currentCandle = candleSeriesRef.current.dataByIndex(
+          candleSeriesRef.current.dataSize() - 1
+        );
         
-        // Add to trade history
-        setTradeHistory([newTrade, ...tradeHistory]);
-        
-        // Update balance based on trade
-        updateBalance();
-      }
-      
-      // Remove from open orders if it was a limit or stop-limit order
-      if (order.order_type !== 'market') {
-        setOpenOrders(openOrders.filter(o => o.order_id !== order.order_id));
-      }
-      
-      // Update order status in history
-      setOrderHistory(orderHistory.map(o => {
-        if (o.order_id === order.order_id) {
-          return { ...o, status: 'filled', executed_at: new Date().toISOString() };
+        if (currentCandle) {
+          // Create a small price change based on market trend
+          const trend = marketData && marketData.trend === 'Bullish' ? 0.2 : -0.2;
+          const priceMove = (Math.random() - 0.5 + trend * 0.1) * 0.0002;
+          let close = currentCandle.close + priceMove;
+          
+          // Update highs and lows if needed
+          const high = Math.max(currentCandle.high, close);
+          const low = Math.min(currentCandle.low, close);
+          
+          // Update the candle
+          candleSeriesRef.current.update({
+            time: currentCandle.time,
+            open: currentCandle.open,
+            high,
+            low,
+            close
+          });
+          
+          // Update current price
+          setCurrentPrice({
+            bid: close - 0.0001,
+            ask: close + 0.0001
+          });
+          
+          // Check if any pending orders should be executed
+          if (orderType !== 'market') {
+            checkAndExecutePendingOrders({
+              bid: close - 0.0001,
+              ask: close + 0.0001
+            });
+          }
         }
-        return o;
-      }));
-    } catch (error) {
-      console.error("Error executing market order:", error);
-      setError("Failed to execute order: " + (error.response?.data?.error || error.message));
-    }
-  };
-  
-  // Cancel an open order
-  const cancelOrder = async (orderId) => {
-    if (!sessionId) return;
-    
-    try {
-      setLoading(true);
-      
-      // Cancel order in database
-      await API.simulation.cancelOrder(sessionId, orderId);
-      
-      // Remove from open orders
-      setOpenOrders(openOrders.filter(o => o.order_id !== orderId));
-      
-      // Update order history
-      setOrderHistory(orderHistory.map(o => {
-        if (o.order_id === orderId) {
-          return { ...o, status: 'canceled', canceled_at: new Date().toISOString() };
-        }
-        return o;
-      }));
-    } catch (error) {
-      console.error("Error canceling order:", error);
-      setError("Failed to cancel order: " + (error.response?.data?.error || error.message));
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  // Update account balance
-  const updateBalance = async () => {
-    if (!sessionId) return;
-    
-    try {
-      const response = await API.simulation.getBalance(sessionId);
-      if (response.data && response.data.balance) {
-        setBalance(response.data.balance);
       }
-    } catch (error) {
-      console.error("Error updating balance:", error);
-    }
-  };
+    };
+    
+    // Update every second
+    const intervalId = setInterval(updateCandles, 1000);
+    
+    return () => clearInterval(intervalId);
+  }, [currentPrice, marketData]);
   
   // Function to check and execute pending orders based on price changes
-  const checkPendingOrders = (price) => {
-    if (!openOrders.length || !sessionId) return;
+  const checkAndExecutePendingOrders = (price) => {
+    if (!openOrders.length) return;
     
     // Copy the current orders to avoid modifying during iteration
     const orders = [...openOrders];
@@ -430,36 +412,412 @@ const ShortTermTrading = () => {
     // Check each order
     orders.forEach(order => {
       // For limit buy orders: execute if price falls below limit price
-      if (order.order_type === 'limit' && order.direction === 'buy' && price.ask <= order.target_price) {
+      if (order.type === 'limit' && order.direction === 'buy' && price.ask <= order.limitPrice) {
         executeMarketOrder({...order, limitReached: true});
       }
       // For limit sell orders: execute if price rises above limit price
-      else if (order.order_type === 'limit' && order.direction === 'sell' && price.bid >= order.target_price) {
+      else if (order.type === 'limit' && order.direction === 'sell' && price.bid >= order.limitPrice) {
         executeMarketOrder({...order, limitReached: true});
       }
       // For stop-limit orders
-      else if (order.order_type === 'stop-limit') {
+      else if (order.type === 'stop-limit') {
         // Buy stop-limit: trigger limit order if price rises above stop price
-        if (order.direction === 'buy' && price.ask >= order.stop_price) {
+        if (order.direction === 'buy' && price.ask >= order.stopPrice) {
           // Convert to a limit order
           setOpenOrders(prev => prev.map(o => 
-            o.order_id === order.order_id ? {...o, order_type: 'limit', stopTriggered: true} : o
+            o.id === order.id ? {...o, type: 'limit', stopTriggered: true} : o
           ));
+          showSnackbar(`Stop triggered for ${order.pair} buy order at ${order.stopPrice}`, 'info');
         } 
         // Sell stop-limit: trigger limit order if price falls below stop price
-        else if (order.direction === 'sell' && price.bid <= order.stop_price) {
+        else if (order.direction === 'sell' && price.bid <= order.stopPrice) {
           // Convert to a limit order
           setOpenOrders(prev => prev.map(o => 
-            o.order_id === order.order_id ? {...o, order_type: 'limit', stopTriggered: true} : o
+            o.id === order.id ? {...o, type: 'limit', stopTriggered: true} : o
           ));
+          showSnackbar(`Stop triggered for ${order.pair} sell order at ${order.stopPrice}`, 'info');
         }
       }
     });
   };
+  
+  // Basic placeholder function to simulate placing an order
+  const placeOrder = async (direction) => {
+    // Validate order parameters
+    if (amount <= 0) {
+      showSnackbar('Please enter a valid amount', 'error');
+      return;
+    }
+    
+    if (orderType === 'limit' && !limitPrice) {
+      showSnackbar('Please enter a limit price', 'error');
+      return;
+    }
+    
+    if (orderType === 'stop-limit' && (!stopPrice || !limitPrice)) {
+      showSnackbar('Please enter both stop and limit prices', 'error');
+      return;
+    }
+    
+    // Check if user has enough balance for the order
+    const totalAmount = amount * leverage;
+    const marginRequired = totalAmount / leverage;
+    
+    if (marginRequired > balance) {
+      showSnackbar('Insufficient balance for this order', 'error');
+      return;
+    }
+    
+    // Set loading state
+    setLoading(true);
+    
+    try {
+      const now = new Date();
+      const id = `order-${Date.now()}`;
+      const pairLabel = currencyPairs.find(p => p.value === selectedPair)?.label || selectedPair;
+      
+      let newOrder = {
+        id,
+        pair: selectedPair,
+        pairLabel,
+        type: orderType,
+        direction,
+        amount,
+        quantity,
+        leverage,
+        status: 'open',
+        createdAt: now.toISOString(),
+        sessionId
+      };
+      
+      if (orderType === 'limit') {
+        newOrder.limitPrice = limitPrice;
+      } else if (orderType === 'stop-limit') {
+        newOrder.stopPrice = stopPrice;
+        newOrder.limitPrice = limitPrice;
+      }
+      
+      // Add stop loss and take profit if set
+      if (stopLossPrice > 0) {
+        newOrder.stopLoss = stopLossPrice;
+      }
+      
+      if (takeProfitPrice > 0) {
+        newOrder.takeProfit = takeProfitPrice;
+      }
+      
+      // Save order to database if session exists
+      if (sessionId && !sessionId.startsWith('local-')) {
+        try {
+          const response = await API.trading.createOrder({
+            session_id: sessionId,
+            symbol: selectedPair,
+            order_type: orderType,
+            direction,
+            amount,
+            price: orderType === 'market' ? null : 
+                  orderType === 'limit' ? limitPrice : null,
+            stop_price: orderType === 'stop-limit' ? stopPrice : null,
+            limit_price: (orderType === 'limit' || orderType === 'stop-limit') ? limitPrice : null,
+            leverage,
+            stop_loss: stopLossPrice > 0 ? stopLossPrice : null,
+            take_profit: takeProfitPrice > 0 ? takeProfitPrice : null,
+            quantity
+          });
+          
+          if (response.data && response.data.order_id) {
+            newOrder.id = response.data.order_id;
+          }
+        } catch (error) {
+          console.error('Error saving order to database:', error);
+          // Continue with local order even if DB save fails
+        }
+      }
+      
+      setOpenOrders([...openOrders, newOrder]);
+      
+      // Add to order history
+      const historyEntry = {
+        id,
+        pair: selectedPair,
+        pairLabel,
+        type: orderType,
+        direction,
+        amount,
+        quantity,
+        leverage,
+        status: 'placed',
+        timestamp: now.toISOString()
+      };
+      
+      setOrderHistory([historyEntry, ...orderHistory]);
+      
+      showSnackbar(`${direction.toUpperCase()} order placed for ${pairLabel}`, 'success');
+      
+      // If it's a market order, execute immediately
+      if (orderType === 'market') {
+        await executeMarketOrder(newOrder);
+      }
+    } catch (error) {
+      console.error('Error placing order:', error);
+      showSnackbar('Failed to place order', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Simulated market order execution
+  const executeMarketOrder = async (order) => {
+    const executionPrice = order.direction === 'buy' ? currentPrice.ask : currentPrice.bid;
+    const now = new Date();
+    
+    try {
+      // Update order status
+      setOpenOrders(openOrders.filter(o => o.id !== order.id));
+      
+      // Determine if this creates a new position or closes an existing one
+      const existingPosition = positions.find(p => 
+        p.pair === order.pair && p.direction === order.direction
+      );
+      
+      let positionId = null;
+      let isClosingPosition = false;
+      let profitLoss = 0;
+      
+      if (existingPosition) {
+        // Add to existing position
+        positionId = existingPosition.id;
+        
+        // Update the existing position
+        const updatedPositions = positions.map(p => {
+          if (p.id === positionId) {
+            const newQuantity = p.quantity + order.quantity;
+            const newAmount = p.amount + order.amount;
+            // Calculate average entry price
+            const newEntryPrice = (p.entryPrice * p.amount + executionPrice * order.amount) / newAmount;
+            
+            return {
+              ...p,
+              quantity: newQuantity,
+              amount: newAmount,
+              entryPrice: newEntryPrice,
+              updatedAt: now.toISOString()
+            };
+          }
+          return p;
+        });
+        
+        setPositions(updatedPositions);
+      } else {
+        // Check for a position in the opposite direction to close
+        const oppositePosition = positions.find(p => 
+          p.pair === order.pair && p.direction !== order.direction
+        );
+        
+        if (oppositePosition && oppositePosition.quantity <= order.quantity) {
+          // Close the opposite position completely
+          isClosingPosition = true;
+          positionId = oppositePosition.id;
+          
+          // Calculate profit/loss
+          const priceDiff = oppositePosition.direction === 'buy' ? 
+            executionPrice - oppositePosition.entryPrice : 
+            oppositePosition.entryPrice - executionPrice;
+          
+          profitLoss = priceDiff * oppositePosition.quantity * oppositePosition.leverage;
+          
+          // Update total P&L
+          setTotalPnL(prev => prev + profitLoss);
+          
+          // Remove the closed position
+          setPositions(positions.filter(p => p.id !== positionId));
+        } else if (oppositePosition) {
+          // Partially close the opposite position
+          isClosingPosition = true;
+          positionId = oppositePosition.id;
+          
+          // Calculate profit/loss for the closed portion
+          const priceDiff = oppositePosition.direction === 'buy' ? 
+            executionPrice - oppositePosition.entryPrice : 
+            oppositePosition.entryPrice - executionPrice;
+          
+          profitLoss = priceDiff * order.quantity * oppositePosition.leverage;
+          
+          // Update total P&L
+          setTotalPnL(prev => prev + profitLoss);
+          
+          // Update the position with reduced quantity
+          const updatedPositions = positions.map(p => {
+            if (p.id === positionId) {
+              const newQuantity = p.quantity - order.quantity;
+              return {
+                ...p,
+                quantity: newQuantity,
+                amount: p.amount * (newQuantity / p.quantity),
+                updatedAt: now.toISOString()
+              };
+            }
+            return p;
+          });
+          
+          setPositions(updatedPositions);
+        } else {
+          // Create new position
+          const newPosition = {
+            id: `position-${Date.now()}`,
+            pair: order.pair,
+            pairLabel: order.pairLabel,
+            direction: order.direction,
+            quantity: order.quantity,
+            amount: order.amount,
+            leverage: order.leverage,
+            entryPrice: executionPrice,
+            stopLoss: order.stopLoss,
+            takeProfit: order.takeProfit,
+            openedAt: now.toISOString(),
+            updatedAt: now.toISOString()
+          };
+          
+          positionId = newPosition.id;
+          setPositions([...positions, newPosition]);
+          
+          // Save position to database if session exists
+          if (sessionId && !sessionId.startsWith('local-')) {
+            try {
+              await API.trading.createPosition({
+                session_id: sessionId,
+                symbol: order.pair,
+                direction: order.direction,
+                open_price: executionPrice,
+                amount: order.amount,
+                quantity: order.quantity,
+                leverage: order.leverage,
+                take_profit: order.takeProfit,
+                stop_loss: order.stopLoss
+              });
+            } catch (error) {
+              console.error('Error saving position to database:', error);
+            }
+          }
+        }
+      }
+      
+      // Add to trade history
+      const newTrade = {
+        id: `trade-${Date.now()}`,
+        orderId: order.id,
+        positionId: positionId,
+        pair: order.pair,
+        pairLabel: order.pairLabel || currencyPairs.find(p => p.value === order.pair)?.label || order.pair,
+        direction: order.direction,
+        amount: order.amount,
+        quantity: order.quantity,
+        price: executionPrice,
+        leverage: order.leverage,
+        timestamp: now.toISOString(),
+        isClosing: isClosingPosition,
+        profitLoss: isClosingPosition ? profitLoss : 0
+      };
+      
+      setTradeHistory([newTrade, ...tradeHistory]);
+      
+      // Save trade to database if session exists
+      if (sessionId && !sessionId.startsWith('local-')) {
+        try {
+          await API.trading.recordTrade({
+            session_id: sessionId,
+            position_id: positionId,
+            order_id: order.id,
+            symbol: order.pair,
+            direction: order.direction,
+            order_type: order.type,
+            open_price: executionPrice,
+            amount: order.amount,
+            leverage: order.leverage,
+            profit_loss: isClosingPosition ? profitLoss : 0
+          });
+        } catch (error) {
+          console.error('Error saving trade to database:', error);
+        }
+      }
+      
+      // Update order history
+      setOrderHistory(orderHistory.map(o => {
+        if (o.id === order.id) {
+          return { 
+            ...o, 
+            status: 'executed', 
+            executedAt: now.toISOString(), 
+            executionPrice,
+            positionId
+          };
+        }
+        return o;
+      }));
+      
+      // Update balance based on margin requirement and P&L
+      if (isClosingPosition) {
+        // When closing, add the margin back plus any profit (or minus any loss)
+        setBalance(prev => parseFloat((prev + order.amount / order.leverage + profitLoss).toFixed(2)));
+      } else {
+        // When opening, subtract the required margin
+        setBalance(prev => parseFloat((prev - order.amount / order.leverage).toFixed(2)));
+      }
+      
+      // Show notification
+      const orderTypeText = order.limitReached ? 'Limit' : (order.stopTriggered ? 'Stop' : 'Market');
+      showSnackbar(
+        `${orderTypeText} ${order.direction.toUpperCase()} order executed at ${executionPrice.toFixed(5)}` + 
+        (isClosingPosition ? ` (P&L: $${profitLoss.toFixed(2)})` : ''), 
+        'success'
+      );
+      
+      // Update balance in database if session exists
+      if (sessionId && !sessionId.startsWith('local-')) {
+        try {
+          await API.trading.updateBalance({
+            session_id: sessionId,
+            balance: balance,
+            profit_loss: isClosingPosition ? profitLoss : 0
+          });
+        } catch (error) {
+          console.error('Error updating balance in database:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Error executing order:', error);
+      showSnackbar('Failed to execute order', 'error');
+    }
+  };
+  
+  // Cancel an open order
+  const cancelOrder = (orderId) => {
+    // Find the order to get details for the history update
+    const orderToCancel = openOrders.find(o => o.id === orderId);
+    
+    if (!orderToCancel) return;
+    
+    // Remove from open orders
+    setOpenOrders(openOrders.filter(o => o.id !== orderId));
+    
+    // Update order history
+    setOrderHistory(orderHistory.map(o => {
+      if (o.id === orderId) {
+        return { 
+          ...o, 
+          status: 'cancelled', 
+          cancelledAt: new Date().toISOString() 
+        };
+      }
+      return o;
+    }));
+    
+    showSnackbar(`Order for ${orderToCancel.pairLabel || orderToCancel.pair} cancelled`, 'info');
+  };
 
-  // Initialize lightweight chart
+  // Initialize lightweight chart with real price history data
   useEffect(() => {
-    if (!chartContainerRef.current || !selectedPair) return;
+    if (!chartContainerRef.current || priceHistory.length === 0) return;
     
     // Clear previous chart if it exists
     if (chartRef.current) {
@@ -517,148 +875,109 @@ const ShortTermTrading = () => {
     // Save candlestick series reference
     candleSeriesRef.current = candlestickSeries;
     
-    // Get the Yahoo Finance symbol format
-    const pair = currencyPairs.find(p => p.value === selectedPair);
-    const yahooSymbol = pair ? pair.yahooSymbol : `${selectedPair}=X`;
+    // Format price history data for the chart
+    const formattedData = priceHistory.map(item => {
+      // Convert date string to timestamp
+      const timestamp = new Date(item.date || item.timestamp).getTime() / 1000;
+      return {
+        time: timestamp,
+        open: parseFloat(item.open_price || item.open),
+        high: parseFloat(item.high_price || item.high),
+        low: parseFloat(item.low_price || item.low),
+        close: parseFloat(item.close_price || item.close),
+      };
+    });
     
-    // Fetch historical data
-    const fetchHistoricalData = async () => {
-      try {
-        const response = await API.market.getHistory(yahooSymbol);
-        
-        if (response.data && response.data.history && response.data.history.length > 0) {
-          // Convert history to candlestick format
-          const candles = response.data.history.map(item => ({
-            time: new Date(item.date).getTime() / 1000,
-            open: parseFloat(item.open),
-            high: parseFloat(item.high),
-            low: parseFloat(item.low),
-            close: parseFloat(item.close)
-          }));
-          
-          // Set chart data
-          candlestickSeries.setData(candles);
-          
-          // Save the last candle time for updates
-          if (candles.length > 0) {
-            lastCandleTimeRef.current = candles[candles.length - 1].time;
-            
-            // Update current price based on the latest candle
-            const lastCandle = candles[candles.length - 1];
-            const spread = 0.0002; // 2 pips spread
-            setCurrentPrice({
-              bid: lastCandle.close - spread / 2,
-              ask: lastCandle.close + spread / 2
-            });
-          }
-          
-          // Add moving average
-          const maSeries = chart.addLineSeries({
-            color: colors.accentBlue,
-            lineWidth: 2,
-          });
-          
-          // Calculate simple 7-day MA for candles
-          if (candles.length > 7) {
-            const maData = [];
-            for (let i = 6; i < candles.length; i++) {
-              let sum = 0;
-              for (let j = 0; j < 7; j++) {
-                sum += candles[i - j].close;
-              }
-              maData.push({
-                time: candles[i].time,
-                value: sum / 7
-              });
-            }
-            
-            maSeries.setData(maData);
-          }
-        } else {
-          // If no history, create sample data
-          generateSampleData(candlestickSeries);
-        }
-      } catch (error) {
-        console.error("Error fetching historical data:", error);
-        // If error, create sample data
-        generateSampleData(candlestickSeries);
-      }
-    };
-    
-    // Helper function to generate sample data if API fails
-    const generateSampleData = (series) => {
-      const currentDate = new Date();
-      const sampleData = [];
-      
-      // Determine base price based on currency pair
-      let basePrice = 1.10; // Default for EURUSD
-      if (selectedPair === 'GBPUSD') basePrice = 1.26;
-      else if (selectedPair === 'USDJPY') basePrice = 151.50;
-      else if (selectedPair === 'AUDUSD') basePrice = 0.65;
-      else if (selectedPair === 'USDCAD') basePrice = 1.36;
-      else if (selectedPair === 'NZDUSD') basePrice = 0.59;
-      else if (selectedPair === 'USDCHF') basePrice = 0.90;
-      
-      for (let i = 30; i >= 0; i--) {
-        const time = new Date(currentDate);
-        time.setDate(time.getDate() - i);
-        
-        // Generate random candle
-        const volatility = 0.02;
-        const open = basePrice + (Math.random() - 0.5) * volatility;
-        const high = open + Math.random() * volatility / 2;
-        const low = open - Math.random() * volatility / 2;
-        const close = (low + Math.random() * (high - low));
-        
-        sampleData.push({
-          time: time.getTime() / 1000,
-          open,
-          high,
-          low,
-          close,
-        });
-      }
-      
-      // Set chart data
-      series.setData(sampleData);
+    // Set chart data
+    if (formattedData.length > 0) {
+      candlestickSeries.setData(formattedData);
       
       // Save the last candle time for updates
-      if (sampleData.length > 0) {
-        lastCandleTimeRef.current = sampleData[sampleData.length - 1].time;
-        
-        // Update current price based on the latest candle
-        const lastCandle = sampleData[sampleData.length - 1];
-        const spread = 0.0002; // 2 pips spread
-        setCurrentPrice({
-          bid: lastCandle.close - spread / 2,
-          ask: lastCandle.close + spread / 2
-        });
-      }
+      lastCandleTimeRef.current = formattedData[formattedData.length - 1].time;
       
-      // Add moving average
+      // Update current price based on the latest candle
+      const lastCandle = formattedData[formattedData.length - 1];
+      const spread = 0.0002; // 2 pips spread
+      
+      setCurrentPrice({
+        bid: lastCandle.close - spread / 2,
+        ask: lastCandle.close + spread / 2
+      });
+      
+      // Update limit and stop prices based on current price
+      setLimitPrice(lastCandle.close);
+      setStopPrice(lastCandle.close * 0.995); // 0.5% below current price
+    }
+    
+    // Add moving average if technical indicators are available
+    if (technicalIndicators && technicalIndicators.sma20) {
       const maSeries = chart.addLineSeries({
         color: colors.accentBlue,
         lineWidth: 2,
+        priceLineVisible: false,
       });
       
-      // Calculate simple 7-day MA
-      const maData = [];
-      for (let i = 6; i < sampleData.length; i++) {
-        let sum = 0;
-        for (let j = 0; j < 7; j++) {
-          sum += sampleData[i - j].close;
+      // Create MA data points
+      const maData = formattedData.map((candle, index) => {
+        // For the last 20 points, use the SMA20 value
+        if (index >= formattedData.length - 20) {
+          return {
+            time: candle.time,
+            value: parseFloat(technicalIndicators.sma20)
+          };
         }
-        maData.push({
-          time: sampleData[i].time,
-          value: sum / 7
-        });
-      }
+        // For earlier points, approximate the SMA
+        return {
+          time: candle.time,
+          value: candle.close
+        };
+      });
       
       maSeries.setData(maData);
-    };
+    }
     
-    // Fetch data
-    fetchHistoricalData();
+    // Add support and resistance lines if available
+    if (supportLevels.length > 0 || resistanceLevels.length > 0) {
+      // Add support levels
+      supportLevels.slice(0, 2).forEach((level, index) => {
+        const supportPrice = parseFloat(level);
+        const supportSeries = chart.addLineSeries({
+          color: colors.buyGreen,
+          lineWidth: 1,
+          lineStyle: 2, // Dashed line
+          lastValueVisible: false,
+          priceLineVisible: false,
+        });
+        
+        // Create data for horizontal line
+        const supportData = formattedData.map(candle => ({
+          time: candle.time,
+          value: supportPrice
+        }));
+        
+        supportSeries.setData(supportData);
+      });
+      
+      // Add resistance levels
+      resistanceLevels.slice(0, 2).forEach((level, index) => {
+        const resistancePrice = parseFloat(level);
+        const resistanceSeries = chart.addLineSeries({
+          color: colors.sellRed,
+          lineWidth: 1,
+          lineStyle: 2, // Dashed line
+          lastValueVisible: false,
+          priceLineVisible: false,
+        });
+        
+        // Create data for horizontal line
+        const resistanceData = formattedData.map(candle => ({
+          time: candle.time,
+          value: resistancePrice
+        }));
+        
+        resistanceSeries.setData(resistanceData);
+      });
+    }
     
     // Handle resize
     const handleResize = () => {
@@ -682,347 +1001,419 @@ const ShortTermTrading = () => {
         chartRef.current = null;
       }
     };
-  }, [selectedPair]);
-  
-  // Simulated real-time price updates - keep this until real-time API is available
+  }, [priceHistory, technicalIndicators, supportLevels, resistanceLevels]);
+
   useEffect(() => {
-    if (!candleSeriesRef.current || !lastCandleTimeRef.current) return;
-    
-    // Function to update the latest candle or create a new one
-    const updateCandles = () => {
-      const now = new Date().getTime() / 1000;
-      const lastCandleTime = lastCandleTimeRef.current;
-      
-      // If more than 5 minutes have passed, create a new candle
-      if (now - lastCandleTime > 300) {
-        // New candle time (rounded to minute)
-        const newTime = Math.floor(now / 60) * 60;
-        lastCandleTimeRef.current = newTime;
+    // Create an interval that simulates real-time price updates (every second)
+    const intervalId = setInterval(() => {
+      if (selectedPair) {
+        // Simulate market price fluctuations
+        const currentPrice = getUpdatedPrice(selectedPair);
         
-        // Generate a new candle based on the last price
-        const lastPrice = currentPrice.ask;
-        const volatility = 0.0005;
-        const open = lastPrice;
-        const high = open + Math.random() * volatility;
-        const low = open - Math.random() * volatility;
-        const close = open + (Math.random() - 0.5) * volatility;
+        // Check if we need to close any positions based on stop loss/take profit
+        checkPositions(currentPrice);
         
-        // Add the new candle
-        candleSeriesRef.current.update({
-          time: newTime,
-          open,
-          high,
-          low,
-          close
-        });
+        // Check pending orders (limit, stop, etc.)
+        checkAndExecutePendingOrders(currentPrice);
         
-        // Update current price
-        const spread = 0.0002; // 2 pips spread
-        setCurrentPrice({
-          bid: close - spread / 2,
-          ask: close + spread / 2
-        });
+        // Update price history for charts
+        const currentTime = new Date();
         
-        // Check if any pending orders should be executed
-        checkPendingOrders({
-          bid: close - spread / 2,
-          ask: close + spread / 2
-        });
-      } else {
-        // Update the current candle
-        const currentCandle = candleSeriesRef.current.dataByIndex(
-          candleSeriesRef.current.dataSize() - 1
-        );
-        
-        if (currentCandle) {
-          // Create a small price change
-          const priceMove = (Math.random() - 0.5) * 0.0002;
-          let close = currentCandle.close + priceMove;
-          
-          // Update highs and lows if needed
-          const high = Math.max(currentCandle.high, close);
-          const low = Math.min(currentCandle.low, close);
-          
-          // Update the candle
-          candleSeriesRef.current.update({
-            time: currentCandle.time,
-            open: currentCandle.open,
-            high,
-            low,
-            close
+        // Every 5 minutes, add a new candle
+        if (currentTime.getMinutes() % 5 === 0 && currentTime.getSeconds() === 0) {
+          setPriceHistory(prev => {
+            const newCandle = {
+              time: currentTime.getTime(),
+              open: prev[prev.length - 1]?.close || currentPrice,
+              high: currentPrice,
+              low: currentPrice,
+              close: currentPrice,
+              volume: Math.floor(Math.random() * 1000) + 500
+            };
+            return [...prev.slice(-99), newCandle]; // Keep last 100 candles
           });
-          
-          // Update current price
-          const spread = 0.0002; // 2 pips spread
-          setCurrentPrice({
-            bid: close - spread / 2,
-            ask: close + spread / 2
-          });
-          
-          // Check if any pending orders should be executed
-          checkPendingOrders({
-            bid: close - spread / 2,
-            ask: close + spread / 2
+        } 
+        // Otherwise update the current candle
+        else {
+          setPriceHistory(prev => {
+            if (prev.length === 0) return prev;
+            const lastCandle = prev[prev.length - 1];
+            const updatedCandle = {
+              ...lastCandle,
+              close: currentPrice,
+              high: Math.max(lastCandle.high, currentPrice),
+              low: Math.min(lastCandle.low, currentPrice)
+            };
+            return [...prev.slice(0, -1), updatedCandle];
           });
         }
       }
-    };
-    
-    // Update every second
-    const intervalId = setInterval(updateCandles, 1000);
-    
+    }, 1000);
+
     return () => clearInterval(intervalId);
-  }, [currentPrice]);
+  }, [selectedPair, positions]);
+  
+  // Check if positions need to be closed due to stop loss or take profit
+  const checkPositions = (currentPrice) => {
+    if (positions.length === 0) return;
+    
+    const updatedPositions = [...positions];
+    let positionsChanged = false;
+    
+    // Calculate unrealized P&L for all positions
+    let totalUnrealized = 0;
+    
+    positions.forEach((position, index) => {
+      const marketPrice = position.direction === 'buy' ? 
+        currentPrice - (currentPrice * 0.0001) : // Simulate a small spread
+        currentPrice + (currentPrice * 0.0001);
+      
+      // Calculate unrealized P&L for this position
+      const priceDiff = position.direction === 'buy' ? 
+        marketPrice - position.entryPrice : 
+        position.entryPrice - marketPrice;
+      
+      const positionPnL = priceDiff * position.quantity * position.leverage;
+      totalUnrealized += positionPnL;
+      
+      // Update position with current P&L
+      updatedPositions[index] = {
+        ...position,
+        currentPrice: marketPrice,
+        unrealizedPnL: positionPnL
+      };
+      
+      // Check for stop loss
+      if (position.stopLoss && (
+        (position.direction === 'buy' && marketPrice <= position.stopLoss) ||
+        (position.direction === 'sell' && marketPrice >= position.stopLoss)
+      )) {
+        // Create market order to close position at stop loss
+        const closeOrder = {
+          id: `stop-loss-${Date.now()}`,
+          pair: position.pair,
+          pairLabel: position.pairLabel,
+          type: 'market',
+          direction: position.direction === 'buy' ? 'sell' : 'buy',
+          amount: position.amount,
+          quantity: position.quantity,
+          leverage: position.leverage,
+          status: 'open',
+          createdAt: new Date().toISOString(),
+          stopTriggered: true,
+          isStopLoss: true,
+          positionId: position.id
+        };
+        
+        // Execute market order to close position
+        executeMarketOrder(closeOrder);
+        positionsChanged = true;
+      }
+      
+      // Check for take profit
+      else if (position.takeProfit && (
+        (position.direction === 'buy' && marketPrice >= position.takeProfit) ||
+        (position.direction === 'sell' && marketPrice <= position.takeProfit)
+      )) {
+        // Create market order to close position at take profit
+        const closeOrder = {
+          id: `take-profit-${Date.now()}`,
+          pair: position.pair,
+          pairLabel: position.pairLabel,
+          type: 'market',
+          direction: position.direction === 'buy' ? 'sell' : 'buy',
+          amount: position.amount,
+          quantity: position.quantity,
+          leverage: position.leverage,
+          status: 'open',
+          createdAt: new Date().toISOString(),
+          isTakeProfit: true,
+          positionId: position.id
+        };
+        
+        // Execute market order to close position
+        executeMarketOrder(closeOrder);
+        positionsChanged = true;
+      }
+    });
+    
+    // Update positions if any changes were made
+    if (!positionsChanged) {
+      setPositions(updatedPositions);
+    }
+    
+    // Update unrealized P&L
+    setUnrealizedPnL(totalUnrealized);
+  };
 
   return (
     <Box sx={{ display: 'flex', bgcolor: colors.darkBg, height: '100vh', overflow: 'hidden' }}>
       <Sidebar activePage="Trading" />
       <Box sx={{ flexGrow: 1, ml: '250px', overflow: 'auto', height: '100vh', p: 3 }}>
-        {/* Header with session info */}
+        {/* Snackbar notifications */}
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={6000}
+          onClose={handleSnackbarClose}
+          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        >
+          <Alert onClose={handleSnackbarClose} severity={snackbar.severity} sx={{ width: '100%' }}>
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
+        
+        {/* Header */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h4" sx={{ color: colors.primaryText }}>
             Short Term Trading
           </Typography>
           
-          {sessionLoading ? (
-            <CircularProgress size={24} sx={{ color: colors.accentBlue }} />
-          ) : sessionId ? (
-            <Chip 
-              label={`Session #${sessionId}`} 
-              variant="outlined" 
-              size="small"
-              sx={{ 
-                color: colors.secondaryText,
-                borderColor: colors.borderColor,
-                '& .MuiChip-label': { px: 1 }
-              }} 
-            />
-          ) : null}
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            {user && (
+              <IconButton 
+                onClick={toggleFavorite}
+                sx={{ color: isFavorite ? colors.warningOrange : colors.secondaryText, mr: 1 }}
+              >
+                {isFavorite ? <StarIcon /> : <StarBorderIcon />}
+              </IconButton>
+            )}
+            
+            <FormControl variant="outlined" size="small" sx={{ width: 140, mr: 2 }}>
+              <InputLabel id="pair-select-label" sx={{ color: colors.secondaryText }}>
+                Currency Pair
+              </InputLabel>
+              <Select
+                labelId="pair-select-label"
+                value={selectedPair}
+                onChange={(e) => setSelectedPair(e.target.value)}
+                label="Currency Pair"
+                sx={{ 
+                  color: colors.primaryText,
+                  '.MuiOutlinedInput-notchedOutline': { borderColor: colors.borderColor },
+                  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: colors.accentBlue },
+                }}
+              >
+                {currencyPairs.map((pair) => (
+                  <MenuItem key={pair.value} value={pair.value}>
+                    {pair.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
         </Box>
         
-        {/* Error display */}
         {error && (
-          <Paper 
-            sx={{ 
-              bgcolor: 'rgba(255, 61, 87, 0.1)', 
-              color: colors.sellRed,
-              p: 2,
-              mb: 3,
-              borderRadius: 2,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
-            }}
-          >
-            <Typography>{error}</Typography>
-            <IconButton size="small" onClick={() => setError(null)} sx={{ color: colors.sellRed }}>
-              <CloseIcon fontSize="small" />
-            </IconButton>
-          </Paper>
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
         )}
         
-        {sessionLoading ? (
-          <Box sx={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            height: 'calc(100vh - 200px)'
-          }}>
-            <CircularProgress size={60} sx={{ color: colors.accentBlue, mb: 3 }} />
-            <Typography variant="h6" sx={{ color: colors.primaryText }}>
-              Initializing Trading Session...
-            </Typography>
-          </Box>
-        ) : (
-          <Grid container spacing={3}>
-            {/* Left side - Chart and Trading interface */}
-            <Grid item xs={12} md={8}>
-              {/* Price chart */}
-              <Paper 
-                sx={{ 
-                  bgcolor: colors.cardBg, 
-                  mb: 3, 
-                  height: '400px',
-                  border: `1px solid ${colors.borderColor}`,
-                  borderRadius: 2,
-                  overflow: 'hidden',
-                  position: 'relative'
-                }}
-                ref={chartContainerRef}
-              >
-                {loading && (
-                  <Box sx={{ 
-                    position: 'absolute', 
-                    top: 0, 
-                    left: 0, 
-                    right: 0, 
-                    bottom: 0, 
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    bgcolor: 'rgba(30, 34, 53, 0.7)',
-                    zIndex: 10
-                  }}>
-                    <CircularProgress size={40} sx={{ color: colors.accentBlue }} />
-                  </Box>
-                )}
-              </Paper>
-              
-              {/* Trading pair info */}
-              {marketData && (
-                <Paper 
-                  sx={{ 
-                    bgcolor: colors.cardBg, 
-                    mb: 3, 
-                    p: 2,
-                    border: `1px solid ${colors.borderColor}`,
-                    borderRadius: 2
-                  }}
-                >
-                  <Grid container spacing={2} alignItems="center">
-                    <Grid item xs={6} md={3}>
-                      <Typography variant="caption" sx={{ color: colors.secondaryText, display: 'block' }}>
-                        Current Price
-                      </Typography>
-                      <Typography variant="h6" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
-                        {currentPrice.ask.toFixed(5)}
-                      </Typography>
-                    </Grid>
-                    
-                    <Grid item xs={6} md={3}>
-                      <Typography variant="caption" sx={{ color: colors.secondaryText, display: 'block' }}>
-                        24h Change
-                      </Typography>
-                      <Typography 
-                        variant="h6" 
-                        sx={{ 
-                          color: marketData.change_percentage >= 0 ? colors.buyGreen : colors.sellRed,
-                          display: 'flex',
-                          alignItems: 'center'
-                        }}
-                      >
-                        {Math.abs(marketData.change_percentage).toFixed(2)}%
-                      </Typography>
-                    </Grid>
-                    
-                    <Grid item xs={6} md={3}>
-                      <Typography variant="caption" sx={{ color: colors.secondaryText, display: 'block' }}>
-                        Spread
-                      </Typography>
-                      <Typography variant="h6" sx={{ color: colors.primaryText }}>
-                        {((currentPrice.ask - currentPrice.bid) * 10000).toFixed(1)} pips
-                      </Typography>
-                    </Grid>
-                    
-                    <Grid item xs={6} md={3}>
-                      <Typography variant="caption" sx={{ color: colors.secondaryText, display: 'block' }}>
-                        Trend
-                      </Typography>
-                      <Chip 
-                        label={marketData.trend || "Neutral"} 
-                        size="small"
-                        sx={{ 
-                          bgcolor: marketData.trend === 'Bullish' 
-                            ? 'rgba(0, 230, 118, 0.2)' 
-                            : marketData.trend === 'Bearish' 
-                              ? 'rgba(255, 61, 87, 0.2)'
-                              : 'rgba(33, 150, 243, 0.2)',
-                          color: marketData.trend === 'Bullish' 
-                            ? colors.buyGreen 
-                            : marketData.trend === 'Bearish' 
-                              ? colors.sellRed
-                              : colors.accentBlue
-                        }}
-                      />
-                    </Grid>
+        <Grid container spacing={3}>
+          {/* Left side - Chart and Trading interface */}
+          <Grid item xs={12} md={8}>
+            {/* Market data summary */}
+            <Paper sx={{ 
+              bgcolor: colors.cardBg, 
+              mb: 3, 
+              p: 2,
+              border: `1px solid ${colors.borderColor}`,
+              borderRadius: 2
+            }}>
+              {dataLoading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 1 }}>
+                  <CircularProgress size={24} sx={{ color: colors.accentBlue }} />
+                </Box>
+              ) : (
+                <Grid container spacing={2} alignItems="center">
+                  <Grid item xs={12} sm={3}>
+                    <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                      {currencyPairs.find(p => p.value === selectedPair)?.label || selectedPair}
+                    </Typography>
+                    <Typography variant="h5" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                      {currentPrice.ask.toFixed(5)}
+                    </Typography>
                   </Grid>
-                </Paper>
+                  
+                  <Grid item xs={6} sm={3}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      {marketData && marketData.trend === 'Bullish' ? (
+                        <TrendingUpIcon sx={{ color: colors.buyGreen, mr: 1 }} />
+                      ) : (
+                        <TrendingDownIcon sx={{ color: colors.sellRed, mr: 1 }} />
+                      )}
+                      <Typography sx={{ color: marketData && marketData.trend === 'Bullish' ? colors.buyGreen : colors.sellRed }}>
+                        {marketData && marketData.trend ? marketData.trend : 'Neutral'}
+                      </Typography>
+                    </Box>
+                    {marketData && marketData.change_percentage !== undefined && (
+                      <Typography variant="body2" sx={{ 
+                        color: parseFloat(marketData.change_percentage) >= 0 ? colors.buyGreen : colors.sellRed 
+                      }}>
+                        {parseFloat(marketData.change_percentage) >= 0 ? '+' : ''}
+                        {parseFloat(marketData.change_percentage).toFixed(2)}%
+                      </Typography>
+                    )}
+                  </Grid>
+                  
+                  <Grid item xs={6} sm={3}>
+                    {technicalIndicators && (
+                      <Box>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          RSI
+                        </Typography>
+                        <Typography sx={{ 
+                          color: technicalIndicators.rsi > 70 ? colors.sellRed : 
+                                 technicalIndicators.rsi < 30 ? colors.buyGreen : 
+                                 colors.primaryText
+                        }}>
+                          {parseFloat(technicalIndicators.rsi).toFixed(1)}
+                        </Typography>
+                      </Box>
+                    )}
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={3}>
+                    {supportLevels.length > 0 && resistanceLevels.length > 0 && (
+                      <Box>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          Support / Resistance
+                        </Typography>
+                        <Typography sx={{ color: colors.buyGreen }}>
+                          {parseFloat(supportLevels[0]).toFixed(5)}
+                        </Typography>
+                        <Typography sx={{ color: colors.sellRed }}>
+                          {parseFloat(resistanceLevels[0]).toFixed(5)}
+                        </Typography>
+                      </Box>
+                    )}
+                  </Grid>
+                </Grid>
               )}
+            </Paper>
+            
+            {/* Price chart */}
+            <Paper 
+              sx={{ 
+                bgcolor: colors.cardBg, 
+                mb: 3, 
+                height: '400px',
+                border: `1px solid ${colors.borderColor}`,
+                borderRadius: 2,
+                overflow: 'hidden',
+                position: 'relative'
+              }}
+            >
+              {dataLoading && (
+                <Box sx={{ 
+                  position: 'absolute', 
+                  top: 0, 
+                  left: 0, 
+                  right: 0, 
+                  bottom: 0, 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  bgcolor: 'rgba(20, 22, 32, 0.7)',
+                  zIndex: 10
+                }}>
+                  <CircularProgress sx={{ color: colors.accentBlue }} />
+                </Box>
+              )}
+              <Box ref={chartContainerRef} sx={{ width: '100%', height: '100%' }} />
+            </Paper>
+            
+            {/* Trading interface */}
+            <Paper sx={{ bgcolor: colors.cardBg, p: 2, border: `1px solid ${colors.borderColor}`, borderRadius: 2 }}>
+              <Tabs 
+                value={tabValue} 
+                onChange={handleTabChange}
+                sx={{ 
+                  mb: 2,
+                  '& .MuiTabs-indicator': { bgcolor: colors.accentBlue },
+                  '& .MuiTab-root': { color: colors.secondaryText },
+                  '& .Mui-selected': { color: colors.primaryText }
+                }}
+              >
+                <Tab label="Market" />
+                <Tab label="Limit" />
+                <Tab label="Stop Limit" />
+              </Tabs>
               
-              {/* Trading interface */}
-              <Paper sx={{ bgcolor: colors.cardBg, p: 2, border: `1px solid ${colors.borderColor}`, borderRadius: 2 }}>
-                <Tabs 
-                  value={tabValue} 
-                  onChange={handleTabChange}
-                  sx={{ 
-                    mb: 2,
-                    '& .MuiTabs-indicator': { bgcolor: colors.accentBlue },
-                    '& .MuiTab-root': { color: colors.secondaryText },
-                    '& .Mui-selected': { color: colors.primaryText }
-                  }}
-                >
-                  <Tab label="Market" />
-                  <Tab label="Limit" />
-                  <Tab label="Stop Limit" />
-                </Tabs>
-                
-                <Box sx={{ mb: 2 }}>
-                  <Grid container spacing={2} alignItems="center">
-                    {/* Currency pair selector */}
-                    <Grid item xs={12} sm={6}>
-                      <FormControl fullWidth variant="outlined">
-                        <InputLabel id="pair-select-label" sx={{ color: colors.secondaryText }}>
-                          Currency Pair
-                        </InputLabel>
-                        <Select
-                          labelId="pair-select-label"
-                          value={selectedPair}
-                          onChange={(e) => setSelectedPair(e.target.value)}
-                          label="Currency Pair"
-                          sx={{ 
-                            color: colors.primaryText,
-                            '.MuiOutlinedInput-notchedOutline': { borderColor: colors.borderColor },
-                            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: colors.accentBlue },
-                          }}
-                          disabled={loading}
-                        >
-                          {currencyPairs.map((pair) => (
-                            <MenuItem key={pair.value} value={pair.value}>
-                              {pair.label}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </Grid>
-                    
-                    {/* Amount input */}
-                    <Grid item xs={12} sm={6}>
+              <Box sx={{ mb: 2 }}>
+                <Grid container spacing={2} alignItems="center">
+                  {/* Amount input */}
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="Amount"
+                      variant="outlined"
+                      type="number"
+                      value={amount}
+                      onChange={(e) => setAmount(Number(e.target.value))}
+                      fullWidth
+                      InputProps={{
+                        startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                      }}
+                      sx={{ 
+                        input: { color: colors.primaryText },
+                        label: { color: colors.secondaryText },
+                        '.MuiOutlinedInput-notchedOutline': { borderColor: colors.borderColor },
+                        '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: colors.accentBlue },
+                      }}
+                    />
+                  </Grid>
+                  
+                  {/* Current price info */}
+                  <Grid item xs={12} sm={6}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Typography sx={{ color: colors.secondaryText }}>
+                        Bid: <span style={{ color: colors.sellRed }}>{currentPrice.bid.toFixed(5)}</span>
+                      </Typography>
+                      <Typography sx={{ color: colors.secondaryText }}>
+                        Ask: <span style={{ color: colors.buyGreen }}>{currentPrice.ask.toFixed(5)}</span>
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  
+                  {/* Additional fields based on order type */}
+                  {tabValue === 1 && (
+                    <Grid item xs={12}>
                       <TextField
-                        label="Amount"
+                        label="Limit Price"
                         variant="outlined"
                         type="number"
-                        value={amount}
-                        onChange={(e) => setAmount(Number(e.target.value))}
+                        value={limitPrice}
+                        onChange={(e) => setLimitPrice(Number(e.target.value))}
                         fullWidth
-                        InputProps={{
-                          startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                        }}
                         sx={{ 
                           input: { color: colors.primaryText },
                           label: { color: colors.secondaryText },
                           '.MuiOutlinedInput-notchedOutline': { borderColor: colors.borderColor },
                           '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: colors.accentBlue },
                         }}
-                        disabled={loading}
                       />
                     </Grid>
-                    
-                    {/* Current price info */}
-                    <Grid item xs={12}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1, mb: 2 }}>
-                        <Typography sx={{ color: colors.secondaryText }}>
-                          Bid: <span style={{ color: colors.sellRed }}>{currentPrice.bid.toFixed(5)}</span>
-                        </Typography>
-                        <Typography sx={{ color: colors.secondaryText }}>
-                          Ask: <span style={{ color: colors.buyGreen }}>{currentPrice.ask.toFixed(5)}</span>
-                        </Typography>
-                      </Box>
-                    </Grid>
-                    
-                    {/* Additional fields based on order type */}
-                    {tabValue === 1 && (
-                      <Grid item xs={12}>
+                  )}
+                  
+                  {tabValue === 2 && (
+                    <>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          label="Stop Price"
+                          variant="outlined"
+                          type="number"
+                          value={stopPrice}
+                          onChange={(e) => setStopPrice(Number(e.target.value))}
+                          fullWidth
+                          sx={{ 
+                            input: { color: colors.primaryText },
+                            label: { color: colors.secondaryText },
+                            '.MuiOutlinedInput-notchedOutline': { borderColor: colors.borderColor },
+                            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: colors.accentBlue },
+                          }}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
                         <TextField
                           label="Limit Price"
                           variant="outlined"
@@ -1036,347 +1427,317 @@ const ShortTermTrading = () => {
                             '.MuiOutlinedInput-notchedOutline': { borderColor: colors.borderColor },
                             '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: colors.accentBlue },
                           }}
-                          disabled={loading}
                         />
                       </Grid>
-                    )}
-                    
-                    {tabValue === 2 && (
-                      <>
-                        <Grid item xs={12} sm={6}>
-                          <TextField
-                            label="Stop Price"
-                            variant="outlined"
-                            type="number"
-                            value={stopPrice}
-                            onChange={(e) => setStopPrice(Number(e.target.value))}
-                            fullWidth
-                            sx={{ 
-                              input: { color: colors.primaryText },
-                              label: { color: colors.secondaryText },
-                              '.MuiOutlinedInput-notchedOutline': { borderColor: colors.borderColor },
-                              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: colors.accentBlue },
-                            }}
-                            disabled={loading}
-                          />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                          <TextField
-                            label="Limit Price"
-                            variant="outlined"
-                            type="number"
-                            value={limitPrice}
-                            onChange={(e) => setLimitPrice(Number(e.target.value))}
-                            fullWidth
-                            sx={{ 
-                              input: { color: colors.primaryText },
-                              label: { color: colors.secondaryText },
-                              '.MuiOutlinedInput-notchedOutline': { borderColor: colors.borderColor },
-                              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: colors.accentBlue },
-                            }}
-                            disabled={loading}
-                          />
-                        </Grid>
-                      </>
-                    )}
-                    
-                    {/* Action buttons */}
-                    <Grid item xs={6}>
-                      <Button
-                        variant="contained"
-                        fullWidth
-                        onClick={() => placeOrder('buy')}
-                        sx={{ 
-                          bgcolor: colors.buyGreen,
-                          '&:hover': { bgcolor: 'success.dark' },
-                          py: 1.5
-                        }}
-                        disabled={loading || !sessionId}
-                      >
-                        {loading ? <CircularProgress size={24} sx={{ color: '#fff' }} /> : "BUY"}
-                      </Button>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Button
-                        variant="contained"
-                        fullWidth
-                        onClick={() => placeOrder('sell')}
-                        sx={{ 
-                          bgcolor: colors.sellRed,
-                          '&:hover': { bgcolor: 'error.dark' },
-                          py: 1.5
-                        }}
-                        disabled={loading || !sessionId}
-                      >
-                        {loading ? <CircularProgress size={24} sx={{ color: '#fff' }} /> : "SELL"}
-                      </Button>
-                    </Grid>
-                  </Grid>
-                </Box>
-              </Paper>
-            </Grid>
-            
-            {/* Right side - Balance, Open Orders, History */}
-            <Grid item xs={12} md={4}>
-              {/* Account balance */}
-              <Paper sx={{ bgcolor: colors.cardBg, p: 2, mb: 3, border: `1px solid ${colors.borderColor}`, borderRadius: 2 }}>
-                <Typography variant="h6" sx={{ color: colors.primaryText, mb: 1 }}>
-                  Account Balance
-                </Typography>
-                
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="h4" sx={{ color: colors.accentBlue, fontWeight: 'bold' }}>
-                    ${balance.toFixed(2)}
-                  </Typography>
+                    </>
+                  )}
                   
-                  <Box>
-                    <Typography 
-                      variant="body2" 
+                  {/* Action buttons */}
+                  <Grid item xs={6}>
+                    <Button
+                      variant="contained"
+                      fullWidth
+                      onClick={() => placeOrder('buy')}
+                      disabled={loading}
                       sx={{ 
-                        color: balance >= initialBalance ? colors.buyGreen : colors.sellRed,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'flex-end'
+                        bgcolor: colors.buyGreen,
+                        '&:hover': { bgcolor: 'success.dark' },
+                        py: 1.5
                       }}
                     >
-                      {balance >= initialBalance ? (
-                        <TrendingUpIcon fontSize="small" sx={{ mr: 0.5 }} />
-                      ) : (
-                        <TrendingDownIcon fontSize="small" sx={{ mr: 0.5 }} />
-                      )}
-                      {((balance / initialBalance - 1) * 100).toFixed(2)}%
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: colors.secondaryText, display: 'block', textAlign: 'right' }}>
-                      Initial: ${initialBalance.toFixed(2)}
-                    </Typography>
-                  </Box>
-                </Box>
-              </Paper>
-              
-              {/* Open Orders */}
-              <Paper sx={{ bgcolor: colors.cardBg, p: 2, mb: 3, border: `1px solid ${colors.borderColor}`, borderRadius: 2 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <Typography variant="h6" sx={{ color: colors.primaryText }}>
-                    Open Orders
-                  </Typography>
-                  
-                  <IconButton 
-                    size="small" 
-                    onClick={() => loadOpenOrders()}
-                    sx={{ color: colors.secondaryText }}
-                    disabled={loading || !sessionId}
-                  >
-                    <RefreshIcon fontSize="small" />
-                  </IconButton>
-                </Box>
-                
-                {openOrders.length === 0 ? (
-                  <Typography sx={{ color: colors.secondaryText, textAlign: 'center', py: 2 }}>
-                    No open orders
-                  </Typography>
-                ) : (
-                  <TableContainer>
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell sx={{ color: colors.secondaryText }}>Pair</TableCell>
-                          <TableCell sx={{ color: colors.secondaryText }}>Type</TableCell>
-                          <TableCell sx={{ color: colors.secondaryText }}>Direction</TableCell>
-                          <TableCell sx={{ color: colors.secondaryText }}>Amount</TableCell>
-                          <TableCell align="center" sx={{ color: colors.secondaryText }}>Action</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {openOrders.map((order) => (
-                          <TableRow key={order.order_id || order.id}>
-                            <TableCell sx={{ color: colors.primaryText }}>
-                              {order.symbol}
-                            </TableCell>
-                            <TableCell sx={{ color: colors.primaryText }}>
-                              {order.order_type || order.type}
-                            </TableCell>
-                            <TableCell>
-                              <Chip 
-                                label={(order.direction || "").toUpperCase()} 
-                                size="small"
-                                sx={{ 
-                                  bgcolor: order.direction === 'buy' ? 'rgba(0, 230, 118, 0.2)' : 'rgba(255, 61, 87, 0.2)',
-                                  color: order.direction === 'buy' ? colors.buyGreen : colors.sellRed
-                                }}
-                              />
-                            </TableCell>
-                            <TableCell sx={{ color: colors.primaryText }}>
-                              ${order.amount}
-                            </TableCell>
-                            <TableCell align="center">
-                              <IconButton 
-                                size="small" 
-                                onClick={() => cancelOrder(order.order_id || order.id)}
-                                sx={{ color: colors.secondaryText }}
-                                disabled={loading}
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                )}
-              </Paper>
-              
-              {/* Tabs for Order History and Trade History */}
-              <Paper sx={{ bgcolor: colors.cardBg, p: 2, border: `1px solid ${colors.borderColor}`, borderRadius: 2 }}>
-                <Tabs 
-                  value={tabValue >= 3 ? tabValue - 3 : 0} 
-                  onChange={(e, val) => setTabValue(val + 3)}
-                  sx={{ 
-                    mb: 2,
-                    '& .MuiTabs-indicator': { bgcolor: colors.accentBlue },
-                    '& .MuiTab-root': { color: colors.secondaryText },
-                    '& .Mui-selected': { color: colors.primaryText }
-                  }}
-                >
-                  <Tab label="Order History" />
-                  <Tab label="Trade History" />
-                </Tabs>
-                
-                {(tabValue === 3 || tabValue < 3) && (
-                  <Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                      <Typography variant="subtitle1" sx={{ color: colors.primaryText }}>
-                        Order History
-                      </Typography>
-                      
-                      <IconButton 
-                        size="small" 
-                        onClick={() => loadOrderHistory()}
-                        sx={{ color: colors.secondaryText }}
-                        disabled={loading || !sessionId}
-                      >
-                        <RefreshIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
-                    
-                    {orderHistory.length === 0 ? (
-                      <Typography sx={{ color: colors.secondaryText, textAlign: 'center', py: 2 }}>
-                        No order history
-                      </Typography>
-                    ) : (
-                      <TableContainer sx={{ maxHeight: 240 }}>
-                        <Table size="small" stickyHeader>
-                          <TableHead>
-                            <TableRow>
-                              <TableCell sx={{ color: colors.secondaryText, bgcolor: colors.cardBg }}>Date</TableCell>
-                              <TableCell sx={{ color: colors.secondaryText, bgcolor: colors.cardBg }}>Pair</TableCell>
-                              <TableCell sx={{ color: colors.secondaryText, bgcolor: colors.cardBg }}>Type</TableCell>
-                              <TableCell sx={{ color: colors.secondaryText, bgcolor: colors.cardBg }}>Status</TableCell>
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {orderHistory.map((order) => (
-                              <TableRow key={order.order_id || order.id}>
-                                <TableCell sx={{ color: colors.primaryText }}>
-                                  {new Date(order.created_at || order.timestamp || order.createdAt).toLocaleString()}
-                                </TableCell>
-                                <TableCell sx={{ color: colors.primaryText }}>
-                                  {order.symbol || order.pair}
-                                </TableCell>
-                                <TableCell sx={{ color: colors.primaryText }}>
-                                  {order.order_type || order.type}
-                                </TableCell>
-                                <TableCell>
-                                  <Chip 
-                                    label={order.status} 
-                                    size="small"
-                                    sx={{ 
-                                      bgcolor: 
-                                        order.status === 'filled' || order.status === 'executed' ? 'rgba(0, 230, 118, 0.2)' : 
-                                        order.status === 'canceled' || order.status === 'cancelled' ? 'rgba(255, 61, 87, 0.2)' :
-                                        'rgba(33, 150, 243, 0.2)',
-                                      color: 
-                                        order.status === 'filled' || order.status === 'executed' ? colors.buyGreen : 
-                                        order.status === 'canceled' || order.status === 'cancelled' ? colors.sellRed :
-                                        colors.accentBlue
-                                    }}
-                                  />
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
-                    )}
-                  </Box>
-                )}
-                
-                {tabValue === 4 && (
-                  <Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                      <Typography variant="subtitle1" sx={{ color: colors.primaryText }}>
-                        Trade History
-                      </Typography>
-                      
-                      <IconButton 
-                        size="small" 
-                        onClick={() => loadTradeHistory()}
-                        sx={{ color: colors.secondaryText }}
-                        disabled={loading || !sessionId}
-                      >
-                        <RefreshIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
-                    
-                    {tradeHistory.length === 0 ? (
-                      <Typography sx={{ color: colors.secondaryText, textAlign: 'center', py: 2 }}>
-                        No trade history
-                      </Typography>
-                    ) : (
-                      <TableContainer sx={{ maxHeight: 240 }}>
-                        <Table size="small" stickyHeader>
-                          <TableHead>
-                            <TableRow>
-                              <TableCell sx={{ color: colors.secondaryText, bgcolor: colors.cardBg }}>Date</TableCell>
-                              <TableCell sx={{ color: colors.secondaryText, bgcolor: colors.cardBg }}>Pair</TableCell>
-                              <TableCell sx={{ color: colors.secondaryText, bgcolor: colors.cardBg }}>Direction</TableCell>
-                              <TableCell sx={{ color: colors.secondaryText, bgcolor: colors.cardBg }}>Price</TableCell>
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {tradeHistory.map((trade) => (
-                              <TableRow key={trade.trade_id || trade.id}>
-                                <TableCell sx={{ color: colors.primaryText }}>
-                                  {new Date(trade.trade_time || trade.timestamp || trade.created_at).toLocaleString()}
-                                </TableCell>
-                                <TableCell sx={{ color: colors.primaryText }}>
-                                  {trade.symbol || trade.pair}
-                                </TableCell>
-                                <TableCell>
-                                  <Chip 
-                                    label={(trade.direction || "").toUpperCase()} 
-                                    size="small"
-                                    sx={{ 
-                                      bgcolor: trade.direction === 'buy' ? 'rgba(0, 230, 118, 0.2)' : 'rgba(255, 61, 87, 0.2)',
-                                      color: trade.direction === 'buy' ? colors.buyGreen : colors.sellRed
-                                    }}
-                                  />
-                                </TableCell>
-                                <TableCell sx={{ color: colors.primaryText }}>
-                                  {trade.open_price ? trade.open_price.toFixed(5) : trade.price ? trade.price.toFixed(5) : 'N/A'}
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
-                    )}
-                  </Box>
-                )}
-              </Paper>
-            </Grid>
+                      {loading ? <CircularProgress size={24} /> : 'BUY'}
+                    </Button>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Button
+                      variant="contained"
+                      fullWidth
+                      onClick={() => placeOrder('sell')}
+                      disabled={loading}
+                      sx={{ 
+                        bgcolor: colors.sellRed,
+                        '&:hover': { bgcolor: 'error.dark' },
+                        py: 1.5
+                      }}
+                    >
+                      {loading ? <CircularProgress size={24} /> : 'SELL'}
+                    </Button>
+                  </Grid>
+                </Grid>
+              </Box>
+            </Paper>
           </Grid>
-        )}
+          
+          {/* Right side - Balance, Open Orders, History */}
+          <Grid item xs={12} md={4}>
+            {/* Account balance */}
+            <Paper sx={{ bgcolor: colors.cardBg, p: 2, mb: 3, border: `1px solid ${colors.borderColor}`, borderRadius: 2 }}>
+              <Typography variant="h6" sx={{ color: colors.primaryText, mb: 1 }}>
+                Account Balance
+              </Typography>
+              <Typography variant="h4" sx={{ color: colors.accentBlue, fontWeight: 'bold' }}>
+                ${balance.toFixed(2)}
+              </Typography>
+            </Paper>
+            
+            {/* Technical Indicators */}
+            <Paper sx={{ bgcolor: colors.cardBg, p: 2, mb: 3, border: `1px solid ${colors.borderColor}`, borderRadius: 2 }}>
+              <Typography variant="h6" sx={{ color: colors.primaryText, mb: 2 }}>
+                Technical Indicators
+              </Typography>
+              
+              {dataLoading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                  <CircularProgress size={24} sx={{ color: colors.accentBlue }} />
+                </Box>
+              ) : technicalIndicators ? (
+                <Grid container spacing={1}>
+                  <Grid item xs={6}>
+                    <Paper sx={{ p: 1, bgcolor: colors.panelBg }}>
+                      <Typography variant="body2" sx={{ color: colors.secondaryText }}>RSI</Typography>
+                      <Typography sx={{ 
+                        color: technicalIndicators.rsi > 70 ? colors.sellRed : 
+                               technicalIndicators.rsi < 30 ? colors.buyGreen : 
+                               colors.primaryText,
+                        fontWeight: 'bold'
+                      }}>
+                        {parseFloat(technicalIndicators.rsi).toFixed(1)}
+                      </Typography>
+                      <Typography variant="caption" sx={{ 
+                        color: technicalIndicators.rsi > 70 ? colors.sellRed : 
+                               technicalIndicators.rsi < 30 ? colors.buyGreen : 
+                               colors.secondaryText
+                      }}>
+                        {technicalIndicators.rsi > 70 ? 'Overbought' : 
+                         technicalIndicators.rsi < 30 ? 'Oversold' : 'Neutral'}
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                  
+                  <Grid item xs={6}>
+                    <Paper sx={{ p: 1, bgcolor: colors.panelBg }}>
+                      <Typography variant="body2" sx={{ color: colors.secondaryText }}>MACD</Typography>
+                      <Typography sx={{ 
+                        color: technicalIndicators.macd > 0 ? colors.buyGreen : colors.sellRed,
+                        fontWeight: 'bold'
+                      }}>
+                        {parseFloat(technicalIndicators.macd).toFixed(4)}
+                      </Typography>
+                      <Typography variant="caption" sx={{ 
+                        color: technicalIndicators.macd_hist > 0 ? colors.buyGreen : colors.sellRed
+                      }}>
+                        Hist: {parseFloat(technicalIndicators.macd_hist).toFixed(4)}
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                  
+                  <Grid item xs={12}>
+                    <Paper sx={{ p: 1, bgcolor: colors.panelBg, mt: 1 }}>
+                      <Typography variant="body2" sx={{ color: colors.secondaryText }}>Moving Averages</Typography>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
+                        <Typography variant="body2" sx={{ color: colors.primaryText }}>
+                          SMA20: <span style={{ fontWeight: 'bold' }}>{parseFloat(technicalIndicators.sma20).toFixed(5)}</span>
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: colors.primaryText }}>
+                          SMA50: <span style={{ fontWeight: 'bold' }}>{parseFloat(technicalIndicators.sma50 || 0).toFixed(5)}</span>
+                        </Typography>
+                      </Box>
+                    </Paper>
+                  </Grid>
+                </Grid>
+              ) : (
+                <Typography sx={{ color: colors.secondaryText, textAlign: 'center', py: 2 }}>
+                  No indicator data available
+                </Typography>
+              )}
+            </Paper>
+            
+            {/* Open Orders */}
+            <Paper sx={{ bgcolor: colors.cardBg, p: 2, mb: 3, border: `1px solid ${colors.borderColor}`, borderRadius: 2 }}>
+              <Typography variant="h6" sx={{ color: colors.primaryText, mb: 2 }}>
+                Open Orders
+              </Typography>
+              {openOrders.length === 0 ? (
+                <Typography sx={{ color: colors.secondaryText, textAlign: 'center', py: 2 }}>
+                  No open orders
+                </Typography>
+              ) : (
+                <TableContainer>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ color: colors.secondaryText }}>Pair</TableCell>
+                        <TableCell sx={{ color: colors.secondaryText }}>Type</TableCell>
+                        <TableCell sx={{ color: colors.secondaryText }}>Direction</TableCell>
+                        <TableCell sx={{ color: colors.secondaryText }}>Amount</TableCell>
+                        <TableCell sx={{ color: colors.secondaryText }}>Action</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {openOrders.map((order) => (
+                        <TableRow key={order.id}>
+                          <TableCell sx={{ color: colors.primaryText }}>
+                            {order.pairLabel || order.pair}
+                          </TableCell>
+                          <TableCell sx={{ color: colors.primaryText }}>
+                            {order.type}
+                          </TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={order.direction.toUpperCase()} 
+                              size="small"
+                              sx={{ 
+                                bgcolor: order.direction === 'buy' ? 'rgba(0, 230, 118, 0.2)' : 'rgba(255, 61, 87, 0.2)',
+                                color: order.direction === 'buy' ? colors.buyGreen : colors.sellRed
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell sx={{ color: colors.primaryText }}>
+                            ${order.amount}
+                          </TableCell>
+                          <TableCell>
+                            <IconButton 
+                              size="small" 
+                              onClick={() => cancelOrder(order.id)}
+                              sx={{ color: colors.secondaryText }}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </Paper>
+            
+            {/* Tabs for Order History and Trade History */}
+            <Paper sx={{ bgcolor: colors.cardBg, p: 2, border: `1px solid ${colors.borderColor}`, borderRadius: 2 }}>
+              <Tabs 
+                value={tabValue === 3 ? 0 : tabValue === 4 ? 1 : 0} 
+                onChange={(e, val) => setTabValue(val === 0 ? 3 : 4)}
+                sx={{ 
+                  mb: 2,
+                  '& .MuiTabs-indicator': { bgcolor: colors.accentBlue },
+                  '& .MuiTab-root': { color: colors.secondaryText },
+                  '& .Mui-selected': { color: colors.primaryText }
+                }}
+              >
+                <Tab label="Order History" />
+                <Tab label="Trade History" />
+              </Tabs>
+              
+              {(tabValue === 3 || tabValue < 3) && (
+                <Box>
+                  <Typography variant="subtitle1" sx={{ color: colors.primaryText, mb: 1 }}>
+                    Order History
+                  </Typography>
+                  {orderHistory.length === 0 ? (
+                    <Typography sx={{ color: colors.secondaryText, textAlign: 'center', py: 2 }}>
+                      No order history
+                    </Typography>
+                  ) : (
+                    <TableContainer sx={{ maxHeight: 240 }}>
+                      <Table size="small" stickyHeader>
+                        <TableHead>
+                          <TableRow>
+                            <TableCell sx={{ color: colors.secondaryText, bgcolor: colors.cardBg }}>Date</TableCell>
+                            <TableCell sx={{ color: colors.secondaryText, bgcolor: colors.cardBg }}>Pair</TableCell>
+                            <TableCell sx={{ color: colors.secondaryText, bgcolor: colors.cardBg }}>Type</TableCell>
+                            <TableCell sx={{ color: colors.secondaryText, bgcolor: colors.cardBg }}>Status</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {orderHistory.map((order) => (
+                            <TableRow key={order.id}>
+                              <TableCell sx={{ color: colors.primaryText }}>
+                                {new Date(order.timestamp).toLocaleString()}
+                              </TableCell>
+                              <TableCell sx={{ color: colors.primaryText }}>
+                                {order.pairLabel || order.pair}
+                              </TableCell>
+                              <TableCell sx={{ color: colors.primaryText }}>
+                                {order.type}
+                              </TableCell>
+                              <TableCell>
+                                <Chip 
+                                  label={order.status} 
+                                  size="small"
+                                  sx={{ 
+                                    bgcolor: 
+                                      order.status === 'executed' ? 'rgba(0, 230, 118, 0.2)' : 
+                                      order.status === 'cancelled' ? 'rgba(255, 61, 87, 0.2)' :
+                                      'rgba(33, 150, 243, 0.2)',
+                                    color: 
+                                      order.status === 'executed' ? colors.buyGreen : 
+                                      order.status === 'cancelled' ? colors.sellRed :
+                                      colors.accentBlue
+                                  }}
+                                />
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  )}
+                </Box>
+              )}
+              
+              {tabValue === 4 && (
+                <Box>
+                  <Typography variant="subtitle1" sx={{ color: colors.primaryText, mb: 1 }}>
+                    Trade History
+                  </Typography>
+                  {tradeHistory.length === 0 ? (
+                    <Typography sx={{ color: colors.secondaryText, textAlign: 'center', py: 2 }}>
+                      No trade history
+                    </Typography>
+                  ) : (
+                    <TableContainer sx={{ maxHeight: 240 }}>
+                      <Table size="small" stickyHeader>
+                        <TableHead>
+                          <TableRow>
+                            <TableCell sx={{ color: colors.secondaryText, bgcolor: colors.cardBg }}>Date</TableCell>
+                            <TableCell sx={{ color: colors.secondaryText, bgcolor: colors.cardBg }}>Pair</TableCell>
+                            <TableCell sx={{ color: colors.secondaryText, bgcolor: colors.cardBg }}>Direction</TableCell>
+                            <TableCell sx={{ color: colors.secondaryText, bgcolor: colors.cardBg }}>Price</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {tradeHistory.map((trade) => (
+                            <TableRow key={trade.id}>
+                              <TableCell sx={{ color: colors.primaryText }}>
+                                {new Date(trade.timestamp).toLocaleString()}
+                              </TableCell>
+                              <TableCell sx={{ color: colors.primaryText }}>
+                                {trade.pairLabel || trade.pair}
+                              </TableCell>
+                              <TableCell>
+                                <Chip 
+                                  label={trade.direction.toUpperCase()} 
+                                  size="small"
+                                  sx={{ 
+                                    bgcolor: trade.direction === 'buy' ? 'rgba(0, 230, 118, 0.2)' : 'rgba(255, 61, 87, 0.2)',
+                                    color: trade.direction === 'buy' ? colors.buyGreen : colors.sellRed
+                                  }}
+                                />
+                              </TableCell>
+                              <TableCell sx={{ color: colors.primaryText }}>
+                                {trade.price ? trade.price.toFixed(5) : 'N/A'}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  )}
+                </Box>
+              )}
+            </Paper>
+          </Grid>
+        </Grid>
       </Box>
     </Box>
   );

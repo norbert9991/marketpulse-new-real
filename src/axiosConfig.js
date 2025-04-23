@@ -803,55 +803,6 @@ export const API = {
     approve: (data) => axiosInstance.post('/api/balance-requests/approve', data),
     reject: (data) => axiosInstance.post('/api/balance-requests/reject', data),
   },
-  
-  // Short-term trading simulation endpoints
-  simulation: {
-    // Create a new trading session
-    createSession: (data) => 
-      axiosInstance.post('/api/simulation/sessions', { 
-        simulation_amount: data.amount,
-        trading_type: 'short-term'
-      }),
-    
-    // Get user's active session
-    getActiveSession: () => 
-      axiosInstance.get('/api/simulation/sessions/active'),
-    
-    // Get user balance
-    getBalance: (sessionId) => 
-      axiosInstance.get(`/api/simulation/sessions/${sessionId}/balance`),
-    
-    // Get open orders for session
-    getOpenOrders: (sessionId) => 
-      axiosInstance.get(`/api/simulation/sessions/${sessionId}/orders/open`),
-    
-    // Get order history for session
-    getOrderHistory: (sessionId) => 
-      axiosInstance.get(`/api/simulation/sessions/${sessionId}/orders/history`),
-    
-    // Get trade history for session
-    getTradeHistory: (sessionId) => 
-      axiosInstance.get(`/api/simulation/sessions/${sessionId}/trades`),
-    
-    // Create new order
-    createOrder: (sessionId, order) => 
-      axiosInstance.post(`/api/simulation/sessions/${sessionId}/orders`, order),
-    
-    // Cancel an order
-    cancelOrder: (sessionId, orderId) => 
-      axiosInstance.delete(`/api/simulation/sessions/${sessionId}/orders/${orderId}`),
-    
-    // Get current price for a symbol
-    getCurrentPrice: (symbol) => {
-      // Format symbol for API
-      const formattedSymbol = symbol.includes('=X') ? symbol : `${symbol}=X`;
-      return axiosInstance.get(`/api/simulation/prices/${formattedSymbol}/current`);
-    },
-    
-    // End session
-    endSession: (sessionId) => 
-      axiosInstance.put(`/api/simulation/sessions/${sessionId}/end`),
-  },
 };
 
 export default axiosInstance; 

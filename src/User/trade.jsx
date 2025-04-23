@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, useContext } from 'react';
-import { Box, Typography, Button, Paper, TextField, Select, MenuItem, FormControl, InputLabel, Tabs, Tab, Grid, Divider, IconButton, Chip, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Switch, Tooltip, Container, Card, CardContent, CircularProgress, Backdrop, Snackbar, Alert } from '@mui/material';
+import React, { useState, useEffect, useRef } from 'react';
+import { Box, Typography, Button, Paper, TextField, Select, MenuItem, FormControl, InputLabel, Tabs, Tab, Grid, Divider, IconButton, Chip, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Switch, Tooltip } from '@mui/material';
 import { createChart, CrosshairMode, LineStyle } from 'lightweight-charts';
 import Sidebar from './Sidebar';
 import { API } from '../axiosConfig';
@@ -35,8 +35,8 @@ const colors = {
 };
 
 const Trade = () => {
+  // Add useNavigate hook
   const navigate = useNavigate();
-  const [userState, setUserState] = useState(null);
   
   // Chart references
   const chartContainerRef = useRef(null);
@@ -58,7 +58,6 @@ const Trade = () => {
   const [trades, setTrades] = useState([]);
   const [simulationAmount, setSimulationAmount] = useState(10000);
   const [tradingType, setTradingType] = useState('short-term');
-  const [activeView, setActiveView] = useState('overview');
   const [step, setStep] = useState(1); // 1: Set amount, 2: Choose type, 3: Trading interface
 
   // Additional state for enhanced trading features
@@ -1249,66 +1248,1255 @@ const Trade = () => {
   };
 
   return (
-    <div className="trade-container">
-      <Sidebar activePage="Trading" />
-      <div className="main-content">
-        <Container>
-          <Typography variant="h4" component="h1" className="page-title">
-            Trading Simulation
-          </Typography>
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <Card className="tool-card">
-                <CardContent>
-                  <Typography variant="h5" component="h2" gutterBottom>
-                    Long-Term Trading
-                  </Typography>
-                  <Typography variant="body1" paragraph>
-                    Simulate long-term trading strategies based on fundamental analysis and technical indicators.
-                    Set up a portfolio and track performance over time.
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    className="action-button"
-                    onClick={() => setActiveView("longTerm")}
+    <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: colors.darkBg }}>
+      <Sidebar />
+      
+      <Box sx={{ flex: 1, p: 3, overflow: 'auto', ml: '250px', position: 'relative' }}>
+        {showTutorial && <TutorialOverlay />}
+        
+        {step === 1 && (
+          // Step 1: Set simulation amount
+          <Box sx={{ maxWidth: '800px', mx: 'auto', mt: 5 }}>
+            <Paper 
+              sx={{ 
+                p: 4, 
+                backgroundColor: colors.cardBg,
+                border: `1px solid ${colors.borderColor}`,
+                borderRadius: '16px',
+                boxShadow: `0 12px 24px ${colors.shadowColor}`,
+              }}
+            >
+        <Typography 
+          variant="h4" 
+          sx={{ 
+            color: colors.primaryText,
+            fontWeight: 'bold',
+                  mb: 1,
+                  textAlign: 'center'
+          }}
+        >
+                Set Your Simulation Amount
+        </Typography>
+        
+              <Typography 
+                variant="body1" 
+              sx={{ 
+                  color: colors.secondaryText,
+                  mb: 4,
+                  textAlign: 'center'
+                }}
+              >
+                Choose how much virtual capital you want to start with
+              </Typography>
+              
+              <Box sx={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 4 }}>
+              <Typography 
+                  variant="h3" 
+                sx={{ 
+                    color: colors.accentBlue,
+                  fontWeight: 'bold',
+                    mb: 2,
+                    textShadow: '0 2px 8px rgba(33, 150, 243, 0.3)'
+                }}
+              >
+                  ${simulationAmount.toLocaleString()}
+              </Typography>
+              
+                <Box sx={{ width: '100%', px: 4, position: 'relative', mt: 2 }}>
+                  {/* Progress fill effect */}
+                  <Box sx={{ 
+                    position: 'absolute', 
+                    top: '50%', 
+                    left: 40, 
+                    right: 40, 
+                    height: '6px', 
+                    transform: 'translateY(-50%)',
+                    backgroundColor: colors.borderColor,
+                    borderRadius: '3px',
+                  }} />
+                  
+                  <Box sx={{ 
+                    position: 'absolute', 
+                    top: '50%', 
+                    left: 40, 
+                    width: `${(simulationAmount - 1000) / 990}%`,
+                    height: '6px', 
+                    transform: 'translateY(-50%)',
+                    background: `linear-gradient(90deg, ${colors.accentBlue}, ${colors.buyGreen})`,
+                    borderRadius: '3px',
+                    transition: 'width 0.3s ease'
+                  }} />
+                  
+                  <input
+                    type="range"
+                    min="1000"
+                    max="100000"
+                    step="1000"
+                    value={simulationAmount}
+                    onChange={(e) => setSimulationAmount(parseFloat(e.target.value))}
+                    style={{ 
+                      width: '100%',
+                      height: '24px',
+                      appearance: 'none',
+                      background: 'transparent',
+                      cursor: 'pointer',
+                      position: 'relative',
+                      zIndex: 2
+                    }}
+                  />
+                  <style jsx>{`
+                    input[type=range] {
+                      -webkit-appearance: none;
+                      margin: 0;
+                    }
+                    input[type=range]:focus {
+                      outline: none;
+                    }
+                    input[type=range]::-webkit-slider-thumb {
+                      -webkit-appearance: none;
+                      height: 22px;
+                      width: 22px;
+                      border-radius: 50%;
+                      background: ${colors.accentBlue};
+                      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+                      cursor: pointer;
+                      margin-top: -8px;
+                    }
+                    input[type=range]::-moz-range-thumb {
+                      height: 22px;
+                      width: 22px;
+                      border-radius: 50%;
+                      background: ${colors.accentBlue};
+                      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+                      cursor: pointer;
+                      border: none;
+                    }
+                    input[type=range]::-ms-thumb {
+                      height: 22px;
+                      width: 22px;
+                      border-radius: 50%;
+                      background: ${colors.accentBlue};
+                      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+                      cursor: pointer;
+                    }
+                    input[type=range]::-webkit-slider-runnable-track {
+                      height: 6px;
+                      cursor: pointer;
+                      background: transparent;
+                      border-radius: 3px;
+                    }
+                    input[type=range]::-moz-range-track {
+                      height: 6px;
+                      cursor: pointer;
+                      background: transparent;
+                      border-radius: 3px;
+                    }
+                    input[type=range]::-ms-track {
+                      height: 6px;
+                      cursor: pointer;
+                      background: transparent;
+                      border-radius: 3px;
+                    }
+                  `}</style>
+                </Box>
+                
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', px: 4, mt: 1 }}>
+                  <Typography variant="body2" sx={{ color: colors.secondaryText }}>$1,000</Typography>
+                  <Typography variant="body2" sx={{ color: colors.secondaryText }}>$100,000</Typography>
+                </Box>
+              </Box>
+              
+              {/* Preset Buttons */}
+              <Typography variant="subtitle2" sx={{ color: colors.primaryText, mb: 2, textAlign: 'center' }}>
+                Popular Starting Amounts
+              </Typography>
+              
+              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 5, flexWrap: 'wrap' }}>
+                {[5000, 10000, 25000, 50000].map(amount => (
+                  <Button 
+                    key={amount}
+                    variant={simulationAmount === amount ? "contained" : "outlined"}
+                    onClick={() => setSimulationAmount(amount)}
+                    sx={{ 
+                        borderColor: colors.borderColor,
+                      color: simulationAmount === amount ? colors.primaryText : colors.secondaryText,
+                      backgroundColor: simulationAmount === amount ? colors.accentBlue : 'transparent',
+                      '&:hover': {
+                        backgroundColor: simulationAmount === amount ? colors.accentBlue : colors.panelBg,
+                        borderColor: colors.accentBlue,
+                      },
+                      transition: 'all 0.2s ease',
+                      minWidth: '100px'
+                    }}
                   >
-                    Access Long-Term Trading
+                    ${amount.toLocaleString()}
                   </Button>
-                </CardContent>
-              </Card>
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <Card className="tool-card">
-                <CardContent>
-                  <Typography variant="h5" component="h2" gutterBottom>
-                    Short-Term Trading
-                  </Typography>
-                  <Typography variant="body1" paragraph>
-                    Execute spot trading with different order types including market, limit, and stop-limit orders.
-                    Track your orders and trade history in real-time.
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    className="action-button"
-                    onClick={() => navigate("/short-term-trading")}
+                ))}
+              </Box>
+
+              {/* Risk Level Indicator */}
+              <Box sx={{ mb: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <Typography variant="subtitle2" sx={{ color: colors.primaryText, mb: 1 }}>
+                  Suggested Risk Level
+                </Typography>
+                
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center', 
+                  width: '100%', 
+                  maxWidth: '500px',
+                  px: 2
+                }}>
+                  <Box sx={{ textAlign: 'center', flex: 1 }}>
+                    <Box sx={{ 
+                      height: '8px', 
+                      backgroundColor: simulationAmount <= 10000 ? colors.buyGreen : colors.borderColor,
+                      borderTopLeftRadius: '4px',
+                      borderBottomLeftRadius: '4px',
+                      transition: 'background-color 0.3s ease'
+                    }} />
+                    <Typography variant="caption" sx={{ color: colors.secondaryText, mt: 0.5, display: 'block' }}>
+                      Conservative
+                    </Typography>
+                  </Box>
+                  
+                  <Box sx={{ textAlign: 'center', flex: 1 }}>
+                    <Box sx={{ 
+                      height: '8px', 
+                      backgroundColor: simulationAmount > 10000 && simulationAmount <= 50000 ? colors.accentBlue : colors.borderColor,
+                      transition: 'background-color 0.3s ease'
+                    }} />
+                    <Typography variant="caption" sx={{ color: colors.secondaryText, mt: 0.5, display: 'block' }}>
+                      Moderate
+                    </Typography>
+                  </Box>
+                  
+                  <Box sx={{ textAlign: 'center', flex: 1 }}>
+                    <Box sx={{ 
+                      height: '8px', 
+                      backgroundColor: simulationAmount > 50000 ? colors.sellRed : colors.borderColor,
+                      borderTopRightRadius: '4px',
+                      borderBottomRightRadius: '4px',
+                      transition: 'background-color 0.3s ease'
+                    }} />
+                    <Typography variant="caption" sx={{ color: colors.secondaryText, mt: 0.5, display: 'block' }}>
+                      Aggressive
+                    </Typography>
+                  </Box>
+                </Box>
+                
+                <Typography variant="body2" sx={{ color: colors.secondaryText, mt: 2, textAlign: 'center', maxWidth: '600px' }}>
+                  {simulationAmount <= 10000 
+                    ? "Perfect for beginners. Practice basic strategies with minimal risk." 
+                    : simulationAmount <= 50000 
+                      ? "Balanced approach. Good for intermediate traders testing various methods." 
+                      : "Advanced simulation. Experience high-stakes trading and complex strategies."}
+                </Typography>
+              </Box>
+              
+              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
+                <Button 
+                  variant="outlined" 
+                  color="primary" 
+                  size="large"
+                  onClick={() => window.history.back()}
+                  sx={{
+                        borderColor: colors.borderColor,
+                    color: colors.secondaryText,
+                    px: 3,
+                    py: 1.5,
+                    '&:hover': {
+                        borderColor: colors.accentBlue,
+                      backgroundColor: 'transparent',
+                    }
+                  }}
+                >
+                  Cancel
+                </Button>
+                
+                <Button 
+                  variant="contained" 
+                  color="primary" 
+                  size="large"
+                  onClick={() => {
+                    setAvailableBalance(simulationAmount);
+                    setStep(2);
+                  }}
+                  sx={{
+                              backgroundColor: colors.accentBlue,
+                    px: 4,
+                    py: 1.5,
+                    '&:hover': {
+                                backgroundColor: colors.accentBlue,
+                      opacity: 0.9,
+                      transform: 'translateY(-2px)',
+                      boxShadow: `0 6px 12px rgba(33, 150, 243, 0.3)`
+                    },
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  Start Trading
+                </Button>
+              </Box>
+            </Paper>
+          </Box>
+        )}
+        
+        {step === 2 && (
+          <Box sx={{ maxWidth: '800px', mx: 'auto', mt: 5 }}>
+            <Paper 
+                  sx={{
+                p: 4, 
+                backgroundColor: colors.cardBg,
+                border: `1px solid ${colors.borderColor}`,
+                borderRadius: '16px',
+                boxShadow: `0 12px 24px ${colors.shadowColor}`,
+                mb: 4
+              }}
+            >
+              <Typography 
+                variant="h4" 
+                  sx={{
+                      color: colors.primaryText,
+                  fontWeight: 'bold',
+                  mb: 1,
+                  textAlign: 'center'
+                }}
+              >
+                Select Trading Type
+              </Typography>
+              
+              <Typography 
+                variant="body1" 
+                    sx={{ 
+                  color: colors.secondaryText,
+                  mb: 4,
+                  textAlign: 'center'
+                }}
+              >
+                Choose how you want to trade
+              </Typography>
+              
+              <Grid container spacing={3} justifyContent="center">
+                <Grid item xs={12} sm={6}>
+                  <Paper 
+                    onClick={() => {
+                      // Redirect to ShortTermTrading component instead of setting step to 3
+                      navigate('/short-term-trading');
+                    }}
+                    sx={{ 
+                      p: 3, 
+                          backgroundColor: colors.panelBg,
+                      border: `1px solid ${tradingType === 'short-term' ? colors.accentBlue : colors.borderColor}`,
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      transition: 'transform 0.2s, box-shadow 0.2s',
+                    '&:hover': {
+                        transform: 'translateY(-5px)',
+                        boxShadow: `0 8px 16px ${colors.shadowColor}`,
+                      }
+                    }}
                   >
-                    Access Short-Term Trading
-                  </Button>
-                </CardContent>
-              </Card>
-            </Grid>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                      <ShowChartIcon 
+                        sx={{ 
+                          fontSize: 60, 
+                          color: colors.accentBlue
+                        }} 
+                      />
+              </Box>
+                    <Typography 
+                      variant="h5" 
+                      sx={{ 
+                            color: colors.primaryText,
+                        fontWeight: 'bold',
+                        mb: 2,
+                        textAlign: 'center'
+                      }}
+                    >
+                      Short-Term Trading
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: colors.secondaryText, textAlign: 'center' }}>
+                      Trade actively with direct control over entries and exits. Suitable for day trading and scalping.
+                    </Typography>
+                  </Paper>
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <Paper 
+                    onClick={() => {
+                      setTradingType('long-term');
+                      setStep(3);
+                    }}
+                    sx={{ 
+                      p: 3, 
+                      backgroundColor: colors.panelBg,
+                      border: `1px solid ${tradingType === 'long-term' ? colors.accentBlue : colors.borderColor}`,
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      transition: 'transform 0.2s, box-shadow 0.2s',
+                            '&:hover': {
+                        transform: 'translateY(-5px)',
+                        boxShadow: `0 8px 16px ${colors.shadowColor}`,
+                      }
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                      <BarChartIcon 
+                        sx={{ 
+                          fontSize: 60, 
+                          color: colors.accentBlue
+                        }} 
+                      />
+              </Box>
+                    <Typography 
+                      variant="h5" 
+                    sx={{ 
+                      color: colors.primaryText,
+                        fontWeight: 'bold',
+                        mb: 2,
+                        textAlign: 'center'
+                      }}
+                    >
+                      Long-Term Strategy
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: colors.secondaryText, textAlign: 'center' }}>
+                      Allocate funds to proven trading strategies. Ideal for passive investing with algorithmic trading.
+                    </Typography>
+                  </Paper>
+                </Grid>
+              </Grid>
+            </Paper>
+          </Box>
+        )}
+        {step === 4 && tradingType === 'long-term' && simulationResults && (
+          <Box sx={{ maxWidth: '1600px', mx: 'auto', mt: 5 }}>
+            <Paper 
+              sx={{ 
+                p: 4, 
+                backgroundColor: colors.cardBg,
+                border: `1px solid ${colors.borderColor}`,
+                borderRadius: '16px',
+                boxShadow: `0 12px 24px ${colors.shadowColor}`,
+                mb: 4
+              }}
+            >
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+                <Typography 
+                  variant="h4" 
+                  sx={{ 
+                    color: colors.primaryText,
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Simulation Results
+                </Typography>
+                
+                <Box>
+              <Button 
+                variant="contained" 
+                    onClick={resetSimulation}
+                sx={{
+                  backgroundColor: colors.accentBlue,
+                  '&:hover': {
+                    backgroundColor: colors.accentBlue,
+                        opacity: 0.9,
+                  }
+                }}
+              >
+                    NEW SIMULATION
+              </Button>
+                </Box>
+          </Box>
+
+              {/* First row - 3 main panels */}
+              <Grid container spacing={4}>
+                <Grid item xs={12} lg={4}>
+          <Paper 
+            sx={{ 
+              p: 4, 
+                      backgroundColor: colors.panelBg,
+              border: `1px solid ${colors.borderColor}`,
+              borderRadius: '12px',
+                      height: '100%'
+                    }}
+                  >
+                    <Typography variant="h6" sx={{ color: colors.primaryText, mb: 3, fontWeight: 'bold' }}>
+                      Balance
+                    </Typography>
+                    
+                    <Box sx={{ position: 'relative', mb: 3 }}>
+                      {/* Balance amount at top right */}
+            <Typography 
+                        variant="body1" 
+              sx={{ 
+                          position: 'absolute',
+                          top: 5,
+                          right: 5,
+                color: colors.primaryText,
+                          fontWeight: 'bold'
+              }}
+            >
+                        ${simulationResults.endingBalance.toLocaleString()}
+            </Typography>
             
-            {/* ... existing code ... */}
-          </Grid>
-          
-          {/* ... existing code ... */}
-        </Container>
-      </div>
-      {/* ... existing code ... */}
-    </div>
+                      {/* Main chart */}
+                      <Box sx={{ height: '180px', position: 'relative', mt: 2 }}>
+                        <svg width="100%" height="100%" viewBox="0 0 300 180" preserveAspectRatio="none">
+                          {/* Path for the balance curve */}
+                          <path 
+                            d="M0,150 C30,140 60,130 90,120 S150,100 180,80 S240,40 300,30"
+                            fill="none"
+                            stroke={colors.accentBlue}
+                            strokeWidth="3"
+                          />
+                          
+                          {/* Gradient fill under the curve */}
+                          <linearGradient id="balanceGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stopColor={colors.accentBlue} stopOpacity="0.3" />
+                            <stop offset="100%" stopColor={colors.accentBlue} stopOpacity="0.05" />
+                          </linearGradient>
+                          <path 
+                            d="M0,150 C30,140 60,130 90,120 S150,100 180,80 S240,40 300,30 V180 H0 Z"
+                            fill="url(#balanceGradient)"
+                          />
+                        </svg>
+                        
+                        {/* Starting balance label */}
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            position: 'absolute', 
+                            bottom: 5, 
+                            left: 5, 
+                            color: colors.secondaryText,
+                          }}
+                        >
+                          ${simulationResults.startingBalance.toLocaleString()}
+              </Typography>
+                      </Box>
+            </Box>
+            
+                    <Box sx={{ mt: 2 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, borderBottom: `1px dashed ${colors.borderColor}`, pb: 1 }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          Starting Balance
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                          ${simulationResults.startingBalance.toLocaleString()}
+              </Typography>
+            </Box>
+            
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, borderBottom: `1px dashed ${colors.borderColor}`, pb: 1 }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          Ending Balance
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                          ${simulationResults.endingBalance.toLocaleString()}
+              </Typography>
+            </Box>
+            
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, borderBottom: `1px dashed ${colors.borderColor}`, pb: 1 }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          Total Profit
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: colors.profitGreen, fontWeight: 'bold' }}>
+                          ${simulationResults.totalProfit.toLocaleString()} ({simulationResults.profitPercentage}%)
+                        </Typography>
+                      </Box>
+                      
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, borderBottom: `1px dashed ${colors.borderColor}`, pb: 1 }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          Total Trades
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                          {simulationResults.totalTrades.toLocaleString()}
+                        </Typography>
+                      </Box>
+                      
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          Win Rate
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                          {simulationResults.winRate}%
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Paper>
+                </Grid>
+                
+                <Grid item xs={12} lg={4}>
+                  <Paper 
+                sx={{ 
+                      p: 4, 
+                  backgroundColor: colors.panelBg, 
+                      border: `1px solid ${colors.borderColor}`,
+                      borderRadius: '12px',
+                      height: '100%'
+                    }}
+                  >
+                    <Typography variant="h6" sx={{ color: colors.primaryText, mb: 3, fontWeight: 'bold' }}>
+                      Monthly P/L
+                    </Typography>
+                    
+                    <Box sx={{ height: '180px', position: 'relative', mb: 3, width: '100%', overflow: 'hidden' }}>
+                      {/* Static SVG chart with built-in month labels for perfect alignment */}
+                      <svg width="100%" height="180" viewBox="0 0 420 180" preserveAspectRatio="none">
+                        {/* Jan */}
+                        <g>
+                          <rect x="15" y="150" width="20" height="20" rx="2" fill={colors.buyGreen} />
+                          <text x="25" y="145" fill={colors.secondaryText} fontSize="10" textAnchor="middle">$10</text>
+                          <text x="25" y="178" fill={colors.secondaryText} fontSize="10" textAnchor="middle">Jan</text>
+                        </g>
+                        
+                        {/* Feb */}
+                        <g>
+                          <rect x="50" y="130" width="20" height="40" rx="2" fill={colors.buyGreen} />
+                          <text x="60" y="125" fill={colors.secondaryText} fontSize="10" textAnchor="middle">$30</text>
+                          <text x="60" y="178" fill={colors.secondaryText} fontSize="10" textAnchor="middle">Feb</text>
+                        </g>
+                        
+                        {/* Mar */}
+                        <g>
+                          <rect x="85" y="110" width="20" height="60" rx="2" fill={colors.buyGreen} />
+                          <text x="95" y="105" fill={colors.secondaryText} fontSize="10" textAnchor="middle">$50</text>
+                          <text x="95" y="178" fill={colors.secondaryText} fontSize="10" textAnchor="middle">Mar</text>
+                        </g>
+                        
+                        {/* Apr */}
+                        <g>
+                          <rect x="120" y="90" width="20" height="80" rx="2" fill={colors.buyGreen} />
+                          <text x="130" y="85" fill={colors.secondaryText} fontSize="10" textAnchor="middle">$70</text>
+                          <text x="130" y="178" fill={colors.secondaryText} fontSize="10" textAnchor="middle">Apr</text>
+                        </g>
+                        
+                        {/* May */}
+                        <g>
+                          <rect x="155" y="70" width="20" height="100" rx="2" fill={colors.buyGreen} />
+                          <text x="165" y="65" fill={colors.secondaryText} fontSize="10" textAnchor="middle">$90</text>
+                          <text x="165" y="178" fill={colors.secondaryText} fontSize="10" textAnchor="middle">May</text>
+                        </g>
+                        
+                        {/* Jun */}
+                        <g>
+                          <rect x="190" y="50" width="20" height="120" rx="2" fill={colors.buyGreen} />
+                          <text x="200" y="45" fill={colors.secondaryText} fontSize="10" textAnchor="middle">$110</text>
+                          <text x="200" y="178" fill={colors.secondaryText} fontSize="10" textAnchor="middle">Jun</text>
+                        </g>
+                        
+                        {/* Jul */}
+                        <g>
+                          <rect x="225" y="60" width="20" height="110" rx="2" fill={colors.buyGreen} />
+                          <text x="235" y="55" fill={colors.secondaryText} fontSize="10" textAnchor="middle">$100</text>
+                          <text x="235" y="178" fill={colors.secondaryText} fontSize="10" textAnchor="middle">Jul</text>
+                        </g>
+                        
+                        {/* Aug */}
+                        <g>
+                          <rect x="260" y="70" width="20" height="100" rx="2" fill={colors.buyGreen} />
+                          <text x="270" y="65" fill={colors.secondaryText} fontSize="10" textAnchor="middle">$90</text>
+                          <text x="270" y="178" fill={colors.secondaryText} fontSize="10" textAnchor="middle">Aug</text>
+                        </g>
+                        
+                        {/* Sep */}
+                        <g>
+                          <rect x="295" y="80" width="20" height="90" rx="2" fill={colors.buyGreen} />
+                          <text x="305" y="75" fill={colors.secondaryText} fontSize="10" textAnchor="middle">$80</text>
+                          <text x="305" y="178" fill={colors.secondaryText} fontSize="10" textAnchor="middle">Sep</text>
+                        </g>
+                        
+                        {/* Oct */}
+                        <g>
+                          <rect x="330" y="90" width="20" height="80" rx="2" fill={colors.buyGreen} />
+                          <text x="340" y="85" fill={colors.secondaryText} fontSize="10" textAnchor="middle">$70</text>
+                          <text x="340" y="178" fill={colors.secondaryText} fontSize="10" textAnchor="middle">Oct</text>
+                        </g>
+                        
+                        {/* Nov */}
+                        <g>
+                          <rect x="365" y="110" width="20" height="60" rx="2" fill={colors.buyGreen} />
+                          <text x="375" y="105" fill={colors.secondaryText} fontSize="10" textAnchor="middle">$50</text>
+                          <text x="375" y="178" fill={colors.secondaryText} fontSize="10" textAnchor="middle">Nov</text>
+                        </g>
+                        
+                        {/* Dec */}
+                        <g>
+                          <rect x="400" y="100" width="20" height="70" rx="2" fill={colors.buyGreen} />
+                          <text x="410" y="95" fill={colors.secondaryText} fontSize="10" textAnchor="middle">$60</text>
+                          <text x="410" y="178" fill={colors.secondaryText} fontSize="10" textAnchor="middle">Dec</text>
+                        </g>
+                      </svg>
+                    </Box>
+                    
+                    <Box sx={{ 
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      mt: 2,
+                      borderTop: `1px dashed ${colors.borderColor}`,
+                      pt: 2
+                    }}>
+                      <Box>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 1 }}>Avg. Monthly P/L</Typography>
+                        <Typography variant="h6" sx={{ color: colors.profitGreen, fontWeight: 'bold' }}>
+                          +${((simulationResults.totalProfit) / 12).toFixed(2)}
+                        </Typography>
+                      </Box>
+                      
+                      <Box sx={{ textAlign: 'right' }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 1 }}>Monthly Trades</Typography>
+                        <Typography variant="h6" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                          {Math.round(simulationResults.totalTrades / 12)}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Paper>
+                </Grid>
+                
+                <Grid item xs={12} lg={4}>
+                  <Paper 
+                    sx={{ 
+                      p: 4, 
+                      backgroundColor: colors.panelBg,
+                      border: `1px solid ${colors.borderColor}`,
+                      borderRadius: '12px'
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                      <Typography variant="h6" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                        Simulation Results
+                </Typography>
+                      <Box sx={{
+                        backgroundColor: colors.accentBlue,
+                        color: '#fff',
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold',
+                        px: 1.5,
+                        py: 0.5,
+                        borderRadius: '4px'
+                      }}>
+                        1 Year
+                      </Box>
+                    </Box>
+                    
+                    <Box sx={{ flex: 1 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, borderBottom: `1px dashed ${colors.borderColor}`, pb: 1 }}>
+                <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          Starting Balance
+                </Typography>
+                        <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                          ${simulationResults.startingBalance.toLocaleString()}
+                        </Typography>
+                      </Box>
+                      
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, borderBottom: `1px dashed ${colors.borderColor}`, pb: 1 }}>
+                <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          Ending Balance
+                </Typography>
+                        <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                          ${simulationResults.endingBalance.toLocaleString()}
+                        </Typography>
+                      </Box>
+                      
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, borderBottom: `1px dashed ${colors.borderColor}`, pb: 1 }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          # Trades
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                          {simulationResults.totalTrades.toLocaleString()}
+                        </Typography>
+                      </Box>
+                      
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, borderBottom: `1px dashed ${colors.borderColor}`, pb: 1 }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          Avg Monthly P/L
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: colors.profitGreen, fontWeight: 'bold' }}>
+                          ${((simulationResults.totalProfit) / 12).toFixed(2)} ({(simulationResults.profitPercentage / 12).toFixed(2)}%)
+                        </Typography>
+                      </Box>
+                    </Box>
+                    
+                    <Box sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center', 
+                      borderTop: `1px dashed ${colors.borderColor}`,
+                      pt: 2,
+                      mt: 'auto'
+                    }}>
+                      <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                        Total Profit
+                      </Typography>
+                      <Typography variant="h5" sx={{ color: colors.profitGreen, fontWeight: 'bold' }}>
+                        ${simulationResults.totalProfit.toLocaleString()} ({simulationResults.profitPercentage}%)
+                      </Typography>
+                    </Box>
+                    
+                    <Box sx={{ textAlign: 'right', mt: 2 }}>
+                      <Button
+                        variant="text"
+                        size="small"
+                        sx={{ 
+                          color: colors.accentBlue,
+                          textTransform: 'none',
+                          '&:hover': {
+                            backgroundColor: 'transparent',
+                            textDecoration: 'underline'
+                          }
+                        }}
+                      >
+                        More Stats
+                      </Button>
+                    </Box>
+                  </Paper>
+                </Grid>
+                
+                {/* Second row - 2 panels for symbols */}
+                <Grid container spacing={4} sx={{ flexWrap: 'nowrap', overflowX: 'auto' }}>
+                  <Grid item sx={{ width: '680px', flexShrink: 0, mr: 2 }}>
+                    <Paper 
+                      sx={{ 
+                        p: 4, 
+                        backgroundColor: colors.panelBg,
+                        border: `1px solid ${colors.borderColor}`,
+                        borderRadius: '12px'
+                      }}
+                    >
+                      <Typography variant="h6" sx={{ color: colors.primaryText, mb: 3, fontWeight: 'bold' }}>
+                        Symbols
+                      </Typography>
+                      
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        {/* Donut chart */}
+                        <Box sx={{ width: 220, height: 220, position: 'relative' }}>
+                          <svg width="220" height="220" viewBox="0 0 220 220">
+                            <defs>
+                              <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                                <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
+                                <feOffset dx="0" dy="1" result="offsetblur" />
+                                <feComponentTransfer>
+                                  <feFuncA type="linear" slope="0.2" />
+                                </feComponentTransfer>
+                                <feMerge>
+                                  <feMergeNode />
+                                  <feMergeNode in="SourceGraphic" />
+                                </feMerge>
+                              </filter>
+                            </defs>
+                            
+                            {/* Ring segments */}
+                            <circle cx="110" cy="110" r="60" fill="none" stroke="#00E676" strokeWidth="22" strokeDasharray="150 230" transform="rotate(-90 110 110)" filter="url(#shadow)" />
+                            <circle cx="110" cy="110" r="60" fill="none" stroke="#2196F3" strokeWidth="22" strokeDasharray="100 280" transform="rotate(60 110 110)" filter="url(#shadow)" />
+                            <circle cx="110" cy="110" r="60" fill="none" stroke="#FFA726" strokeWidth="22" strokeDasharray="30 350" transform="rotate(160 110 110)" filter="url(#shadow)" />
+                            <circle cx="110" cy="110" r="60" fill="none" stroke="#FF3D57" strokeWidth="22" strokeDasharray="23 357" transform="rotate(190 110 110)" filter="url(#shadow)" />
+                            <circle cx="110" cy="110" r="60" fill="none" stroke="#9C27B0" strokeWidth="22" strokeDasharray="20 360" transform="rotate(213 110 110)" filter="url(#shadow)" />
+                            <circle cx="110" cy="110" r="60" fill="none" stroke="#CDDC39" strokeWidth="22" strokeDasharray="15 365" transform="rotate(233 110 110)" filter="url(#shadow)" />
+                            
+                            {/* Center hole */}
+                            <circle cx="110" cy="110" r="40" fill={colors.panelBg} />
+                          </svg>
+                        </Box>
+                        
+                        {/* Symbol list */}
+                        <Box sx={{ flex: 1, pl: 3 }}>
+                          {['EURUSD', 'EURJPY', 'GBPUSD', 'EURNZD', 'EURCAD', 'EURCHF'].map((symbol, i) => {
+                            const weights = [44.8, 32.0, 4.8, 3.3, 7.9, 5.5];
+                            const colors = ['#00E676', '#2196F3', '#FFA726', '#FF3D57', '#9C27B0', '#CDDC39'];
+                            
+                            return (
+                              <Box key={i} sx={{ 
+                                display: 'flex', 
+                                justifyContent: 'space-between', 
+                                alignItems: 'center', 
+                                mb: 1 
+                              }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                  <Box sx={{ 
+                                    width: 8, 
+                                    height: 8, 
+                                    borderRadius: '50%', 
+                                    backgroundColor: colors[i],
+                                    mr: 1 
+                                  }} />
+                                  <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                                    {symbol}
+                                  </Typography>
+                                </Box>
+                                <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                                  {weights[i]}%
+                                </Typography>
+                              </Box>
+                            );
+                          })}
+                        </Box>
+                      </Box>
+                    </Paper>
+                  </Grid>
+                  
+                  <Grid item xs={12} lg={6}>
+                    <Paper 
+                      sx={{ 
+                        p: 4, 
+                        backgroundColor: colors.panelBg,
+                        border: `1px solid ${colors.borderColor}`,
+                        borderRadius: '12px'
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                        <Typography variant="h6" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                          Symbols P/L
+                        </Typography>
+                        <Button
+                          variant="text"
+                          size="small"
+                          sx={{ 
+                            color: colors.accentBlue,
+                            textTransform: 'none',
+                            fontSize: '0.75rem',
+                            p: 0
+                          }}
+                        >
+                          All Symbols
+                        </Button>
+                      </Box>
+                      
+                      <Box sx={{ height: 220, display: 'flex', alignItems: 'flex-end', position: 'relative' }}>
+                        {/* X-axis labels - rotated currency names */}
+                        <Box sx={{ 
+                          position: 'absolute',
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          display: 'flex',
+                          justifyContent: 'space-around',
+                          transform: 'translateY(20px)'
+                        }}>
+                          {['EURUSD', 'EURJPY', 'GBPUSD', 'EURNZD', 'EURCAD', 'EURCHF', 'AUDUSD'].map((symbol, i) => (
+                <Typography 
+                            key={i} 
+                            variant="caption" 
+                  sx={{ 
+                              color: colors.secondaryText,
+                              fontSize: '10px',
+                              transform: 'rotate(-45deg)',
+                              transformOrigin: 'top left',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            {symbol}
+                </Typography>
+                          ))}
+                        </Box>
+                        
+                        {/* Bar chart */}
+                        <Box sx={{ 
+                          display: 'flex',
+                          height: 150,
+                          alignItems: 'flex-end',
+                          width: '100%',
+                          justifyContent: 'space-around',
+                          mb: 4
+                        }}>
+                          {[5380, 3840, 580, 390, 947, 670, 290].map((value, i) => {
+                            const maxValue = 5380;
+                            const height = (value / maxValue) * 130;
+                            
+                            return (
+                              <Box key={i} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                <Typography 
+                                  variant="caption" 
+                                  sx={{ 
+                                    color: colors.profitGreen,
+                                    fontSize: '10px',
+                                    mb: 0.5
+                                  }}
+                                >
+                                  +${value}
+                                </Typography>
+                                <Box sx={{ 
+                                  height: `${height}px`,
+                                  width: 16,
+                                  backgroundColor: colors.profitGreen,
+                                  borderRadius: '2px'
+                                }} />
+                              </Box>
+                            );
+                          })}
+                        </Box>
+                      </Box>
+                    </Paper>
+                  </Grid>
+                </Grid>
+                
+                {/* Insights row */}
+                <Grid item xs={12}>
+                  <Paper 
+                    sx={{ 
+                      p: 4, 
+                      backgroundColor: colors.panelBg,
+                      border: `1px solid ${colors.borderColor}`,
+                      borderRadius: '12px'
+                    }}
+                  >
+                    <Typography variant="h6" sx={{ color: colors.primaryText, mb: 3, fontWeight: 'bold' }}>
+                      Insights
+                    </Typography>
+                    
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      {simulationResults.insights.map((insight, index) => (
+                        <Typography key={index} variant="body2" sx={{ 
+                          color: colors.primaryText,
+                          pl: 2,
+                          borderLeft: `3px solid ${colors.accentBlue}`
+                        }}>
+                          {insight}
+                        </Typography>
+                      ))}
+                      
+                      <Typography variant="body2" sx={{ 
+                        color: colors.primaryText,
+                        pl: 2,
+                        borderLeft: `3px solid ${colors.profitGreen}`,
+                        mt: 1
+                      }}>
+                        Legacy with a copy ratio of 6 achieved the most profit of 69.24% Net P/L for the simulation amount and {simulationPeriod} selected.
+                      </Typography>
+                    </Box>
+                  </Paper>
+                </Grid>
+              </Grid>
+            </Paper>
+          </Box>
+        )}
+        {step === 3 && tradingType === 'long-term' && (
+          <Box sx={{ maxWidth: '1400px', mx: 'auto', mt: 5 }}>
+            <Paper 
+              sx={{ 
+                p: 4, 
+                backgroundColor: colors.cardBg,
+                border: `1px solid ${colors.borderColor}`,
+                borderRadius: '16px',
+                boxShadow: `0 12px 24px ${colors.shadowColor}`,
+                mb: 4
+              }}
+            >
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+            <Typography 
+                  variant="h4" 
+                  sx={{ 
+                    color: colors.primaryText,
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Long-Term Strategy Allocation
+            </Typography>
+                
+                <Box>
+                <Button 
+                  variant="outlined" 
+                    onClick={() => setStep(2)}
+                  sx={{ 
+                      borderColor: colors.borderColor,
+                      color: colors.secondaryText,
+                      mr: 2,
+                    '&:hover': {
+                        borderColor: colors.accentBlue,
+                        backgroundColor: 'transparent',
+                    }
+                  }}
+                >
+                    Back
+                </Button>
+                  
+                  <Button 
+                    variant="contained"
+                    onClick={startSimulation}
+                    disabled={strategies.filter(s => s.allocatedFunds > 0 && s.copyRatio > 0).length === 0}
+                    sx={{
+                      backgroundColor: colors.accentBlue,
+                      '&:hover': {
+                        backgroundColor: colors.accentBlue,
+                        opacity: 0.9,
+                      },
+                      '&.Mui-disabled': {
+                        backgroundColor: colors.borderColor,
+                        color: colors.secondaryText
+                      }
+                    }}
+                  >
+                    Run Simulation
+                  </Button>
+                </Box>
+              </Box>
+              
+              <Box sx={{ mb: 4 }}>
+                <Typography variant="h6" sx={{ color: colors.primaryText, mb: 2 }}>
+                  Your Simulation Balance: ${availableBalance.toLocaleString()}
+            </Typography>
+                <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                  Allocate your funds to different trading strategies and set a copy ratio for each one.
+                  The copy ratio determines how closely you follow each strategy's trades.
+                </Typography>
+              </Box>
+              
+              <Box sx={{ mb: 4 }}>
+                <FormControl fullWidth variant="outlined" sx={{ mb: 3 }}>
+                  <InputLabel id="simulation-period-label" sx={{ color: colors.secondaryText }}>Simulation Period</InputLabel>
+                  <Select
+                    labelId="simulation-period-label"
+                    value={simulationPeriod}
+                    onChange={(e) => setSimulationPeriod(e.target.value)}
+                    label="Simulation Period"
+                  sx={{ 
+                      color: colors.primaryText,
+                    backgroundColor: colors.panelBg, 
+                      '.MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.borderColor
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.accentBlue
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.accentBlue
+                      }
+                    }}
+                  >
+                    <MenuItem value="1 Month">1 Month</MenuItem>
+                    <MenuItem value="3 Months">3 Months</MenuItem>
+                    <MenuItem value="6 Months">6 Months</MenuItem>
+                    <MenuItem value="1 Year">1 Year</MenuItem>
+                    <MenuItem value="2 Years">2 Years</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
+              
+              <TableContainer component={Paper} sx={{ backgroundColor: colors.panelBg, mb: 4 }}>
+                <Table sx={{ minWidth: 650 }}>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>Strategy</TableCell>
+                      <TableCell align="right" sx={{ color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>Total Net P/L</TableCell>
+                      <TableCell align="right" sx={{ color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>1Y Net P/L</TableCell>
+                      <TableCell align="right" sx={{ color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>Allocated Funds ($)</TableCell>
+                      <TableCell align="right" sx={{ color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>Copy Ratio (1-10)</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {strategies.map((strategy, index) => (
+                      <TableRow key={strategy.id} sx={{ '&:hover': { backgroundColor: colors.hoverBg } }}>
+                        <TableCell sx={{ color: colors.primaryText, borderBottom: `1px solid ${colors.borderColor}` }}>
+                          {strategy.name}
+                        </TableCell>
+                        <TableCell align="right" sx={{ 
+                          color: strategy.totalNetPL >= 0 ? colors.profitGreen : colors.lossRed,
+                          fontWeight: 'bold',
+                          borderBottom: `1px solid ${colors.borderColor}` 
+                        }}>
+                          {strategy.totalNetPL >= 0 ? '+' : ''}{strategy.totalNetPL}%
+                        </TableCell>
+                        <TableCell align="right" sx={{ 
+                          color: strategy.oneYearNetPL >= 0 ? colors.profitGreen : colors.lossRed,
+                          fontWeight: 'bold',
+                          borderBottom: `1px solid ${colors.borderColor}` 
+                        }}>
+                          {strategy.oneYearNetPL >= 0 ? '+' : ''}{strategy.oneYearNetPL}%
+                        </TableCell>
+                        <TableCell align="right" sx={{ borderBottom: `1px solid ${colors.borderColor}` }}>
+                          <Box sx={{ width: '100%', px: 1 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                              <Typography variant="caption" sx={{ color: colors.secondaryText }}>$0</Typography>
+                              <Typography variant="caption" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                                ${strategy.allocatedFunds.toLocaleString()}
+                  </Typography>
+                              <Typography variant="caption" sx={{ color: colors.secondaryText }}>${availableBalance.toLocaleString()}</Typography>
+                            </Box>
+                            <Box sx={{ position: 'relative' }}>
+                              {/* Track background */}
+                              <Box sx={{ 
+                                position: 'absolute', 
+                                height: '4px', 
+                                width: '100%', 
+                                backgroundColor: colors.borderColor,
+                                borderRadius: '2px',
+                                top: '50%',
+                                transform: 'translateY(-50%)'
+                              }} />
+                              
+                              {/* Filled portion */}
+                              <Box sx={{ 
+                                position: 'absolute', 
+                                height: '4px', 
+                                width: `${(strategy.allocatedFunds / availableBalance) * 100}%`, 
+                                background: `linear-gradient(90deg, ${colors.accentBlue}, ${colors.buyGreen})`,
+                                borderRadius: '2px',
+                                top: '50%',
+                                transform: 'translateY(-50%)'
+                              }} />
+                              
+                              <input
+                                type="range"
+                                min="0"
+                                max={availableBalance}
+                                step="100"
+                                value={strategy.allocatedFunds}
+                                onChange={(e) => handleAllocationChange(index, e.target.value)}
+                                className="allocation-slider"
+                                style={{ 
+                                  width: '100%',
+                                  height: '24px',
+                                  appearance: 'none',
+                                  background: 'transparent',
+                                  cursor: 'pointer',
+                                  position: 'relative',
+                                  zIndex: 2
+                                }}
+                              />
+                            </Box>
+                          </Box>
+                        </TableCell>
+                        <TableCell align="right" sx={{ borderBottom: `1px solid ${colors.borderColor}` }}>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                              color: colors.primaryText,
+                              fontWeight: 'bold'
+                    }}
+                  >
+                            {/* Calculate copy ratio based on allocation percentage */}
+                            {strategy.allocatedFunds > 0 ? 
+                              Math.max(1, Math.round((strategy.allocatedFunds / availableBalance) * 10)) 
+                              : 0}
+                  </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                p: 3, 
+                backgroundColor: colors.panelBg, 
+                borderRadius: '12px',
+                border: `1px solid ${colors.borderColor}`
+              }}>
+                <Typography variant="h6" sx={{ color: colors.primaryText }}>
+                  Total Allocated: ${totalAllocatedFunds.toLocaleString()}
+                </Typography>
+                <Typography variant="h6" sx={{ color: colors.primaryText }}>
+                  Remaining: ${(availableBalance - totalAllocatedFunds).toLocaleString()}
+                </Typography>
+            </Box>
+          </Paper>
+        </Box>
+        )}
+      </Box>
+    </Box>
   );
 };
 
