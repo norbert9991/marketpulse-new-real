@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Box, 
   Typography, 
@@ -25,7 +25,10 @@ import {
   InputAdornment,
   Slider,
   CircularProgress,
-  ButtonGroup
+  ButtonGroup,
+  Alert,
+  Snackbar,
+  LinearProgress
 } from '@mui/material';
 import { createChart, CrosshairMode, LineStyle } from 'lightweight-charts';
 import Sidebar from './Sidebar';
@@ -41,8 +44,14 @@ import ShowChartIcon from '@mui/icons-material/ShowChart';
 import HistoryIcon from '@mui/icons-material/History';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import TuneIcon from '@mui/icons-material/Tune';
+import AddIcon from '@mui/icons-material/Add';
+import RemoveIcon from '@mui/icons-material/Remove';
+import ZoomInIcon from '@mui/icons-material/ZoomIn';
+import ZoomOutIcon from '@mui/icons-material/ZoomOut';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import tradingService from '../services/tradingService';
 
-// Binance-inspired color palette
+// Forex color palette
 const colors = {
   darkBg: '#0A0C14',
   panelBg: '#121212',
@@ -82,6 +91,22 @@ const ShortTermTrading = () => {
   const chartContainerRef = useRef(null);
   const chartRef = useRef(null);
   const candleSeriesRef = useRef(null);
+  const volumeSeriesRef = useRef(null);
+  const sma20SeriesRef = useRef(null);
+  const sma50SeriesRef = useRef(null);
+  const sma200SeriesRef = useRef(null);
+  const supportLevelsRef = useRef([]);
+  const resistanceLevelsRef = useRef([]);
+  
+  // User and account state
+  const [user, setUser] = useState(null);
+  const [accountInfo, setAccountInfo] = useState({
+    balance: 10000,
+    currency: 'USD',
+    equity: 10000,
+    marginUsed: 0,
+    freeMargin: 10000
+  });
   
   // Trading state
   const [symbol, setSymbol] = useState('EUR/USD');
@@ -93,18 +118,37 @@ const ShortTermTrading = () => {
   const [orderSide, setOrderSide] = useState('buy');
   const [orderHistory, setOrderHistory] = useState([]);
   const [openOrders, setOpenOrders] = useState([]);
-  const [balance, setBalance] = useState(10000);
   const [tabValue, setTabValue] = useState(0);
+  const [indicators, setIndicators] = useState({
+    rsi: { value: 50, visible: true },
+    macd: { value: 0, signal: 0, histogram: 0, visible: true },
+    ma: { sma20: 0, sma50: 0, sma200: 0, visible: true },
+    volume: { visible: true },
+    supportResistance: { support: [], resistance: [], visible: true }
+  });
+  const [showIndicators, setShowIndicators] = useState(true);
+  const [chartType, setChartType] = useState('candles');
+  
+  // UI state
   const [isLoading, setIsLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(false);
   const [orderForm, setOrderForm] = useState({
     price: currencyBasePrices['EUR/USD'] || 1.0850,
     amount: 0.1,
     total: (currencyBasePrices['EUR/USD'] || 1.0850) * 0.1,
     stopPrice: '',
-    limitPrice: ''
+    limitPrice: '',
+    leverage: 1
   });
+  const [notification, setNotification] = useState({
+    open: false,
+    message: '',
+    severity: 'info'
+  });
+  const [leverage, setLeverage] = useState(1);
+  const [showLeverageWarning, setShowLeverageWarning] = useState(false);
   
-  // Popular forex pairs
+  // Currency pairs - sync with database values
   const forexPairs = [
     { symbol: 'EUR/USD', price: 1.0850, change: 0.12 },
     { symbol: 'GBP/USD', price: 1.2650, change: -0.25 },
@@ -112,12 +156,228 @@ const ShortTermTrading = () => {
     { symbol: 'AUD/USD', price: 0.6750, change: -0.48 },
     { symbol: 'USD/CAD', price: 1.3570, change: 0.10 },
     { symbol: 'NZD/USD', price: 0.6150, change: -0.15 },
-    { symbol: 'USD/CHF', price: 0.8950, change: 0.05 }
+    { symbol: 'USD/CHF', price: 0.8950, change: 0.05 },
+    { symbol: 'EUR/GBP', price: 0.8550, change: 0.02 },
+    { symbol: 'EUR/JPY', price: 158.20, change: 0.45 },
+    { symbol: 'GBP/JPY', price: 184.40, change: 0.20 }
   ];
   
   // Available timeframes for chart
   const timeframes = ['1m', '5m', '15m', '1h', '4h', '1d', '1w'];
-
+  
+  // Fetch user data and account info
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const response = await API.auth.me();
+        setUser(response.data.user);
+        
+        // Fetch account info
+        const accountData = await tradingService.getAccountInfo();
+        setAccountInfo(accountData);
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+        showNotification('Error loading user data', 'error');
+      }
+    };
+    
+    fetchUserData();
+    
+    // Fetch order history and open orders
+    fetchOpenOrders();
+    fetchOrderHistory();
+  }, []);
+  
+  // Fetch market data for the selected symbol
+  useEffect(() => {
+    const fetchMarketData = async () => {
+      setDataLoading(true);
+      try {
+        // Get current price and market data
+        const marketData = await tradingService.getMarketData(symbol);
+        setPrice(marketData.current_price);
+        setPriceChange(marketData.change_percentage);
+        
+        // Get historical data based on timeframe
+        const historicalData = await tradingService.getHistoricalData(symbol, timeframe);
+        setPriceHistory(historicalData);
+        
+        // Get technical indicators
+        const techIndicators = await tradingService.getTechnicalIndicators(symbol);
+        setIndicators(prev => ({
+          ...prev,
+          rsi: { ...prev.rsi, value: techIndicators.rsi },
+          macd: { 
+            ...prev.macd, 
+            value: techIndicators.macd, 
+            signal: techIndicators.macd_signal, 
+            histogram: techIndicators.macd_hist 
+          },
+          ma: { 
+            ...prev.ma, 
+            sma20: techIndicators.sma20, 
+            sma50: techIndicators.sma50, 
+            sma200: techIndicators.sma200 
+          }
+        }));
+        
+        // Get support/resistance levels
+        const supportResistance = await tradingService.getSupportResistance(symbol);
+        setIndicators(prev => ({
+          ...prev,
+          supportResistance: { 
+            ...prev.supportResistance, 
+            support: supportResistance.support, 
+            resistance: supportResistance.resistance
+          }
+        }));
+        
+        // Update the chart if it exists
+        if (candleSeriesRef.current) {
+          updateChartData(historicalData);
+        }
+        
+        // Update the order form with the current price
+        setOrderForm(prev => ({
+          ...prev,
+          price: marketData.current_price,
+          total: marketData.current_price * prev.amount
+        }));
+      } catch (error) {
+        console.error('Error fetching market data:', error);
+        showNotification('Error loading market data', 'error');
+      } finally {
+        setDataLoading(false);
+      }
+    };
+    
+    fetchMarketData();
+  }, [symbol, timeframe]);
+  
+  // Fetch open orders
+  const fetchOpenOrders = async () => {
+    try {
+      const data = await tradingService.getOpenOrders();
+      setOpenOrders(data.orders || []);
+    } catch (error) {
+      console.error('Error fetching open orders:', error);
+    }
+  };
+  
+  // Fetch order history
+  const fetchOrderHistory = async () => {
+    try {
+      const data = await tradingService.getOrderHistory();
+      setOrderHistory(data.orders || []);
+    } catch (error) {
+      console.error('Error fetching order history:', error);
+    }
+  };
+  
+  // Convert historical data to chart format
+  const formatHistoricalDataForChart = useCallback((data) => {
+    return data.map(item => ({
+      time: new Date(item.timestamp).getTime() / 1000,
+      open: item.open,
+      high: item.high,
+      low: item.low,
+      close: item.close,
+      volume: item.volume
+    }));
+  }, []);
+  
+  // Update chart with new data
+  const updateChartData = useCallback((data) => {
+    if (!candleSeriesRef.current) return;
+    
+    const formattedData = formatHistoricalDataForChart(data);
+    candleSeriesRef.current.setData(formattedData);
+    
+    // Update volume series if visible
+    if (volumeSeriesRef.current && indicators.volume.visible) {
+      const volumeData = formattedData.map(item => ({
+        time: item.time,
+        value: item.volume
+      }));
+      volumeSeriesRef.current.setData(volumeData);
+    }
+    
+    // Update moving averages if visible
+    if (indicators.ma.visible) {
+      // Calculate SMA values
+      const sma20Data = calculateSMA(formattedData, 20);
+      const sma50Data = calculateSMA(formattedData, 50);
+      const sma200Data = calculateSMA(formattedData, 200);
+      
+      if (sma20SeriesRef.current) sma20SeriesRef.current.setData(sma20Data);
+      if (sma50SeriesRef.current) sma50SeriesRef.current.setData(sma50Data);
+      if (sma200SeriesRef.current) sma200SeriesRef.current.setData(sma200Data);
+    }
+    
+    // Update support/resistance levels
+    updateSupportResistanceLevels();
+  }, [formatHistoricalDataForChart, indicators.ma.visible, indicators.volume.visible]);
+  
+  // Calculate Simple Moving Average
+  const calculateSMA = useCallback((data, period) => {
+    const result = [];
+    
+    for (let i = period - 1; i < data.length; i++) {
+      let sum = 0;
+      for (let j = 0; j < period; j++) {
+        sum += data[i - j].close;
+      }
+      result.push({
+        time: data[i].time,
+        value: sum / period
+      });
+    }
+    
+    return result;
+  }, []);
+  
+  // Update support/resistance levels on chart
+  const updateSupportResistanceLevels = useCallback(() => {
+    if (!chartRef.current || !indicators.supportResistance.visible) return;
+    
+    // Remove existing lines
+    supportLevelsRef.current.forEach(line => {
+      if (line) chartRef.current.removePriceLine(line);
+    });
+    resistanceLevelsRef.current.forEach(line => {
+      if (line) chartRef.current.removePriceLine(line);
+    });
+    
+    supportLevelsRef.current = [];
+    resistanceLevelsRef.current = [];
+    
+    // Add support levels
+    indicators.supportResistance.support.forEach(level => {
+      const supportLine = candleSeriesRef.current.createPriceLine({
+        price: level,
+        color: 'rgba(14, 203, 129, 0.5)',
+        lineWidth: 1,
+        lineStyle: LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: 'Support'
+      });
+      supportLevelsRef.current.push(supportLine);
+    });
+    
+    // Add resistance levels
+    indicators.supportResistance.resistance.forEach(level => {
+      const resistanceLine = candleSeriesRef.current.createPriceLine({
+        price: level,
+        color: 'rgba(246, 70, 93, 0.5)',
+        lineWidth: 1,
+        lineStyle: LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: 'Resistance'
+      });
+      resistanceLevelsRef.current.push(resistanceLine);
+    });
+  }, [indicators.supportResistance]);
+  
   // Initialize chart
   useEffect(() => {
     if (chartContainerRef.current && !chartRef.current) {
@@ -127,7 +387,7 @@ const ShortTermTrading = () => {
       container.style.width = '100%';
       container.style.height = '100%';
       
-      // Create chart with Binance-like appearance
+      // Create chart with professional appearance
       const chart = createChart(container, {
         layout: {
           backgroundColor: colors.cardBg,
@@ -154,10 +414,19 @@ const ShortTermTrading = () => {
         timeScale: {
           borderColor: colors.borderColor,
           timeVisible: true,
+          secondsVisible: false
         },
         rightPriceScale: {
           borderColor: colors.borderColor,
         },
+        watermark: {
+          color: 'rgba(66, 66, 66, 0.1)',
+          visible: true,
+          text: symbol,
+          fontSize: 48,
+          horzAlign: 'center',
+          vertAlign: 'center',
+        }
       });
       
       // Add candlestick series
@@ -169,9 +438,38 @@ const ShortTermTrading = () => {
         wickDownColor: colors.sellRed,
       });
       
-      // Generate and set initial data
-      const data = generateCandlestickData(100);
-      candleSeriesRef.current.setData(data);
+      // Add volume series
+      const volumeSeries = chart.addHistogramSeries({
+        color: '#26a69a',
+        priceFormat: {
+          type: 'volume',
+        },
+        priceScaleId: '',
+        scaleMargins: {
+          top: 0.8,
+          bottom: 0,
+        },
+      });
+      volumeSeriesRef.current = volumeSeries;
+      
+      // Add SMA series
+      sma20SeriesRef.current = chart.addLineSeries({
+        color: '#2196F3',
+        lineWidth: 1,
+        title: 'SMA 20',
+      });
+      
+      sma50SeriesRef.current = chart.addLineSeries({
+        color: '#FF9800',
+        lineWidth: 1,
+        title: 'SMA 50',
+      });
+      
+      sma200SeriesRef.current = chart.addLineSeries({
+        color: '#E91E63',
+        lineWidth: 1,
+        title: 'SMA 200',
+      });
       
       // Store the chart reference
       chartRef.current = chart;
@@ -185,24 +483,10 @@ const ShortTermTrading = () => {
       };
       
       window.addEventListener('resize', handleResize);
-      setIsLoading(false);
-      
-      // Set current price
-      if (data.length > 0) {
-        setPrice(data[data.length - 1].close);
-        setOrderForm(prev => ({
-          ...prev,
-          price: data[data.length - 1].close,
-          total: data[data.length - 1].close * prev.amount
-        }));
-      }
       
       // Set up price updates for live chart effect
       const priceUpdateInterval = setInterval(() => {
         if (!candleSeriesRef.current) return;
-        
-        // Get the last candle data
-        const lastCandle = data[data.length - 1];
         
         // Calculate a small random price change with some trend bias
         const maxMove = price < 10 ? 0.0005 : 0.05; // Smaller moves for lower priced pairs
@@ -217,6 +501,12 @@ const ShortTermTrading = () => {
         const newPriceChange = parseFloat(((newPrice / price - 1) * 100).toFixed(2));
         setPriceChange(newPriceChange);
         
+        // Get the last candle data
+        const formattedData = formatHistoricalDataForChart(priceHistory);
+        if (formattedData.length === 0) return;
+        
+        const lastCandle = formattedData[formattedData.length - 1];
+        
         // Create a new candle for the latest data point
         const currentTime = Math.floor(Date.now() / 1000);
         const newCandle = {
@@ -226,25 +516,6 @@ const ShortTermTrading = () => {
           low: Math.min(lastCandle.close, newPrice),
           close: newPrice
         };
-        
-        // Update the last candle
-        data[data.length - 1] = newCandle;
-        
-        // Add a new data point every 5 seconds for more realistic chart movement
-        if (currentTime % 5 === 0) {
-          data.push({
-            time: currentTime + 60,
-            open: newPrice,
-            high: newPrice * (1 + Math.random() * 0.0005),
-            low: newPrice * (1 - Math.random() * 0.0005),
-            close: newPrice * (1 + (Math.random() - 0.5) * 0.001)
-          });
-          
-          // Remove the oldest data point to keep the array size consistent
-          if (data.length > 100) {
-            data.shift();
-          }
-        }
         
         // Update the chart with the new data
         candleSeriesRef.current.update(newCandle);
@@ -256,7 +527,10 @@ const ShortTermTrading = () => {
             total: newPrice * prev.amount
           }));
         }
-      }, 1000); // Update every second for more fluid movement
+        
+        // Check if limit orders should be triggered
+        checkPendingOrders(newPrice);
+      }, 1000); // Update every second for fluid movement
       
       return () => {
         window.removeEventListener('resize', handleResize);
@@ -267,288 +541,40 @@ const ShortTermTrading = () => {
         }
       };
     }
-  }, []);
+  }, [formatHistoricalDataForChart, price, priceHistory, symbol, orderType]);
   
-  // Handle timeframe changes
-  useEffect(() => {
-    if (candleSeriesRef.current) {
-      // Generate new data based on timeframe
-      const data = generateCandlestickData(100, timeframe);
-      candleSeriesRef.current.setData(data);
-      
-      // Update current price
-      if (data.length > 0) {
-        setPrice(data[data.length - 1].close);
-      }
-    }
-  }, [timeframe]);
-  
-  // Handle symbol changes
-  useEffect(() => {
-    if (!candleSeriesRef.current) return;
+  // Check if pending orders should be triggered
+  const checkPendingOrders = (currentPrice) => {
+    if (openOrders.length === 0) return;
     
-    // Get base price for selected symbol
-    const basePrice = currencyBasePrices[symbol] || 1.0850;
-    setPrice(basePrice);
-    
-    // Generate new data based on the symbol's typical price range
-    const data = generateCandlestickData(100, timeframe, symbol);
-    candleSeriesRef.current.setData(data);
-    
-    // Update order form with new price
-    setOrderForm(prev => ({
-      ...prev,
-      price: basePrice,
-      total: basePrice * prev.amount
-    }));
-  }, [symbol]);
-  
-  // Generate realistic candlestick data based on currency pair
-  const generateCandlestickData = (count, timeframe = '1h', pairSymbol = symbol) => {
-    const data = [];
-    // Get base price for the selected currency pair
-    let basePrice = currencyBasePrices[pairSymbol] || 1.0850;
-    
-    // Set volatility based on timeframe and currency pair
-    let volatility = 0.001; // Default volatility
-    
-    // Adjust volatility based on timeframe (shorter timeframes have less volatility)
-    switch (timeframe) {
-      case '1m': volatility = 0.0005; break;
-      case '5m': volatility = 0.001; break;
-      case '15m': volatility = 0.0015; break;
-      case '1h': volatility = 0.002; break;
-      case '4h': volatility = 0.003; break;
-      case '1d': volatility = 0.005; break;
-      case '1w': volatility = 0.01; break;
-      default: volatility = 0.002;
-    }
-    
-    // Adjust volatility based on currency pair (some pairs are more volatile)
-    if (pairSymbol.includes('JPY')) {
-      volatility *= 2; // JPY pairs tend to have larger pip movements
-    } else if (pairSymbol.includes('GBP')) {
-      volatility *= 1.5; // GBP pairs tend to be more volatile
-    }
-    
-    // Starting time based on timeframe
-    const now = new Date();
-    let time = new Date(now);
-    const timeFrameInMinutes = {
-      '1m': 1, '5m': 5, '15m': 15, '1h': 60, '4h': 240, '1d': 1440, '1w': 10080
-    };
-    
-    // Subtract the appropriate amount of time to start from
-    time.setMinutes(time.getMinutes() - count * timeFrameInMinutes[timeframe]);
-    
-    // Create a trend pattern with cycles
-    const trendCycles = Math.floor(count / 20); // Cycle every ~20 candles
-    let trendDirection = 1;
-    
-    for (let i = 0; i < count; i++) {
-      // Change trend direction occasionally
-      if (i % 20 === 0) {
-        trendDirection = Math.random() > 0.5 ? 1 : -1;
-      }
-      
-      // Calculate price change with trend bias
-      const trendBias = trendDirection * volatility * 0.3;
-      const randomChange = (Math.random() * volatility * 2) - volatility + trendBias;
-      
-      // Calculate prices with 4 decimal precision for most forex pairs
-      const open = parseFloat(basePrice.toFixed(4));
-      const close = parseFloat((basePrice * (1 + randomChange)).toFixed(4));
-      let high, low;
-      
-      if (close > open) {
-        high = parseFloat((close * (1 + Math.random() * volatility * 0.5)).toFixed(4));
-        low = parseFloat((open * (1 - Math.random() * volatility * 0.5)).toFixed(4));
-      } else {
-        high = parseFloat((open * (1 + Math.random() * volatility * 0.5)).toFixed(4));
-        low = parseFloat((close * (1 - Math.random() * volatility * 0.5)).toFixed(4));
-      }
-      
-      // Create candle
-      data.push({
-        time: Math.floor(time.getTime() / 1000),
-        open,
-        high,
-        low,
-        close
-      });
-      
-      // Update base price for next candle
-      basePrice = close;
-      
-      // Move time forward based on timeframe
-      time.setMinutes(time.getMinutes() + timeFrameInMinutes[timeframe]);
-    }
-    
-    return data;
-  };
-  
-  // Handler for order type tabs
-  const handleOrderTabChange = (event, newValue) => {
-    setTabValue(newValue);
-    
-    // Reset form when changing tabs
-    if (newValue === 0) {
-      setOrderType('limit');
-    } else if (newValue === 1) {
-      setOrderType('market');
-    } else if (newValue === 2) {
-      setOrderType('stop_limit');
-    }
-  };
-  
-  // Handle pair tab change
-  const handlePairTabChange = (event, newValue) => {
-    setSymbol(forexPairs[newValue].symbol);
-  };
-  
-  // Handle order placement for forex
-  const handlePlaceOrder = () => {
-    // Validate inputs
-    if (orderForm.amount <= 0) {
-      alert("Please enter a valid amount");
-      return;
-    }
-    
-    if (orderType !== 'market' && orderForm.price <= 0) {
-      alert("Please enter a valid price");
-      return;
-    }
-    
-    if (orderForm.total > balance && orderSide === 'buy') {
-      alert("Insufficient balance");
-      return;
-    }
-    
-    const newOrder = {
-      id: Date.now(),
-      symbol: symbol,
-      type: orderType,
-      side: orderSide,
-      price: orderType === 'market' ? price : orderForm.price,
-      amount: orderForm.amount,
-      total: orderForm.total,
-      status: orderType === 'market' ? 'filled' : 'open',
-      date: new Date().toISOString()
-    };
-    
-    if (orderType === 'market') {
-      // Execute market order immediately
-      executeOrder(newOrder);
-    } else {
-      // Add limit/stop order to open orders
-      setOpenOrders(prev => [...prev, newOrder]);
-      
-      // Show confirmation
-      alert(`${orderSide.toUpperCase()} ${orderForm.amount} ${symbol} order placed successfully!`);
-    }
-    
-    // Reset form
-    setOrderForm({
-      ...orderForm,
-      amount: 0,
-      total: 0
-    });
-  };
-  
-  // Execute an order (for market orders or when limit orders are triggered)
-  const executeOrder = (order) => {
-    // Calculate execution price (for market orders, use current price)
-    const execPrice = order.type === 'market' ? price : order.price;
-    
-    // Process the order
-    if (order.side === 'buy') {
-      // Deduct funds
-      const cost = order.amount * execPrice;
-      if (cost > balance) {
-        alert("Insufficient balance to execute order");
-        return false;
-      }
-      
-      setBalance(prev => prev - cost);
-      
-      // Add to order history
-      const filledOrder = {
-        ...order,
-        status: 'filled',
-        filledPrice: execPrice,
-        filledTime: new Date().toISOString()
-      };
-      
-      setOrderHistory(prev => [filledOrder, ...prev]);
-      
-      // Show notification
-      alert(`BUY order executed: ${order.amount} ${symbol.split('/')[0]} at ${execPrice} USDT`);
-      return true;
-      
-    } else if (order.side === 'sell') {
-      // Add funds
-      const proceeds = order.amount * execPrice;
-      setBalance(prev => prev + proceeds);
-      
-      // Add to order history
-      const filledOrder = {
-        ...order,
-        status: 'filled',
-        filledPrice: execPrice,
-        filledTime: new Date().toISOString()
-      };
-      
-      setOrderHistory(prev => [filledOrder, ...prev]);
-      
-      // Show notification
-      alert(`SELL order executed: ${order.amount} ${symbol.split('/')[0]} at ${execPrice} USDT`);
-      return true;
-    }
-    
-    return false;
-  };
-  
-  // Cancel an open order
-  const cancelOrder = (orderId) => {
-    setOpenOrders(prev => prev.filter(order => order.id !== orderId));
-    
-    // Add to order history with canceled status
-    const canceledOrder = openOrders.find(order => order.id === orderId);
-    if (canceledOrder) {
-      setOrderHistory(prev => [{
-        ...canceledOrder,
-        status: 'canceled',
-        cancelTime: new Date().toISOString()
-      }, ...prev]);
-      
-      alert(`Order canceled successfully`);
-    }
-  };
-  
-  // Check if limit orders should be triggered
-  useEffect(() => {
-    if (openOrders.length === 0 || !price) return;
-    
-    // Check each open order
     const ordersToProcess = [...openOrders];
     const triggeredOrders = [];
     
     ordersToProcess.forEach(order => {
       if (order.type === 'limit') {
         // For limit buy, trigger if price falls below order price
-        if (order.side === 'buy' && price <= order.price) {
-          const success = executeOrder(order);
-          if (success) triggeredOrders.push(order.id);
+        if (order.side === 'buy' && currentPrice <= order.price) {
+          executeOrder(order, currentPrice);
+          triggeredOrders.push(order.id);
         }
         // For limit sell, trigger if price rises above order price
-        else if (order.side === 'sell' && price >= order.price) {
-          const success = executeOrder(order);
-          if (success) triggeredOrders.push(order.id);
+        else if (order.side === 'sell' && currentPrice >= order.price) {
+          executeOrder(order, currentPrice);
+          triggeredOrders.push(order.id);
         }
       }
       else if (order.type === 'stop_limit') {
-        // Implementation for stop-limit orders would go here
-        // For simplicity, we're not implementing the full logic
+        // For stop limit orders
+        if (order.side === 'buy' && currentPrice >= order.stopPrice) {
+          // Trigger the limit order when price goes above stop price for buy
+          executeOrder(order, order.limitPrice);
+          triggeredOrders.push(order.id);
+        }
+        else if (order.side === 'sell' && currentPrice <= order.stopPrice) {
+          // Trigger the limit order when price goes below stop price for sell
+          executeOrder(order, order.limitPrice);
+          triggeredOrders.push(order.id);
+        }
       }
     });
     
@@ -556,14 +582,275 @@ const ShortTermTrading = () => {
     if (triggeredOrders.length > 0) {
       setOpenOrders(prev => prev.filter(order => !triggeredOrders.includes(order.id)));
     }
-  }, [price]);
+  };
   
-  // Handler for amount percentage buttons
+  // Execute an order
+  const executeOrder = async (order, execPrice = price) => {
+    try {
+      // Process the order
+      const calculatedPrice = order.type === 'market' ? execPrice : order.price;
+      const calculatedTotal = order.amount * calculatedPrice;
+      
+      if (order.side === 'buy') {
+        // Check if user has enough balance
+        if (calculatedTotal > accountInfo.balance) {
+          showNotification('Insufficient balance to execute order', 'error');
+          return false;
+        }
+        
+        // Update balance
+        setAccountInfo(prev => ({
+          ...prev,
+          balance: prev.balance - calculatedTotal,
+          marginUsed: prev.marginUsed + calculatedTotal * order.leverage,
+          freeMargin: prev.balance - (prev.marginUsed + calculatedTotal * order.leverage)
+        }));
+      } else {
+        // For sell orders, add to balance
+        setAccountInfo(prev => ({
+          ...prev,
+          balance: prev.balance + calculatedTotal
+        }));
+      }
+      
+      // Create filled order for history
+      const filledOrder = {
+        ...order,
+        status: 'filled',
+        filledPrice: calculatedPrice,
+        filledTime: new Date().toISOString()
+      };
+      
+      // Update order history
+      setOrderHistory(prev => [filledOrder, ...prev]);
+      
+      // Show success notification
+      showNotification(
+        `${order.side.toUpperCase()} order executed: ${order.amount} ${order.symbol} at ${formatPrice(calculatedPrice)}`,
+        'success'
+      );
+      
+      return true;
+    } catch (error) {
+      console.error('Error executing order:', error);
+      showNotification('Failed to execute order. Please try again.', 'error');
+      return false;
+    }
+  };
+  
+  // Handle order placement
+  const handlePlaceOrder = async () => {
+    // Validate inputs
+    if (orderForm.amount <= 0) {
+      showNotification('Please enter a valid amount', 'error');
+      return;
+    }
+    
+    if (orderType !== 'market' && orderForm.price <= 0) {
+      showNotification('Please enter a valid price', 'error');
+      return;
+    }
+    
+    if (orderType === 'stop_limit' && (!orderForm.stopPrice || orderForm.stopPrice <= 0)) {
+      showNotification('Please enter a valid stop price', 'error');
+      return;
+    }
+    
+    const calculatedTotal = orderForm.amount * (orderType === 'market' ? price : orderForm.price);
+    
+    if (orderSide === 'buy' && calculatedTotal > accountInfo.balance) {
+      showNotification('Insufficient balance', 'error');
+      return;
+    }
+    
+    try {
+      // Create order object
+      const newOrder = {
+        id: Date.now(),
+        symbol: symbol,
+        type: orderType,
+        side: orderSide,
+        price: orderType === 'market' ? price : orderForm.price,
+        stopPrice: orderForm.stopPrice || null,
+        limitPrice: orderForm.limitPrice || null,
+        amount: orderForm.amount,
+        total: calculatedTotal,
+        leverage: leverage,
+        status: orderType === 'market' ? 'filled' : 'open',
+        date: new Date().toISOString()
+      };
+      
+      // Submit order to service
+      const response = await tradingService.placeOrder(newOrder);
+      
+      if (response.success) {
+        if (orderType === 'market') {
+          // Execute market order immediately
+          executeOrder(newOrder);
+        } else {
+          // Add limit/stop order to open orders
+          setOpenOrders(prev => [...prev, newOrder]);
+          
+          // Show confirmation
+          showNotification(
+            `${orderSide.toUpperCase()} ${orderForm.amount} ${symbol} order placed successfully!`,
+            'success'
+          );
+        }
+        
+        // Reset form
+        setOrderForm({
+          ...orderForm,
+          amount: 0,
+          total: 0,
+          stopPrice: '',
+          limitPrice: ''
+        });
+      } else {
+        showNotification('Failed to place order. Please try again.', 'error');
+      }
+    } catch (error) {
+      console.error('Error placing order:', error);
+      showNotification('Error placing order: ' + error.message, 'error');
+    }
+  };
+  
+  // Cancel an open order
+  const cancelOrder = async (orderId) => {
+    try {
+      const response = await tradingService.cancelOrder(orderId);
+      
+      if (response.success) {
+        // Find the order that was canceled
+        const canceledOrder = openOrders.find(order => order.id === orderId);
+        
+        // Remove from open orders
+        setOpenOrders(prev => prev.filter(order => order.id !== orderId));
+        
+        // Add to order history with canceled status
+        if (canceledOrder) {
+          setOrderHistory(prev => [{
+            ...canceledOrder,
+            status: 'canceled',
+            cancelTime: new Date().toISOString()
+          }, ...prev]);
+          
+          showNotification('Order canceled successfully', 'success');
+        }
+      } else {
+        showNotification('Failed to cancel order', 'error');
+      }
+    } catch (error) {
+      console.error('Error canceling order:', error);
+      showNotification('Error canceling order: ' + error.message, 'error');
+    }
+  };
+  
+  // Handle tab changes
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
+  };
+  
+  // Handle symbol selection
+  const handleSymbolChange = (event) => {
+    setSymbol(event.target.value);
+  };
+  
+  // Handle timeframe changes
+  const handleTimeframeChange = (tf) => {
+    setTimeframe(tf);
+  };
+  
+  // Handle order type changes
+  const handleOrderTypeChange = (type) => {
+    setOrderType(type);
+  };
+  
+  // Handle order side changes
+  const handleOrderSideChange = (side) => {
+    setOrderSide(side);
+  };
+  
+  // Handle indicator toggle
+  const handleToggleIndicator = (indicator) => {
+    setIndicators(prev => ({
+      ...prev,
+      [indicator]: {
+        ...prev[indicator],
+        visible: !prev[indicator].visible
+      }
+    }));
+    
+    // Update chart based on which indicator was toggled
+    if (indicator === 'ma') {
+      if (indicators.ma.visible) {
+        // Hide MAs
+        if (sma20SeriesRef.current) sma20SeriesRef.current.applyOptions({ visible: false });
+        if (sma50SeriesRef.current) sma50SeriesRef.current.applyOptions({ visible: false });
+        if (sma200SeriesRef.current) sma200SeriesRef.current.applyOptions({ visible: false });
+      } else {
+        // Show MAs
+        if (sma20SeriesRef.current) sma20SeriesRef.current.applyOptions({ visible: true });
+        if (sma50SeriesRef.current) sma50SeriesRef.current.applyOptions({ visible: true });
+        if (sma200SeriesRef.current) sma200SeriesRef.current.applyOptions({ visible: true });
+      }
+    } else if (indicator === 'volume') {
+      if (volumeSeriesRef.current) {
+        volumeSeriesRef.current.applyOptions({ visible: !indicators.volume.visible });
+      }
+    } else if (indicator === 'supportResistance') {
+      updateSupportResistanceLevels();
+    }
+  };
+  
+  // Handle chart type changes
+  const handleChartTypeChange = (type) => {
+    setChartType(type);
+    
+    if (candleSeriesRef.current && chartRef.current) {
+      if (type === 'line') {
+        // Switch to line chart
+        candleSeriesRef.current.applyOptions({
+          visible: false
+        });
+        
+        // Create line series if it doesn't exist
+        if (!lineSeriesRef.current) {
+          lineSeriesRef.current = chartRef.current.addLineSeries({
+            color: '#2196F3',
+            lineWidth: 2,
+            crosshairMarkerVisible: true,
+            lastValueVisible: true,
+            priceLineVisible: true,
+          });
+          
+          // Convert candle data to line data
+          const lineData = priceHistory.map(candle => ({
+            time: new Date(candle.timestamp).getTime() / 1000,
+            value: candle.close
+          }));
+          
+          lineSeriesRef.current.setData(lineData);
+        } else {
+          lineSeriesRef.current.applyOptions({ visible: true });
+        }
+      } else {
+        // Switch to candle chart
+        if (lineSeriesRef.current) {
+          lineSeriesRef.current.applyOptions({ visible: false });
+        }
+        candleSeriesRef.current.applyOptions({ visible: true });
+      }
+    }
+  };
+  
+  // Handle amount percentage buttons
   const handleAmountPercentage = (percent) => {
     if (orderSide === 'buy') {
       // Calculate amount based on available balance
-      const maxTotal = balance * (percent / 100);
-      const newAmount = orderForm.price > 0 ? maxTotal / orderForm.price : 0;
+      const maxTotal = accountInfo.balance * (percent / 100);
+      const currentPrice = orderType === 'market' ? price : orderForm.price;
+      const newAmount = currentPrice > 0 ? maxTotal / currentPrice : 0;
       
       setOrderForm({
         ...orderForm,
@@ -572,19 +859,20 @@ const ShortTermTrading = () => {
       });
     } else {
       // For sell orders, this would use available token balance
-      // For the demo, we'll just use a simulated balance of 1 BTC
+      // For the demo, we'll just use a simulated balance of 1 lot
       const availableTokens = 1;
       const newAmount = availableTokens * (percent / 100);
+      const currentPrice = orderType === 'market' ? price : orderForm.price;
       
       setOrderForm({
         ...orderForm,
         amount: newAmount,
-        total: newAmount * orderForm.price
+        total: newAmount * currentPrice
       });
     }
   };
   
-  // Add the missing handler functions
+  // Handle price change in form
   const handlePriceChange = (e) => {
     const newPrice = parseFloat(e.target.value) || 0;
     setOrderForm({
@@ -594,6 +882,7 @@ const ShortTermTrading = () => {
     });
   };
 
+  // Handle amount change in form
   const handleAmountChange = (e) => {
     const newAmount = parseFloat(e.target.value) || 0;
     const currentPrice = orderType === 'market' ? price : orderForm.price;
@@ -604,6 +893,7 @@ const ShortTermTrading = () => {
     });
   };
 
+  // Handle total change in form
   const handleTotalChange = (e) => {
     const newTotal = parseFloat(e.target.value) || 0;
     const currentPrice = orderType === 'market' ? price : orderForm.price;
@@ -614,27 +904,86 @@ const ShortTermTrading = () => {
     });
   };
   
-  // Update the JSX for percentage buttons to use the handler
-  const percentageButtonsJsx = (
-    <Box sx={{ display: 'flex', gap: 0.5, mt: 1 }}>
-      {[25, 50, 75, 100].map((percent) => (
-        <Button
-          key={percent}
-          size="small"
-          variant="outlined"
-          sx={{
-            flexGrow: 1,
-            color: colors.secondaryText,
-            borderColor: colors.borderColor,
-            '&:hover': { borderColor: colors.accentYellow, bgcolor: 'transparent' }
-          }}
-          onClick={() => handleAmountPercentage(percent)}
-        >
-          {percent}%
-        </Button>
-      ))}
-    </Box>
-  );
+  // Handle stop price change
+  const handleStopPriceChange = (e) => {
+    const newStopPrice = parseFloat(e.target.value) || 0;
+    setOrderForm({
+      ...orderForm,
+      stopPrice: newStopPrice
+    });
+  };
+  
+  // Handle limit price change
+  const handleLimitPriceChange = (e) => {
+    const newLimitPrice = parseFloat(e.target.value) || 0;
+    setOrderForm({
+      ...orderForm,
+      limitPrice: newLimitPrice
+    });
+  };
+  
+  // Handle leverage change
+  const handleLeverageChange = (event, newValue) => {
+    setLeverage(newValue);
+    
+    // Set leverage warning for high values
+    setShowLeverageWarning(newValue > 5);
+    
+    setOrderForm(prev => ({
+      ...prev,
+      leverage: newValue
+    }));
+  };
+  
+  // Show notification
+  const showNotification = (message, severity = 'info') => {
+    setNotification({
+      open: true,
+      message,
+      severity
+    });
+  };
+  
+  // Close notification
+  const handleCloseNotification = () => {
+    setNotification({
+      ...notification,
+      open: false
+    });
+  };
+  
+  // Refresh data
+  const handleRefreshData = () => {
+    // Refetch all data for the current symbol
+    const fetchData = async () => {
+      setDataLoading(true);
+      try {
+        // Fetch market data
+        const marketData = await tradingService.getMarketData(symbol);
+        setPrice(marketData.current_price);
+        setPriceChange(marketData.change_percentage);
+        
+        // Fetch historical data
+        const historicalData = await tradingService.getHistoricalData(symbol, timeframe);
+        setPriceHistory(historicalData);
+        
+        // Update chart
+        if (candleSeriesRef.current) {
+          updateChartData(historicalData);
+        }
+        
+        // Show success notification
+        showNotification('Data refreshed successfully', 'success');
+      } catch (error) {
+        console.error('Error refreshing data:', error);
+        showNotification('Error refreshing data', 'error');
+      } finally {
+        setDataLoading(false);
+      }
+    };
+    
+    fetchData();
+  };
   
   // Format price with appropriate decimal places for forex
   const formatPrice = (value) => {
@@ -646,133 +995,6 @@ const ShortTermTrading = () => {
     } else {
       return value.toFixed(4); // Most forex pairs show 4 decimal places
     }
-  };
-  
-  // Render order history for forex
-  const renderOrderHistory = () => {
-    if (orderHistory.length === 0) {
-      return (
-        <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '200px' }}>
-          <Typography sx={{ color: colors.secondaryText }}>No order history</Typography>
-        </Box>
-      );
-    }
-    
-    return (
-      <TableContainer component={Box} sx={{ maxHeight: 200, overflow: 'auto' }}>
-        <Table size="small" sx={{ '& td, & th': { borderColor: 'transparent', py: 0.5 } }}>
-          <TableHead>
-            <TableRow sx={{ '& th': { color: colors.secondaryText, fontWeight: 500 } }}>
-              <TableCell>Date</TableCell>
-              <TableCell>Pair</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell>Side</TableCell>
-              <TableCell align="right">Price</TableCell>
-              <TableCell align="right">Amount</TableCell>
-              <TableCell>Status</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {orderHistory.map((order) => (
-              <TableRow key={order.id}>
-                <TableCell sx={{ color: colors.secondaryText }}>
-                  {new Date(order.date).toLocaleTimeString()}
-                </TableCell>
-                <TableCell sx={{ color: colors.primaryText }}>{order.symbol}</TableCell>
-                <TableCell sx={{ color: colors.secondaryText }}>{order.type}</TableCell>
-                <TableCell sx={{ 
-                  color: order.side === 'buy' ? colors.buyGreen : colors.sellRed 
-                }}>
-                  {order.side.toUpperCase()}
-                </TableCell>
-                <TableCell align="right" sx={{ color: colors.primaryText }}>
-                  {formatPrice(order.price)}
-                </TableCell>
-                <TableCell align="right" sx={{ color: colors.primaryText }}>
-                  {order.amount.toFixed(2)}
-                </TableCell>
-                <TableCell>
-                  <Chip 
-                    size="small" 
-                    label={order.status}
-                    sx={{ 
-                      bgcolor: order.status === 'filled' 
-                        ? 'rgba(14, 203, 129, 0.2)' 
-                        : 'rgba(240, 185, 11, 0.2)',
-                      color: order.status === 'filled' 
-                        ? colors.buyGreen 
-                        : colors.accentYellow,
-                      height: 20,
-                      fontSize: 10
-                    }} 
-                  />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    );
-  };
-  
-  // Render open orders for forex
-  const renderOpenOrders = () => {
-    if (openOrders.length === 0) {
-      return (
-        <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '200px' }}>
-          <Typography sx={{ color: colors.secondaryText }}>No open orders</Typography>
-        </Box>
-      );
-    }
-    
-    return (
-      <TableContainer component={Box} sx={{ maxHeight: 200, overflow: 'auto' }}>
-        <Table size="small" sx={{ '& td, & th': { borderColor: 'transparent', py: 0.5 } }}>
-          <TableHead>
-            <TableRow sx={{ '& th': { color: colors.secondaryText, fontWeight: 500 } }}>
-              <TableCell>Date</TableCell>
-              <TableCell>Pair</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell>Side</TableCell>
-              <TableCell align="right">Price</TableCell>
-              <TableCell align="right">Amount</TableCell>
-              <TableCell>Action</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {openOrders.map((order) => (
-              <TableRow key={order.id}>
-                <TableCell sx={{ color: colors.secondaryText }}>
-                  {new Date(order.date).toLocaleTimeString()}
-                </TableCell>
-                <TableCell sx={{ color: colors.primaryText }}>{order.symbol}</TableCell>
-                <TableCell sx={{ color: colors.secondaryText }}>{order.type}</TableCell>
-                <TableCell sx={{ 
-                  color: order.side === 'buy' ? colors.buyGreen : colors.sellRed 
-                }}>
-                  {order.side.toUpperCase()}
-                </TableCell>
-                <TableCell align="right" sx={{ color: colors.primaryText }}>
-                  {formatPrice(order.price)}
-                </TableCell>
-                <TableCell align="right" sx={{ color: colors.primaryText }}>
-                  {order.amount.toFixed(2)}
-                </TableCell>
-                <TableCell>
-                  <IconButton 
-                    size="small" 
-                    onClick={() => cancelOrder(order.id)}
-                    sx={{ color: colors.sellRed }}
-                  >
-                    <CloseIcon fontSize="small" />
-                  </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    );
   };
   
   return (
@@ -1122,7 +1344,7 @@ const ShortTermTrading = () => {
                   Available Balance:
                 </Typography>
                 <Typography variant="body2" sx={{ color: colors.primaryText }}>
-                  {balance.toFixed(2)} USDT
+                  {accountInfo.balance.toFixed(2)} USDT
                 </Typography>
               </Box>
             </Box>
