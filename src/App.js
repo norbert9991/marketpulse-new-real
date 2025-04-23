@@ -8,7 +8,6 @@ import UserManagement from './Admin/UserManagement';
 import TransactionPage from './Admin/TransactionPage';
 import ReportPage from './Admin/ReportPage';
 import Trade from './User/trade';
-import ShortTermTrading from './User/ShortTermTrading';
 import Market from './User/market';
 import ForexNews from './User/ForexNews';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -107,14 +106,6 @@ function App() {
             element={
               <ProtectedRoute>
                 <Trade />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/short-term-trading" 
-            element={
-              <ProtectedRoute>
-                <ShortTermTrading />
               </ProtectedRoute>
             } 
           />

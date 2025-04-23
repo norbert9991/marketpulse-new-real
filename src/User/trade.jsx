@@ -12,7 +12,6 @@ import BarChartIcon from '@mui/icons-material/BarChart';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
 import CandlestickChartIcon from '@mui/icons-material/CandlestickChart';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import { useNavigate } from 'react-router-dom';
 
 // Forex Trading Color Palette
 const colors = {
@@ -35,8 +34,6 @@ const colors = {
 };
 
 const Trade = () => {
-  const navigate = useNavigate();
-  
   // Chart references
   const chartContainerRef = useRef(null);
   const chartRef = useRef(null);
@@ -1246,11 +1243,6 @@ const Trade = () => {
     setStep(3);
   };
 
-  // Function to redirect to short-term trading page
-  const goToShortTermTrading = () => {
-    navigate('/short-term-trading');
-  };
-
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: colors.darkBg }}>
       <Sidebar />
@@ -1548,114 +1540,131 @@ const Trade = () => {
         )}
         
         {step === 2 && (
-          <Grid container spacing={3} sx={{ mt: 2 }}>
-            <Grid item xs={12}>
-              <Typography variant="h5" sx={{ color: colors.primaryText, mb: 2 }}>
-                Choose Trading Type
-              </Typography>
-            </Grid>
-            
-            <Grid item xs={12} sm={6}>
-              <Paper
-                elevation={3}
-                onClick={() => {
-                  setTradingType('short-term');
-                  goToShortTermTrading(); // Redirect to short-term trading page
-                }}
-                sx={{
-                  p: 3,
-                  height: '100%',
-                  cursor: 'pointer',
-                  backgroundColor: colors.cardBg,
-                  border: `1px solid ${tradingType === 'short-term' ? colors.accentBlue : colors.borderColor}`,
-                  borderRadius: '12px',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    backgroundColor: colors.hoverBg,
-                    transform: 'translateY(-5px)',
-                    boxShadow: '0 8px 16px rgba(0, 0, 0, 0.2)',
-                  },
+          <Box sx={{ maxWidth: '800px', mx: 'auto', mt: 5 }}>
+            <Paper 
+                  sx={{
+                p: 4, 
+                backgroundColor: colors.cardBg,
+                border: `1px solid ${colors.borderColor}`,
+                borderRadius: '16px',
+                boxShadow: `0 12px 24px ${colors.shadowColor}`,
+                mb: 4
+              }}
+            >
+              <Typography 
+                variant="h4" 
+                  sx={{
+                      color: colors.primaryText,
+                  fontWeight: 'bold',
+                  mb: 1,
+                  textAlign: 'center'
                 }}
               >
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <ShowChartIcon sx={{ fontSize: 60, color: colors.accentBlue, mb: 2 }} />
-                  <Typography variant="h6" sx={{ color: colors.primaryText, mb: 1, textAlign: 'center' }}>
-                    Short-Term Trading
-                  </Typography>
-                  <Typography sx={{ color: colors.secondaryText, textAlign: 'center' }}>
-                    Quick trades with rapid price movements. Ideal for day trading and scalping strategies.
-                  </Typography>
-                  <Button 
-                    variant="contained" 
-                    onClick={(e) => {
-                      e.stopPropagation(); // Prevent the paper click from triggering
-                      goToShortTermTrading();
+                Select Trading Type
+              </Typography>
+              
+              <Typography 
+                variant="body1" 
+                    sx={{ 
+                  color: colors.secondaryText,
+                  mb: 4,
+                  textAlign: 'center'
+                }}
+              >
+                Choose how you want to trade
+              </Typography>
+              
+              <Grid container spacing={3} justifyContent="center">
+                <Grid item xs={12} sm={6}>
+                  <Paper 
+                    onClick={() => {
+                      setTradingType('short-term');
+                      setStep(3);
                     }}
                     sx={{ 
-                      mt: 2, 
-                      backgroundColor: colors.accentBlue,
-                      '&:hover': {
-                        backgroundColor: '#1976d2'
+                      p: 3, 
+                          backgroundColor: colors.panelBg,
+                      border: `1px solid ${tradingType === 'short-term' ? colors.accentBlue : colors.borderColor}`,
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      transition: 'transform 0.2s, box-shadow 0.2s',
+                    '&:hover': {
+                        transform: 'translateY(-5px)',
+                        boxShadow: `0 8px 16px ${colors.shadowColor}`,
                       }
                     }}
                   >
-                    Start Trading
-                  </Button>
-                </Box>
-              </Paper>
-            </Grid>
-            
-            <Grid item xs={12} sm={6}>
-              <Paper
-                elevation={3}
-                onClick={() => {
-                  setTradingType('long-term');
-                  setStep(3);
-                }}
-                sx={{
-                  p: 3,
-                  height: '100%',
-                  cursor: 'pointer',
-                  backgroundColor: colors.cardBg,
-                  border: `1px solid ${tradingType === 'long-term' ? colors.accentBlue : colors.borderColor}`,
-                  borderRadius: '12px',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    backgroundColor: colors.hoverBg,
-                    transform: 'translateY(-5px)',
-                    boxShadow: '0 8px 16px rgba(0, 0, 0, 0.2)',
-                  },
-                }}
-              >
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <CandlestickChartIcon sx={{ fontSize: 60, color: colors.warningOrange, mb: 2 }} />
-                  <Typography variant="h6" sx={{ color: colors.primaryText, mb: 1, textAlign: 'center' }}>
-                    Long-Term Investing
-                  </Typography>
-                  <Typography sx={{ color: colors.secondaryText, textAlign: 'center' }}>
-                    Position trading with longer timeframes. Focus on fundamental analysis and major trends.
-                  </Typography>
-                  <Button 
-                    variant="contained" 
-                    onClick={(e) => {
-                      e.stopPropagation(); // Prevent the paper click from triggering
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                      <ShowChartIcon 
+                        sx={{ 
+                          fontSize: 60, 
+                          color: colors.accentBlue
+                        }} 
+                      />
+              </Box>
+                    <Typography 
+                      variant="h5" 
+                      sx={{ 
+                            color: colors.primaryText,
+                        fontWeight: 'bold',
+                        mb: 2,
+                        textAlign: 'center'
+                      }}
+                    >
+                      Short-Term Trading
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: colors.secondaryText, textAlign: 'center' }}>
+                      Trade actively with direct control over entries and exits. Suitable for day trading and scalping.
+                    </Typography>
+                  </Paper>
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <Paper 
+                    onClick={() => {
                       setTradingType('long-term');
                       setStep(3);
                     }}
                     sx={{ 
-                      mt: 2, 
-                      backgroundColor: colors.warningOrange,
-                      '&:hover': {
-                        backgroundColor: '#f57c00'
+                      p: 3, 
+                      backgroundColor: colors.panelBg,
+                      border: `1px solid ${tradingType === 'long-term' ? colors.accentBlue : colors.borderColor}`,
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      transition: 'transform 0.2s, box-shadow 0.2s',
+                            '&:hover': {
+                        transform: 'translateY(-5px)',
+                        boxShadow: `0 8px 16px ${colors.shadowColor}`,
                       }
                     }}
                   >
-                    Start Investing
-                  </Button>
-                </Box>
-              </Paper>
-            </Grid>
-          </Grid>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                      <BarChartIcon 
+                        sx={{ 
+                          fontSize: 60, 
+                          color: colors.accentBlue
+                        }} 
+                      />
+              </Box>
+                    <Typography 
+                      variant="h5" 
+                    sx={{ 
+                      color: colors.primaryText,
+                        fontWeight: 'bold',
+                        mb: 2,
+                        textAlign: 'center'
+                      }}
+                    >
+                      Long-Term Strategy
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: colors.secondaryText, textAlign: 'center' }}>
+                      Allocate funds to proven trading strategies. Ideal for passive investing with algorithmic trading.
+                    </Typography>
+                  </Paper>
+                </Grid>
+              </Grid>
+            </Paper>
+          </Box>
         )}
         {step === 4 && tradingType === 'long-term' && simulationResults && (
           <Box sx={{ maxWidth: '1600px', mx: 'auto', mt: 5 }}>
