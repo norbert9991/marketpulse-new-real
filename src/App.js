@@ -13,7 +13,6 @@ import ForexNews from './User/ForexNews';
 import ProtectedRoute from './components/ProtectedRoute';
 import Settings from './User/settings';
 import AdminSettings from './Admin/adminsettings';
-import { ToastProvider } from './User/ToastContext';
 
 // Create a custom theme
 const theme = createTheme({
@@ -45,99 +44,97 @@ const theme = createTheme({
 function App() {
   return (
     <ThemeProvider theme={theme}>
-      <ToastProvider>
-        <CssBaseline /> {/* Normalize CSS and apply baseline styles */}
-        <Router>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/home" element={<Home />} />
-            
-            {/* Admin Routes */}
-            <Route 
-              path="/admin-dashboard" 
-              element={
-                <ProtectedRoute requiredRole="admin">
-                  <AdminDashboard />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/UserManagement" 
-              element={
-                <ProtectedRoute requiredRole="admin">
-                  <UserManagement />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/TransactionPage" 
-              element={
-                <ProtectedRoute requiredRole="admin">
-                  <TransactionPage />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/ReportPage" 
-              element={
-                <ProtectedRoute requiredRole="admin">
-                  <ReportPage />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/adminsettings" 
-              element={
-                <ProtectedRoute requiredRole="admin">
-                  <AdminSettings />
-                </ProtectedRoute>
-              }
-            />
-            
-            {/* User Routes */}
-            <Route 
-              path="/user-dashboard" 
-              element={
-                <ProtectedRoute>
-                  <UserDashboard />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/trade" 
-              element={
-                <ProtectedRoute>
-                  <Trade />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/market" 
-              element={
-                <ProtectedRoute>
-                  <Market />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/forex-news" 
-              element={
-                <ProtectedRoute>
-                  <ForexNews />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/settings" 
-              element={
-                <ProtectedRoute>
-                  <Settings />
-                </ProtectedRoute>
-              } 
-            />
-          </Routes>
-        </Router>
-      </ToastProvider>
+      <CssBaseline /> {/* Normalize CSS and apply baseline styles */}
+      <Router>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/home" element={<Home />} />
+          
+          {/* Admin Routes */}
+          <Route 
+            path="/admin-dashboard" 
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/UserManagement" 
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <UserManagement />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/TransactionPage" 
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <TransactionPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/ReportPage" 
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <ReportPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/adminsettings" 
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminSettings />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* User Routes */}
+          <Route 
+            path="/user-dashboard" 
+            element={
+              <ProtectedRoute>
+                <UserDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/trade" 
+            element={
+              <ProtectedRoute>
+                <Trade />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/market" 
+            element={
+              <ProtectedRoute>
+                <Market />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/forex-news" 
+            element={
+              <ProtectedRoute>
+                <ForexNews />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/settings" 
+            element={
+              <ProtectedRoute>
+                <Settings />
+              </ProtectedRoute>
+            } 
+          />
+        </Routes>
+      </Router>
     </ThemeProvider>
   );
 }
