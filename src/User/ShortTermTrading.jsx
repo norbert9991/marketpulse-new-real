@@ -94,6 +94,132 @@ const ShortTermTrading = () => {
     { value: 'USDCHF', label: 'USD/CHF' }
   ];
 
+  // Load open orders from the API
+  const loadOpenOrders = async () => {
+    if (!sessionId) return;
+    
+    try {
+      setLoading(true);
+      const response = await API.simulation.getOpenOrders(sessionId);
+      
+      if (response.data && response.data.orders) {
+        setOpenOrders(response.data.orders);
+      }
+    } catch (error) {
+      console.error("Error loading open orders:", error);
+      setError("Failed to load open orders: " + (error.response?.data?.error || error.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Load order history from the API
+  const loadOrderHistory = async () => {
+    if (!sessionId) return;
+    
+    try {
+      setLoading(true);
+      const response = await API.simulation.getOrderHistory(sessionId);
+      
+      if (response.data && response.data.orders) {
+        setOrderHistory(response.data.orders);
+      }
+    } catch (error) {
+      console.error("Error loading order history:", error);
+      setError("Failed to load order history: " + (error.response?.data?.error || error.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Load trade history from the API
+  const loadTradeHistory = async () => {
+    if (!sessionId) return;
+    
+    try {
+      setLoading(true);
+      const response = await API.simulation.getTradeHistory(sessionId);
+      
+      if (response.data && response.data.trades) {
+        setTradeHistory(response.data.trades);
+      }
+    } catch (error) {
+      console.error("Error loading trade history:", error);
+      setError("Failed to load trade history: " + (error.response?.data?.error || error.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initialize trading session
+  useEffect(() => {
+    const initSession = async () => {
+      try {
+        setSessionLoading(true);
+        
+        // Try to get an active session first
+        const activeSessionResponse = await API.simulation.getActiveSession();
+        
+        if (activeSessionResponse.data && activeSessionResponse.data.session) {
+          // Use existing session
+          const session = activeSessionResponse.data.session;
+          setSessionId(session.id || session.session_id);
+          setBalance(session.current_balance || 10000);
+          setInitialBalance(session.initial_balance || 10000);
+          
+          // Load session data
+          loadOpenOrders();
+          loadOrderHistory();
+          loadTradeHistory();
+        } else {
+          // Create a new session
+          const sessionResponse = await API.simulation.createSession({
+            amount: 10000,
+            trading_type: 'short-term'
+          });
+          
+          if (sessionResponse.data && sessionResponse.data.session) {
+            const newSession = sessionResponse.data.session;
+            setSessionId(newSession.id || newSession.session_id);
+            setBalance(newSession.current_balance || 10000);
+            setInitialBalance(newSession.initial_balance || 10000);
+          } else {
+            setError("Failed to create a trading session");
+          }
+        }
+        
+        // Initialize market data
+        const marketResponse = await API.market.analyze({ symbol: `${selectedPair}=X` });
+        if (marketResponse.data) {
+          setMarketData({
+            current_price: marketResponse.data.current_price || 0,
+            change_percentage: marketResponse.data.change_percentage || 0,
+            trend: marketResponse.data.trend || 'Neutral'
+          });
+          
+          // Set initial price data
+          const spread = 0.0002; // 2 pips
+          const price = marketResponse.data.current_price || 0;
+          setCurrentPrice({
+            bid: price - spread / 2,
+            ask: price + spread / 2
+          });
+          
+          // Set initial limit prices
+          setStopPrice(price);
+          setLimitPrice(price);
+        }
+      } catch (error) {
+        console.error("Error initializing session:", error);
+        setError("Failed to initialize trading session: " + (error.response?.data?.error || error.message));
+      } finally {
+        setSessionLoading(false);
+      }
+    };
+    
+    initSession();
+  }, [selectedPair]); // Re-run when selected pair changes
+
   // Handle tab changes
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);

@@ -58,6 +58,7 @@ const Trade = () => {
   const [trades, setTrades] = useState([]);
   const [simulationAmount, setSimulationAmount] = useState(10000);
   const [tradingType, setTradingType] = useState('short-term');
+  const [activeView, setActiveView] = useState('overview');
   const [step, setStep] = useState(1); // 1: Set amount, 2: Choose type, 3: Trading interface
 
   // Additional state for enhanced trading features
