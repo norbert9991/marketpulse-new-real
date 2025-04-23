@@ -12,6 +12,7 @@ import BarChartIcon from '@mui/icons-material/BarChart';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
 import CandlestickChartIcon from '@mui/icons-material/CandlestickChart';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import { useNavigate } from 'react-router-dom';
 
 // Forex Trading Color Palette
 const colors = {
@@ -34,6 +35,9 @@ const colors = {
 };
 
 const Trade = () => {
+  // Add useNavigate hook
+  const navigate = useNavigate();
+  
   // Chart references
   const chartContainerRef = useRef(null);
   const chartRef = useRef(null);
@@ -1578,8 +1582,8 @@ const Trade = () => {
                 <Grid item xs={12} sm={6}>
                   <Paper 
                     onClick={() => {
-                      setTradingType('short-term');
-                      setStep(3);
+                      // Redirect to ShortTermTrading component instead of setting step to 3
+                      navigate('/short-term-trading');
                     }}
                     sx={{ 
                       p: 3, 
