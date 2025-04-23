@@ -97,6 +97,7 @@ const ShortTermTrading = () => {
   const sma200SeriesRef = useRef(null);
   const supportLevelsRef = useRef([]);
   const resistanceLevelsRef = useRef([]);
+  const lineSeriesRef = useRef(null);
   
   // User and account state
   const [user, setUser] = useState(null);
@@ -746,9 +747,23 @@ const ShortTermTrading = () => {
     }
   };
   
-  // Handle tab changes
-  const handleTabChange = (event, newValue) => {
+  // Handle tab changes for the pair tabs
+  const handlePairTabChange = (event, newValue) => {
     setTabValue(newValue);
+    // Set the symbol based on selected tab
+    if (forexPairs[newValue]) {
+      setSymbol(forexPairs[newValue].symbol);
+    }
+  };
+
+  // Handle tab changes for order type tabs
+  const handleOrderTabChange = (event, newValue) => {
+    setTabValue(newValue);
+    // Set order type based on selected tab
+    const orderTypes = ['limit', 'market', 'stop_limit'];
+    if (orderTypes[newValue]) {
+      setOrderType(orderTypes[newValue]);
+    }
   };
   
   // Handle symbol selection
@@ -995,6 +1010,89 @@ const ShortTermTrading = () => {
     } else {
       return value.toFixed(4); // Most forex pairs show 4 decimal places
     }
+  };
+  
+  // Percentage buttons JSX
+  const percentageButtonsJsx = (
+    <Grid container spacing={1} sx={{ mt: 1 }}>
+      {[25, 50, 75, 100].map((percent) => (
+        <Grid item xs={3} key={percent}>
+          <Button
+            size="small"
+            fullWidth
+            variant="outlined"
+            onClick={() => handleAmountPercentage(percent)}
+            sx={{
+              color: colors.secondaryText,
+              borderColor: colors.borderColor,
+              '&:hover': {
+                borderColor: colors.accentYellow,
+                bgcolor: 'transparent'
+              }
+            }}
+          >
+            {percent}%
+          </Button>
+        </Grid>
+      ))}
+    </Grid>
+  );
+  
+  // Render open orders
+  const renderOpenOrders = () => {
+    if (openOrders.length === 0) {
+      return (
+        <Box sx={{ p: 2, textAlign: 'center', color: colors.secondaryText }}>
+          <Typography variant="body2">No open orders</Typography>
+        </Box>
+      );
+    }
+    
+    return (
+      <Box sx={{ maxHeight: '200px', overflow: 'auto' }}>
+        <TableContainer component={Paper} sx={{ boxShadow: 'none', bgcolor: 'transparent' }}>
+          <Table size="small" sx={{ '& td, & th': { borderColor: colors.borderColor, py: 1 } }}>
+            <TableHead>
+              <TableRow sx={{ '& th': { color: colors.secondaryText, fontWeight: 500 } }}>
+                <TableCell>Pair</TableCell>
+                <TableCell>Type</TableCell>
+                <TableCell>Price</TableCell>
+                <TableCell>Amount</TableCell>
+                <TableCell align="right">Action</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {openOrders.map((order) => (
+                <TableRow key={order.id}>
+                  <TableCell sx={{ color: colors.primaryText }}>{order.symbol}</TableCell>
+                  <TableCell>
+                    <Chip 
+                      size="small" 
+                      label={order.type}
+                      sx={{ 
+                        bgcolor: colors.cardBg, 
+                        color: order.side === 'buy' ? colors.buyGreen : colors.sellRed
+                      }} 
+                    />
+                  </TableCell>
+                  <TableCell sx={{ color: colors.primaryText }}>{formatPrice(order.price)}</TableCell>
+                  <TableCell sx={{ color: colors.primaryText }}>{order.amount}</TableCell>
+                  <TableCell align="right">
+                    <IconButton 
+                      size="small" 
+                      sx={{ color: colors.sellRed }}
+                      onClick={() => cancelOrder(order.id)}
+                    >
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Box>
+    );
   };
   
   return (
