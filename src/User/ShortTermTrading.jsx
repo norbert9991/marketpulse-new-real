@@ -407,16 +407,16 @@ const ShortTermTrading = () => {
     let dataPoints = 200;
     let interval = 24 * 60 * 60; // 1 day in seconds
     
-    if (timeframe === '1h') {
+    if (selectedTimeframe === '1h') {
       dataPoints = 60;
       interval = 60 * 60; // 1 hour in seconds
-    } else if (timeframe === '4h') {
+    } else if (selectedTimeframe === '4h') {
       dataPoints = 60;
       interval = 4 * 60 * 60; // 4 hours in seconds
-    } else if (timeframe === '1d') {
+    } else if (selectedTimeframe === '1d') {
       dataPoints = 60;
       interval = 24 * 60 * 60; // 1 day in seconds
-    } else if (timeframe === '1w') {
+    } else if (selectedTimeframe === '1w') {
       dataPoints = 52;
       interval = 7 * 24 * 60 * 60; // 1 week in seconds
     }
