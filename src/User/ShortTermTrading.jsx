@@ -63,6 +63,20 @@ const colors = {
   accentBlue: '#4782DA'
 };
 
+// Currency pair base price mappings for realistic values
+const currencyBasePrices = {
+  'EUR/USD': 1.0850,
+  'GBP/USD': 1.2650,
+  'USD/JPY': 145.80,
+  'AUD/USD': 0.6750,
+  'USD/CAD': 1.3570,
+  'NZD/USD': 0.6150,
+  'USD/CHF': 0.8950,
+  'EUR/GBP': 0.8550,
+  'EUR/JPY': 158.20,
+  'GBP/JPY': 184.40
+};
+
 const ShortTermTrading = () => {
   // Chart references
   const chartContainerRef = useRef(null);
@@ -70,37 +84,35 @@ const ShortTermTrading = () => {
   const candleSeriesRef = useRef(null);
   
   // Trading state
-  const [symbol, setSymbol] = useState('BTC/USDT');
-  const [price, setPrice] = useState(19965.74);
+  const [symbol, setSymbol] = useState('EUR/USD');
+  const [price, setPrice] = useState(currencyBasePrices['EUR/USD'] || 1.0850);
+  const [priceChange, setPriceChange] = useState(0.12);
   const [priceHistory, setPriceHistory] = useState([]);
+  const [timeframe, setTimeframe] = useState('1h');
   const [orderType, setOrderType] = useState('limit');
   const [orderSide, setOrderSide] = useState('buy');
-  const [amount, setAmount] = useState(1000);
-  const [limitPrice, setLimitPrice] = useState(19965.74);
   const [orderHistory, setOrderHistory] = useState([]);
   const [openOrders, setOpenOrders] = useState([]);
   const [balance, setBalance] = useState(10000);
-  const [activePairTab, setActivePairTab] = useState(0);
-  const [activeOrderTab, setActiveOrderTab] = useState(0);
-  const [chartTimeframe, setChartTimeframe] = useState('1h');
-  const [isLoading, setIsLoading] = useState(false);
+  const [tabValue, setTabValue] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
   const [orderForm, setOrderForm] = useState({
-    price: 19965.74,
-    amount: 0.05,
-    total: 998.29,
+    price: currencyBasePrices['EUR/USD'] || 1.0850,
+    amount: 0.1,
+    total: (currencyBasePrices['EUR/USD'] || 1.0850) * 0.1,
     stopPrice: '',
     limitPrice: ''
   });
   
-  // Popular trading pairs
-  const tradingPairs = [
-    { symbol: 'BTC/USDT', price: 19965.74, change: -0.48 },
-    { symbol: 'ETH/USDT', price: 1348.56, change: -2.15 },
-    { symbol: 'BNB/USDT', price: 276.5, change: -0.25 },
-    { symbol: 'SOL/USDT', price: 31.51, change: 0.76 },
-    { symbol: 'XRP/USDT', price: 0.4813, change: 0.59 },
-    { symbol: 'ADA/USDT', price: 0.4342, change: -0.97 },
-    { symbol: 'DOGE/USDT', price: 0.05987, change: -0.27 }
+  // Popular forex pairs
+  const forexPairs = [
+    { symbol: 'EUR/USD', price: 1.0850, change: 0.12 },
+    { symbol: 'GBP/USD', price: 1.2650, change: -0.25 },
+    { symbol: 'USD/JPY', price: 145.80, change: 0.33 },
+    { symbol: 'AUD/USD', price: 0.6750, change: -0.48 },
+    { symbol: 'USD/CAD', price: 1.3570, change: 0.10 },
+    { symbol: 'NZD/USD', price: 0.6150, change: -0.15 },
+    { symbol: 'USD/CHF', price: 0.8950, change: 0.05 }
   ];
   
   // Available timeframes for chart
@@ -185,11 +197,57 @@ const ShortTermTrading = () => {
         }));
       }
       
-      // Set up price updates
+      // Set up price updates for live chart effect
       const priceUpdateInterval = setInterval(() => {
+        if (!candleSeriesRef.current) return;
+        
+        // Get the last candle data
         const lastCandle = data[data.length - 1];
-        const newPrice = lastCandle.close * (1 + (Math.random() * 0.002 - 0.001));
+        
+        // Calculate a small random price change with some trend bias
+        const maxMove = price < 10 ? 0.0005 : 0.05; // Smaller moves for lower priced pairs
+        const trendBias = Math.random() > 0.5 ? 0.3 : -0.3; // Slight trend bias
+        const change = (Math.random() * maxMove * 2 - maxMove) + (maxMove * trendBias);
+        
+        // Update the price with the random change
+        const newPrice = parseFloat((price + change).toFixed(4));
         setPrice(newPrice);
+        
+        // Update price change percentage (last 24h simulation)
+        const newPriceChange = parseFloat(((newPrice / price - 1) * 100).toFixed(2));
+        setPriceChange(newPriceChange);
+        
+        // Create a new candle for the latest data point
+        const currentTime = Math.floor(Date.now() / 1000);
+        const newCandle = {
+          time: currentTime,
+          open: lastCandle.close,
+          high: Math.max(lastCandle.close, newPrice),
+          low: Math.min(lastCandle.close, newPrice),
+          close: newPrice
+        };
+        
+        // Update the last candle
+        data[data.length - 1] = newCandle;
+        
+        // Add a new data point every 5 seconds for more realistic chart movement
+        if (currentTime % 5 === 0) {
+          data.push({
+            time: currentTime + 60,
+            open: newPrice,
+            high: newPrice * (1 + Math.random() * 0.0005),
+            low: newPrice * (1 - Math.random() * 0.0005),
+            close: newPrice * (1 + (Math.random() - 0.5) * 0.001)
+          });
+          
+          // Remove the oldest data point to keep the array size consistent
+          if (data.length > 100) {
+            data.shift();
+          }
+        }
+        
+        // Update the chart with the new data
+        candleSeriesRef.current.update(newCandle);
         
         // Update order form price for market orders
         if (orderType === 'market') {
@@ -198,7 +256,7 @@ const ShortTermTrading = () => {
             total: newPrice * prev.amount
           }));
         }
-      }, 2000);
+      }, 1000); // Update every second for more fluid movement
       
       return () => {
         window.removeEventListener('resize', handleResize);
@@ -214,9 +272,8 @@ const ShortTermTrading = () => {
   // Handle timeframe changes
   useEffect(() => {
     if (candleSeriesRef.current) {
-      // In a real app, we would fetch new data based on timeframe
-      // For simulation, we'll just generate new data with different granularity
-      const data = generateCandlestickData(100, chartTimeframe);
+      // Generate new data based on timeframe
+      const data = generateCandlestickData(100, timeframe);
       candleSeriesRef.current.setData(data);
       
       // Update current price
@@ -224,58 +281,67 @@ const ShortTermTrading = () => {
         setPrice(data[data.length - 1].close);
       }
     }
-  }, [chartTimeframe]);
+  }, [timeframe]);
   
-  // Generate realistic candlestick data
-  const generateCandlestickData = (count, timeframe = '1h') => {
-    const data = [];
-    let basePrice = 19965.74;
-    let volatility = 0.01;
+  // Handle symbol changes
+  useEffect(() => {
+    if (!candleSeriesRef.current) return;
     
-    // Adjust volatility based on timeframe
+    // Get base price for selected symbol
+    const basePrice = currencyBasePrices[symbol] || 1.0850;
+    setPrice(basePrice);
+    
+    // Generate new data based on the symbol's typical price range
+    const data = generateCandlestickData(100, timeframe, symbol);
+    candleSeriesRef.current.setData(data);
+    
+    // Update order form with new price
+    setOrderForm(prev => ({
+      ...prev,
+      price: basePrice,
+      total: basePrice * prev.amount
+    }));
+  }, [symbol]);
+  
+  // Generate realistic candlestick data based on currency pair
+  const generateCandlestickData = (count, timeframe = '1h', pairSymbol = symbol) => {
+    const data = [];
+    // Get base price for the selected currency pair
+    let basePrice = currencyBasePrices[pairSymbol] || 1.0850;
+    
+    // Set volatility based on timeframe and currency pair
+    let volatility = 0.001; // Default volatility
+    
+    // Adjust volatility based on timeframe (shorter timeframes have less volatility)
     switch (timeframe) {
-      case '1m':
-        volatility = 0.002;
-        break;
-      case '5m':
-        volatility = 0.004;
-        break;
-      case '15m':
-        volatility = 0.006;
-        break;
-      case '1h':
-        volatility = 0.01;
-        break;
-      case '4h':
-        volatility = 0.02;
-        break;
-      case '1d':
-        volatility = 0.04;
-        break;
-      case '1w':
-        volatility = 0.08;
-        break;
-      default:
-        volatility = 0.01;
+      case '1m': volatility = 0.0005; break;
+      case '5m': volatility = 0.001; break;
+      case '15m': volatility = 0.0015; break;
+      case '1h': volatility = 0.002; break;
+      case '4h': volatility = 0.003; break;
+      case '1d': volatility = 0.005; break;
+      case '1w': volatility = 0.01; break;
+      default: volatility = 0.002;
+    }
+    
+    // Adjust volatility based on currency pair (some pairs are more volatile)
+    if (pairSymbol.includes('JPY')) {
+      volatility *= 2; // JPY pairs tend to have larger pip movements
+    } else if (pairSymbol.includes('GBP')) {
+      volatility *= 1.5; // GBP pairs tend to be more volatile
     }
     
     // Starting time based on timeframe
     const now = new Date();
     let time = new Date(now);
     const timeFrameInMinutes = {
-      '1m': 1,
-      '5m': 5,
-      '15m': 15,
-      '1h': 60,
-      '4h': 240,
-      '1d': 1440,
-      '1w': 10080
+      '1m': 1, '5m': 5, '15m': 15, '1h': 60, '4h': 240, '1d': 1440, '1w': 10080
     };
     
     // Subtract the appropriate amount of time to start from
     time.setMinutes(time.getMinutes() - count * timeFrameInMinutes[timeframe]);
     
-    // Create a trend pattern
+    // Create a trend pattern with cycles
     const trendCycles = Math.floor(count / 20); // Cycle every ~20 candles
     let trendDirection = 1;
     
@@ -289,17 +355,17 @@ const ShortTermTrading = () => {
       const trendBias = trendDirection * volatility * 0.3;
       const randomChange = (Math.random() * volatility * 2) - volatility + trendBias;
       
-      // Calculate prices
-      const open = basePrice;
-      const close = basePrice * (1 + randomChange);
+      // Calculate prices with 4 decimal precision for most forex pairs
+      const open = parseFloat(basePrice.toFixed(4));
+      const close = parseFloat((basePrice * (1 + randomChange)).toFixed(4));
       let high, low;
       
       if (close > open) {
-        high = close * (1 + Math.random() * volatility * 0.5);
-        low = open * (1 - Math.random() * volatility * 0.5);
+        high = parseFloat((close * (1 + Math.random() * volatility * 0.5)).toFixed(4));
+        low = parseFloat((open * (1 - Math.random() * volatility * 0.5)).toFixed(4));
       } else {
-        high = open * (1 + Math.random() * volatility * 0.5);
-        low = close * (1 - Math.random() * volatility * 0.5);
+        high = parseFloat((open * (1 + Math.random() * volatility * 0.5)).toFixed(4));
+        low = parseFloat((close * (1 - Math.random() * volatility * 0.5)).toFixed(4));
       }
       
       // Create candle
@@ -323,7 +389,7 @@ const ShortTermTrading = () => {
   
   // Handler for order type tabs
   const handleOrderTabChange = (event, newValue) => {
-    setActiveOrderTab(newValue);
+    setTabValue(newValue);
     
     // Reset form when changing tabs
     if (newValue === 0) {
@@ -337,10 +403,10 @@ const ShortTermTrading = () => {
   
   // Handle pair tab change
   const handlePairTabChange = (event, newValue) => {
-    setActivePairTab(newValue);
+    setSymbol(forexPairs[newValue].symbol);
   };
   
-  // Handle order placement
+  // Handle order placement for forex
   const handlePlaceOrder = () => {
     // Validate inputs
     if (orderForm.amount <= 0) {
@@ -378,7 +444,7 @@ const ShortTermTrading = () => {
       setOpenOrders(prev => [...prev, newOrder]);
       
       // Show confirmation
-      alert(`${orderSide.toUpperCase()} ${orderForm.amount} ${symbol.split('/')[0]} order placed successfully!`);
+      alert(`${orderSide.toUpperCase()} ${orderForm.amount} ${symbol} order placed successfully!`);
     }
     
     // Reset form
@@ -570,20 +636,19 @@ const ShortTermTrading = () => {
     </Box>
   );
   
-  // Format price with appropriate decimal places
+  // Format price with appropriate decimal places for forex
   const formatPrice = (value) => {
-    if (typeof value !== 'number') return '0.00';
+    if (typeof value !== 'number') return '0.0000';
     
-    // Format based on price range
-    if (value >= 1000) return value.toFixed(2);
-    if (value >= 100) return value.toFixed(2);
-    if (value >= 10) return value.toFixed(3);
-    if (value >= 1) return value.toFixed(4);
-    if (value >= 0.1) return value.toFixed(5);
-    return value.toFixed(6);
+    // Format based on currency pair
+    if (symbol.includes('JPY')) {
+      return value.toFixed(3); // JPY pairs typically show 3 decimal places
+    } else {
+      return value.toFixed(4); // Most forex pairs show 4 decimal places
+    }
   };
   
-  // Render order history
+  // Render order history for forex
   const renderOrderHistory = () => {
     if (orderHistory.length === 0) {
       return (
@@ -624,7 +689,7 @@ const ShortTermTrading = () => {
                   {formatPrice(order.price)}
                 </TableCell>
                 <TableCell align="right" sx={{ color: colors.primaryText }}>
-                  {order.amount.toFixed(6)}
+                  {order.amount.toFixed(2)}
                 </TableCell>
                 <TableCell>
                   <Chip 
@@ -650,7 +715,7 @@ const ShortTermTrading = () => {
     );
   };
   
-  // Render open orders
+  // Render open orders for forex
   const renderOpenOrders = () => {
     if (openOrders.length === 0) {
       return (
@@ -691,7 +756,7 @@ const ShortTermTrading = () => {
                   {formatPrice(order.price)}
                 </TableCell>
                 <TableCell align="right" sx={{ color: colors.primaryText }}>
-                  {order.amount.toFixed(6)}
+                  {order.amount.toFixed(2)}
                 </TableCell>
                 <TableCell>
                   <IconButton 
@@ -733,8 +798,8 @@ const ShortTermTrading = () => {
               />
             </Typography>
             <Typography variant="body2" sx={{ color: colors.secondaryText }}>
-              24h Change: <span style={{ color: tradingPairs[0].change >= 0 ? colors.buyGreen : colors.sellRed }}>
-                {tradingPairs[0].change >= 0 ? '+' : ''}{tradingPairs[0].change}%
+              24h Change: <span style={{ color: forexPairs[0].change >= 0 ? colors.buyGreen : colors.sellRed }}>
+                {forexPairs[0].change >= 0 ? '+' : ''}{forexPairs[0].change}%
               </span>
             </Typography>
           </Box>
@@ -758,7 +823,7 @@ const ShortTermTrading = () => {
           {/* Left Column - Trading Pairs */}
           <Grid item xs={2} sx={{ borderRight: `1px solid ${colors.borderColor}`, height: '100%', overflow: 'auto' }}>
             <Tabs 
-              value={activePairTab} 
+              value={tabValue} 
               onChange={handlePairTabChange}
               variant="fullWidth"
               sx={{
@@ -771,9 +836,9 @@ const ShortTermTrading = () => {
                 '& .MuiTabs-indicator': { backgroundColor: colors.accentYellow }
               }}
             >
-              <Tab label="USDT" />
-              <Tab label="BUSD" />
-              <Tab label="Favorites" />
+              {forexPairs.map((pair) => (
+                <Tab key={pair.symbol} label={pair.symbol} />
+              ))}
             </Tabs>
             
             <Box sx={{ p: 1 }}>
@@ -803,7 +868,7 @@ const ShortTermTrading = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {tradingPairs.map((pair) => (
+                    {forexPairs.map((pair) => (
                       <TableRow 
                         key={pair.symbol}
                         sx={{ 
@@ -844,15 +909,15 @@ const ShortTermTrading = () => {
                     minWidth: 'auto',
                     px: 1.5,
                     py: 0.5,
-                    color: chartTimeframe === tf ? colors.accentYellow : colors.secondaryText,
-                    ...(chartTimeframe === tf ? { 
+                    color: timeframe === tf ? colors.accentYellow : colors.secondaryText,
+                    ...(timeframe === tf ? { 
                       bgcolor: colors.hoverBg,
                     } : {}),
                     '&:hover': {
                       bgcolor: colors.hoverBg
                     }
                   }}
-                  onClick={() => setChartTimeframe(tf)}
+                  onClick={() => setTimeframe(tf)}
                 >
                   {tf}
                 </Button>
@@ -904,7 +969,7 @@ const ShortTermTrading = () => {
           {/* Right Column - Order Form */}
           <Grid item xs={3} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Tabs 
-              value={activeOrderTab} 
+              value={tabValue} 
               onChange={handleOrderTabChange}
               variant="fullWidth"
               sx={{
