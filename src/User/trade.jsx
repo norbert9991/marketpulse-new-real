@@ -14,6 +14,7 @@ import CandlestickChartIcon from '@mui/icons-material/CandlestickChart';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import SettingsIcon from '@mui/icons-material/Settings';
 import { alpha } from '@mui/material/styles';
+import { useToast } from './ToastContext';
 
 // Forex Trading Color Palette
 const colors = {
@@ -44,7 +45,7 @@ const Trade = () => {
   
   // Trading state
   const [selectedPair, setSelectedPair] = useState('EUR/USD');
-  const [orderType, setOrderType] = useState('market');
+  const [orderType, setOrderType] = useState('limit');
   const [amount, setAmount] = useState(1000);
   const [leverage, setLeverage] = useState(10);
   const [position, setPosition] = useState(null);
@@ -835,13 +836,24 @@ const Trade = () => {
     }
   };
 
-  // Cancel an open order
-  const cancelOrder = (orderId) => {
-    setOpenOrders(prev => prev.filter(order => order.id !== orderId));
+  // Cancel an open order (renaming the new function to cancelOpenOrder to fix redeclaration error)
+  const cancelOpenOrder = (orderId) => {
+    const orderToCancel = openOrders.find(order => order.id === orderId);
     
-    // Update database if connected
-    if (sessionId) {
-      // API call to cancel the order would go here
+    if (orderToCancel) {
+      setOpenOrders(prev => prev.filter(order => order.id !== orderId));
+      setAvailableBalance(prev => prev + orderToCancel.total);
+      setLockedMargin(prev => prev - orderToCancel.total);
+      
+      // Add to order history with canceled status
+      const canceledOrder = {
+        ...orderToCancel,
+        status: 'canceled',
+        canceledAt: new Date()
+      };
+      
+      setOrderHistory(prev => [canceledOrder, ...prev]);
+      toast.info('Order canceled successfully');
     }
   };
 
@@ -1244,6 +1256,240 @@ const Trade = () => {
     })));
     setStep(3);
   };
+
+  // Trading functions for short-term trading
+  const [limitPrice, setLimitPrice] = useState('');
+  const [stopPrice, setStopPrice] = useState('');
+  const [orderAmount, setOrderAmount] = useState('');
+  const [orderTotal, setOrderTotal] = useState('');
+  const [orderHistory, setOrderHistory] = useState([]);
+  const [activeOrderTab, setActiveOrderTab] = useState(0);
+  const [marketTrades, setMarketTrades] = useState([]);
+  
+  // Calculate order total when price or amount changes
+  useEffect(() => {
+    if (orderType === 'market') {
+      setOrderTotal((orderAmount * currentPrice).toFixed(2));
+    } else {
+      setOrderTotal((orderAmount * (limitPrice || currentPrice)).toFixed(2));
+    }
+  }, [orderAmount, limitPrice, currentPrice, orderType]);
+
+  // Place a limit order
+  const placeLimitOrder = (isBuy) => {
+    if (!limitPrice || !orderAmount || availableBalance < parseFloat(orderTotal)) {
+      toast.error('Please check your order details and balance');
+      return;
+    }
+    
+    const order = {
+      id: Date.now(),
+      type: isBuy ? 'buy' : 'sell',
+      orderType: 'limit',
+      pair: selectedPair,
+      price: parseFloat(limitPrice),
+      amount: parseFloat(orderAmount),
+      total: parseFloat(orderTotal),
+      status: 'open',
+      createdAt: new Date(),
+    };
+    
+    setOpenOrders(prev => [...prev, order]);
+    setAvailableBalance(prev => prev - parseFloat(orderTotal));
+    setLockedMargin(prev => prev + parseFloat(orderTotal));
+    
+    toast.success(`${isBuy ? 'Buy' : 'Sell'} limit order placed successfully`);
+    resetOrderForm();
+  };
+  
+  // Place a market order
+  const placeMarketOrder = (isBuy) => {
+    if (!orderAmount || availableBalance < parseFloat(orderTotal)) {
+      toast.error('Please check your order details and balance');
+      return;
+    }
+    
+    // Execute immediately at current price
+    const executedPrice = currentPrice * (isBuy ? 1.001 : 0.999); // Simulate slight slippage
+    const total = orderAmount * executedPrice;
+    
+    const order = {
+      id: Date.now(),
+      type: isBuy ? 'buy' : 'sell',
+      orderType: 'market',
+      pair: selectedPair,
+      price: executedPrice,
+      amount: parseFloat(orderAmount),
+      total: total,
+      status: 'filled',
+      createdAt: new Date(),
+      filledAt: new Date(),
+    };
+    
+    // Add to order history
+    setOrderHistory(prev => [order, ...prev]);
+    
+    // Add to market trades
+    const newTrade = {
+      id: Date.now(),
+      price: executedPrice,
+      amount: orderAmount,
+      time: new Date(),
+      type: isBuy ? 'buy' : 'sell'
+    };
+    
+    setMarketTrades(prev => [newTrade, ...prev.slice(0, 19)]);
+    
+    // Update balances
+    if (isBuy) {
+      // If buying, we get the asset but spend the quoted currency
+      setAvailableBalance(prev => prev - total);
+    } else {
+      // If selling, we get the quoted currency but spend the asset
+      setAvailableBalance(prev => prev + total);
+    }
+    
+    toast.success(`Market order executed at ${executedPrice.toFixed(5)}`);
+    resetOrderForm();
+  };
+  
+  // Place a stop-limit order
+  const placeStopLimitOrder = (isBuy) => {
+    if (!stopPrice || !limitPrice || !orderAmount || availableBalance < parseFloat(orderTotal)) {
+      toast.error('Please check your order details and balance');
+      return;
+    }
+    
+    const order = {
+      id: Date.now(),
+      type: isBuy ? 'buy' : 'sell',
+      orderType: 'stop-limit',
+      pair: selectedPair,
+      stopPrice: parseFloat(stopPrice),
+      price: parseFloat(limitPrice),
+      amount: parseFloat(orderAmount),
+      total: parseFloat(orderTotal),
+      status: 'open',
+      createdAt: new Date(),
+    };
+    
+    setOpenOrders(prev => [...prev, order]);
+    setAvailableBalance(prev => prev - parseFloat(orderTotal));
+    setLockedMargin(prev => prev + parseFloat(orderTotal));
+    
+    toast.success(`${isBuy ? 'Buy' : 'Sell'} stop-limit order placed successfully`);
+    resetOrderForm();
+  };
+  
+  // Cancel an open order
+  const cancelOrder = (orderId) => {
+    const orderToCancel = openOrders.find(order => order.id === orderId);
+    
+    if (orderToCancel) {
+      setOpenOrders(prev => prev.filter(order => order.id !== orderId));
+      setAvailableBalance(prev => prev + orderToCancel.total);
+      setLockedMargin(prev => prev - orderToCancel.total);
+      
+      // Add to order history with canceled status
+      const canceledOrder = {
+        ...orderToCancel,
+        status: 'canceled',
+        canceledAt: new Date()
+      };
+      
+      setOrderHistory(prev => [canceledOrder, ...prev]);
+      toast.info('Order canceled successfully');
+    }
+  };
+  
+  // Reset order form
+  const resetOrderForm = () => {
+    setOrderAmount('');
+    setLimitPrice(currentPrice?.toFixed(5) || '');
+    setStopPrice('');
+    setOrderTotal('');
+  };
+  
+  // Set amount as percentage of available balance
+  const setAmountByPercentage = (percentage) => {
+    const maxAmount = availableBalance / (limitPrice || currentPrice);
+    setOrderAmount((maxAmount * percentage / 100).toFixed(5));
+  };
+  
+  // Generate random market trades for demo
+  useEffect(() => {
+    if (currentPrice && selectedPair) {
+      const interval = setInterval(() => {
+        const isBuy = Math.random() > 0.5;
+        const variance = (Math.random() * 0.002 - 0.001) * currentPrice;
+        const price = currentPrice + variance;
+        const amount = Math.random() * 0.5;
+        
+        const newTrade = {
+          id: Date.now(),
+          price,
+          amount,
+          time: new Date(),
+          type: isBuy ? 'buy' : 'sell'
+        };
+        
+        setMarketTrades(prev => [newTrade, ...prev.slice(0, 19)]);
+      }, 3000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [currentPrice, selectedPair]);
+  
+  // Check if stop-limit orders should be triggered
+  useEffect(() => {
+    if (currentPrice && openOrders.length > 0) {
+      const updatedOrders = [...openOrders];
+      let ordersChanged = false;
+      
+      for (let i = 0; i < updatedOrders.length; i++) {
+        const order = updatedOrders[i];
+        
+        if (order.orderType === 'stop-limit') {
+          // For buy stop-limit: trigger when price rises above stop price
+          // For sell stop-limit: trigger when price falls below stop price
+          const shouldTrigger = (order.type === 'buy' && currentPrice >= order.stopPrice) || 
+                               (order.type === 'sell' && currentPrice <= order.stopPrice);
+          
+          if (shouldTrigger) {
+            // Move to order history as filled
+            const filledOrder = {
+              ...order,
+              status: 'filled',
+              filledAt: new Date(),
+              filledPrice: order.price
+            };
+            
+            setOrderHistory(prev => [filledOrder, ...prev]);
+            
+            // Add to market trades
+            const newTrade = {
+              id: Date.now(),
+              price: order.price,
+              amount: order.amount,
+              time: new Date(),
+              type: order.type
+            };
+            
+            setMarketTrades(prev => [newTrade, ...prev.slice(0, 19)]);
+            
+            // Remove from open orders
+            updatedOrders.splice(i, 1);
+            i--;
+            ordersChanged = true;
+          }
+        }
+      }
+      
+      if (ordersChanged) {
+        setOpenOrders(updatedOrders);
+      }
+    }
+  }, [currentPrice, openOrders]);
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: colors.darkBg }}>
@@ -2858,7 +3104,11 @@ const Trade = () => {
                   >
                     {/* Trading form tabs */}
                     <Tabs 
-                      value={0} 
+                      value={orderType === 'limit' ? 0 : orderType === 'market' ? 1 : 2} 
+                      onChange={(e, newValue) => {
+                        setOrderType(newValue === 0 ? 'limit' : newValue === 1 ? 'market' : 'stop-limit');
+                        resetOrderForm();
+                      }}
                       sx={{ 
                         mb: 2, 
                         '.MuiTabs-indicator': { backgroundColor: colors.accentBlue } 
@@ -2889,6 +3139,12 @@ const Trade = () => {
                     
                     <Box sx={{ display: 'flex', mb: 2 }}>
                       <Button
+                        onClick={() => orderType === 'limit' 
+                          ? placeLimitOrder(true) 
+                          : orderType === 'market' 
+                            ? placeMarketOrder(true) 
+                            : placeStopLimitOrder(true)
+                        }
                         sx={{
                           flex: 1,
                           bgcolor: colors.buyGreen,
@@ -2902,6 +3158,12 @@ const Trade = () => {
                         BUY
                       </Button>
                       <Button
+                        onClick={() => orderType === 'limit' 
+                          ? placeLimitOrder(false) 
+                          : orderType === 'market' 
+                            ? placeMarketOrder(false) 
+                            : placeStopLimitOrder(false)
+                        }
                         sx={{
                           flex: 1,
                           bgcolor: colors.sellRed,
@@ -2916,36 +3178,67 @@ const Trade = () => {
                     </Box>
                     
                     <Grid container spacing={2}>
-                      <Grid item xs={12}>
-                        <TextField
-                          label="Price"
-                          fullWidth
-                          type="number"
-                          value={currentPrice ? currentPrice.toFixed(2) : ''}
-                          InputProps={{
-                            endAdornment: <InputAdornment position="end">USDT</InputAdornment>
-                          }}
-                          sx={{ 
-                            '.MuiOutlinedInput-root': {
-                              color: colors.primaryText,
-                              bgcolor: alpha(colors.panelBg, 0.6)
-                            },
-                            '.MuiOutlinedInput-notchedOutline': {
-                              borderColor: colors.borderColor
-                            },
-                            '.MuiInputLabel-root': {
-                              color: colors.secondaryText
-                            }
-                          }}
-                        />
-                      </Grid>
+                      {orderType === 'stop-limit' && (
+                        <Grid item xs={12}>
+                          <TextField
+                            label="Stop Price"
+                            fullWidth
+                            type="number"
+                            value={stopPrice}
+                            onChange={(e) => setStopPrice(e.target.value)}
+                            InputProps={{
+                              endAdornment: <InputAdornment position="end">USDT</InputAdornment>
+                            }}
+                            sx={{ 
+                              '.MuiOutlinedInput-root': {
+                                color: colors.primaryText,
+                                bgcolor: alpha(colors.panelBg, 0.6)
+                              },
+                              '.MuiOutlinedInput-notchedOutline': {
+                                borderColor: colors.borderColor
+                              },
+                              '.MuiInputLabel-root': {
+                                color: colors.secondaryText
+                              }
+                            }}
+                          />
+                        </Grid>
+                      )}
+                      
+                      {orderType !== 'market' && (
+                        <Grid item xs={12}>
+                          <TextField
+                            label="Price"
+                            fullWidth
+                            type="number"
+                            value={limitPrice}
+                            onChange={(e) => setLimitPrice(e.target.value)}
+                            InputProps={{
+                              endAdornment: <InputAdornment position="end">USDT</InputAdornment>
+                            }}
+                            sx={{ 
+                              '.MuiOutlinedInput-root': {
+                                color: colors.primaryText,
+                                bgcolor: alpha(colors.panelBg, 0.6)
+                              },
+                              '.MuiOutlinedInput-notchedOutline': {
+                                borderColor: colors.borderColor
+                              },
+                              '.MuiInputLabel-root': {
+                                color: colors.secondaryText
+                              }
+                            }}
+                          />
+                        </Grid>
+                      )}
+                      
                       <Grid item xs={12}>
                         <TextField
                           label="Amount"
                           fullWidth
                           type="number"
-                          value={amount}
-                          onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+                          value={orderAmount}
+                          onChange={(e) => setOrderAmount(e.target.value)}
                           InputProps={{
                             endAdornment: <InputAdornment position="end">BTC</InputAdornment>
                           }}
@@ -2982,7 +3275,7 @@ const Trade = () => {
                               backgroundColor: alpha(colors.accentBlue, 0.1)
                             }
                           }}
-                          onClick={() => setAmount((availableBalance * (percent / 100)).toFixed(2))}
+                          onClick={() => setAmountByPercentage(percent)}
                         >
                           <Typography variant="caption" sx={{ color: colors.secondaryText }}>
                             {percent}%
@@ -2995,7 +3288,7 @@ const Trade = () => {
                       label="Total"
                       fullWidth
                       type="number"
-                      value={(amount * (currentPrice || 0)).toFixed(2)}
+                      value={orderTotal}
                       disabled
                       InputProps={{
                         endAdornment: <InputAdornment position="end">USDT</InputAdornment>
@@ -3056,7 +3349,8 @@ const Trade = () => {
                     }}
                   >
                     <Tabs 
-                      value={0} 
+                      value={activeOrderTab} 
+                      onChange={(e, newValue) => setActiveOrderTab(newValue)}
                       sx={{ 
                         px: 2, 
                         pt: 1,
@@ -3064,7 +3358,7 @@ const Trade = () => {
                       }}
                     >
                       <Tab 
-                        label="Open Orders (0)" 
+                        label={`Open Orders (${openOrders.length})`}
                         sx={{ 
                           color: colors.secondaryText,
                           '&.Mui-selected': { color: colors.primaryText },
@@ -3092,11 +3386,162 @@ const Trade = () => {
                       />
                     </Tabs>
                     
-                    <Box sx={{ p: 3, textAlign: 'center' }}>
-                      <Typography variant="body2" sx={{ color: colors.secondaryText }}>
-                        You have no open orders.
-                      </Typography>
-                    </Box>
+                    {/* Open Orders Tab */}
+                    {activeOrderTab === 0 && (
+                      <>
+                        {openOrders.length === 0 ? (
+                          <Box sx={{ p: 3, textAlign: 'center' }}>
+                            <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                              You have no open orders.
+                            </Typography>
+                          </Box>
+                        ) : (
+                          <TableContainer sx={{ maxHeight: '200px' }}>
+                            <Table stickyHeader size="small">
+                              <TableHead>
+                                <TableRow>
+                                  <TableCell sx={{ color: colors.secondaryText, bgcolor: alpha(colors.cardBg, 0.9) }}>Type</TableCell>
+                                  <TableCell sx={{ color: colors.secondaryText, bgcolor: alpha(colors.cardBg, 0.9) }}>Price</TableCell>
+                                  <TableCell sx={{ color: colors.secondaryText, bgcolor: alpha(colors.cardBg, 0.9) }}>Amount</TableCell>
+                                  <TableCell sx={{ color: colors.secondaryText, bgcolor: alpha(colors.cardBg, 0.9) }}>Total</TableCell>
+                                  <TableCell sx={{ color: colors.secondaryText, bgcolor: alpha(colors.cardBg, 0.9) }}>Action</TableCell>
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                {openOrders.map((order) => (
+                                  <TableRow key={order.id}>
+                                    <TableCell sx={{ color: order.type === 'buy' ? colors.buyGreen : colors.sellRed }}>
+                                      {order.type.toUpperCase()} {order.orderType === 'stop-limit' ? '(S-L)' : ''}
+                                    </TableCell>
+                                    <TableCell sx={{ color: colors.primaryText }}>
+                                      {order.price.toFixed(5)}
+                                    </TableCell>
+                                    <TableCell sx={{ color: colors.primaryText }}>
+                                      {order.amount.toFixed(5)}
+                                    </TableCell>
+                                    <TableCell sx={{ color: colors.primaryText }}>
+                                      {order.total.toFixed(2)}
+                                    </TableCell>
+                                    <TableCell>
+                                      <IconButton 
+                                        size="small" 
+                                        onClick={() => cancelOpenOrder(order.id)}
+                                        sx={{ color: colors.lossRed, padding: 0.5 }}
+                                      >
+                                        <CloseIcon fontSize="small" />
+                                      </IconButton>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </TableContainer>
+                        )}
+                      </>
+                    )}
+                    
+                    {/* Order History Tab */}
+                    {activeOrderTab === 1 && (
+                      <>
+                        {orderHistory.length === 0 ? (
+                          <Box sx={{ p: 3, textAlign: 'center' }}>
+                            <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                              No order history yet.
+                            </Typography>
+                          </Box>
+                        ) : (
+                          <TableContainer sx={{ maxHeight: '200px' }}>
+                            <Table stickyHeader size="small">
+                              <TableHead>
+                                <TableRow>
+                                  <TableCell sx={{ color: colors.secondaryText, bgcolor: alpha(colors.cardBg, 0.9) }}>Type</TableCell>
+                                  <TableCell sx={{ color: colors.secondaryText, bgcolor: alpha(colors.cardBg, 0.9) }}>Price</TableCell>
+                                  <TableCell sx={{ color: colors.secondaryText, bgcolor: alpha(colors.cardBg, 0.9) }}>Amount</TableCell>
+                                  <TableCell sx={{ color: colors.secondaryText, bgcolor: alpha(colors.cardBg, 0.9) }}>Status</TableCell>
+                                  <TableCell sx={{ color: colors.secondaryText, bgcolor: alpha(colors.cardBg, 0.9) }}>Time</TableCell>
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                {orderHistory.map((order) => (
+                                  <TableRow key={order.id}>
+                                    <TableCell sx={{ color: order.type === 'buy' ? colors.buyGreen : colors.sellRed }}>
+                                      {order.type.toUpperCase()}
+                                    </TableCell>
+                                    <TableCell sx={{ color: colors.primaryText }}>
+                                      {order.price.toFixed(5)}
+                                    </TableCell>
+                                    <TableCell sx={{ color: colors.primaryText }}>
+                                      {order.amount.toFixed(5)}
+                                    </TableCell>
+                                    <TableCell sx={{ 
+                                      color: 
+                                        order.status === 'filled' ? colors.profitGreen : 
+                                        order.status === 'canceled' ? colors.lossRed : 
+                                        colors.primaryText 
+                                    }}>
+                                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                                    </TableCell>
+                                    <TableCell sx={{ color: colors.secondaryText }}>
+                                      {formatTime(order.filledAt || order.canceledAt || order.createdAt)}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </TableContainer>
+                        )}
+                      </>
+                    )}
+                    
+                    {/* Trade History Tab */}
+                    {activeOrderTab === 2 && (
+                      <>
+                        {trades.length === 0 ? (
+                          <Box sx={{ p: 3, textAlign: 'center' }}>
+                            <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                              No trade history yet.
+                            </Typography>
+                          </Box>
+                        ) : (
+                          <TableContainer sx={{ maxHeight: '200px' }}>
+                            <Table stickyHeader size="small">
+                              <TableHead>
+                                <TableRow>
+                                  <TableCell sx={{ color: colors.secondaryText, bgcolor: alpha(colors.cardBg, 0.9) }}>Pair</TableCell>
+                                  <TableCell sx={{ color: colors.secondaryText, bgcolor: alpha(colors.cardBg, 0.9) }}>Type</TableCell>
+                                  <TableCell sx={{ color: colors.secondaryText, bgcolor: alpha(colors.cardBg, 0.9) }}>Price</TableCell>
+                                  <TableCell sx={{ color: colors.secondaryText, bgcolor: alpha(colors.cardBg, 0.9) }}>Amount</TableCell>
+                                  <TableCell sx={{ color: colors.secondaryText, bgcolor: alpha(colors.cardBg, 0.9) }}>P/L</TableCell>
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                {trades.map((trade) => (
+                                  <TableRow key={trade.id}>
+                                    <TableCell sx={{ color: colors.primaryText }}>
+                                      {trade.pair}
+                                    </TableCell>
+                                    <TableCell sx={{ color: trade.type === 'buy' ? colors.buyGreen : colors.sellRed }}>
+                                      {trade.type.toUpperCase()}
+                                    </TableCell>
+                                    <TableCell sx={{ color: colors.primaryText }}>
+                                      {trade.price?.toFixed(5) || '0.00000'}
+                                    </TableCell>
+                                    <TableCell sx={{ color: colors.primaryText }}>
+                                      {trade.amount?.toFixed(5) || '0.00000'}
+                                    </TableCell>
+                                    <TableCell sx={{ 
+                                      color: trade.pnl >= 0 ? colors.profitGreen : colors.lossRed
+                                    }}>
+                                      ${trade.pnl?.toFixed(2) || '0.00'}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </TableContainer>
+                        )}
+                      </>
+                    )}
                   </Paper>
                 </Grid>
                 
@@ -3132,37 +3577,60 @@ const Trade = () => {
                     
                     {/* Market trades list */}
                     <Box sx={{ maxHeight: '450px', overflow: 'auto' }}>
-                      {Array.from({ length: 20 }).map((_, index) => {
-                        const isBuy = Math.random() > 0.5;
-                        const basePrice = currentPrice || 19500;
-                        const variance = Math.random() * 20 - 10;
-                        const price = basePrice + variance;
-                        const amount = Math.random() * 0.2;
-                        const now = new Date();
-                        now.setMinutes(now.getMinutes() - index);
-                        const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-                        
-                        return (
+                      {marketTrades.length === 0 ? (
+                        Array.from({ length: 20 }).map((_, index) => {
+                          const isBuy = Math.random() > 0.5;
+                          const basePrice = currentPrice || 19500;
+                          const variance = Math.random() * 20 - 10;
+                          const price = basePrice + variance;
+                          const amount = Math.random() * 0.2;
+                          const now = new Date();
+                          now.setMinutes(now.getMinutes() - index);
+                          const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+                          
+                          return (
+                            <Box 
+                              key={`trade-${index}`} 
+                              sx={{ 
+                                display: 'flex', 
+                                px: 1.5, 
+                                py: 0.5
+                              }}
+                            >
+                              <Typography variant="body2" sx={{ color: isBuy ? colors.buyGreen : colors.sellRed, flex: 1 }}>
+                                {price.toFixed(2)}
+                              </Typography>
+                              <Typography variant="body2" sx={{ color: colors.primaryText, flex: 1, textAlign: 'right' }}>
+                                {amount.toFixed(5)}
+                              </Typography>
+                              <Typography variant="body2" sx={{ color: colors.secondaryText, flex: 1, textAlign: 'right' }}>
+                                {timeStr}
+                              </Typography>
+                            </Box>
+                          );
+                        })
+                      ) : (
+                        marketTrades.map((trade, index) => (
                           <Box 
-                            key={`trade-${index}`} 
+                            key={`market-trade-${trade.id || index}`} 
                             sx={{ 
                               display: 'flex', 
                               px: 1.5, 
                               py: 0.5
                             }}
                           >
-                            <Typography variant="body2" sx={{ color: isBuy ? colors.buyGreen : colors.sellRed, flex: 1 }}>
-                              {price.toFixed(2)}
+                            <Typography variant="body2" sx={{ color: trade.type === 'buy' ? colors.buyGreen : colors.sellRed, flex: 1 }}>
+                              {trade.price.toFixed(2)}
                             </Typography>
                             <Typography variant="body2" sx={{ color: colors.primaryText, flex: 1, textAlign: 'right' }}>
-                              {amount.toFixed(5)}
+                              {trade.amount.toFixed(5)}
                             </Typography>
                             <Typography variant="body2" sx={{ color: colors.secondaryText, flex: 1, textAlign: 'right' }}>
-                              {timeStr}
+                              {formatTime(trade.time)}
                             </Typography>
                           </Box>
-                        );
-                      })}
+                        ))
+                      )}
                     </Box>
                   </Paper>
                 </Grid>
