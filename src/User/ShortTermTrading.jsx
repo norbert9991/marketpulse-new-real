@@ -1146,6 +1146,27 @@ const ShortTermTrading = () => {
     setUnrealizedPnL(totalUnrealized);
   };
 
+  // Function to simulate updated price with small random fluctuations
+  const getUpdatedPrice = (symbol) => {
+    // Use current price as base or provide default if not set
+    const basePrice = currentPrice.ask || 1.0;
+    
+    // Generate random price movement (small fluctuation)
+    const volatilityFactor = 0.0002; // 0.02% volatility
+    const randomChange = (Math.random() - 0.5) * 2 * volatilityFactor * basePrice;
+    
+    // Apply market sentiment bias if available from market data
+    let sentimentBias = 0;
+    if (marketData && marketData.trend) {
+      sentimentBias = marketData.trend === 'Bullish' ? 0.00002 : -0.00002;
+    }
+    
+    // Calculate new price
+    const updatedPrice = basePrice + randomChange + sentimentBias;
+    
+    return updatedPrice;
+  };
+
   return (
     <Box sx={{ display: 'flex', bgcolor: colors.darkBg, height: '100vh', overflow: 'hidden' }}>
       <Sidebar activePage="Trading" />
