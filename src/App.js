@@ -8,12 +8,12 @@ import UserManagement from './Admin/UserManagement';
 import TransactionPage from './Admin/TransactionPage';
 import ReportPage from './Admin/ReportPage';
 import Trade from './User/trade';
+import ShortTermTrading from './User/ShortTermTrading';
 import Market from './User/market';
 import ForexNews from './User/ForexNews';
 import ProtectedRoute from './components/ProtectedRoute';
 import Settings from './User/settings';
 import AdminSettings from './Admin/adminsettings';
-import ShortTermTrading from './User/ShortTermTrading';
 
 // Create a custom theme
 const theme = createTheme({
