@@ -106,10 +106,16 @@ const ShortTermTrading = () => {
   // UI State
   const [loading, setLoading] = useState(false);
   const [chartLoading, setChartLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [tradeTab, setTradeTab] = useState(0);
   const [notification, setNotification] = useState({ open: false, message: '', type: 'info' });
   const [chartType, setChartType] = useState('candles');
   const [showIndicators, setShowIndicators] = useState(true);
+  const [chartData, setChartData] = useState([]);
+  const [supportResistance, setSupportResistance] = useState({
+    support: [],
+    resistance: []
+  });
   
   // Trading State
   const [selectedPair, setSelectedPair] = useState(forexPairs[0]);
@@ -174,373 +180,415 @@ const ShortTermTrading = () => {
   // Initialize chart with advanced features
   useEffect(() => {
     if (!chartContainerRef.current) return;
-
-    const container = chartContainerRef.current;
     
-    // Clear previous chart if exists
-    if (chartRef.current) {
-      chartRef.current.remove();
-      chartRef.current = null;
-      candleSeriesRef.current = null;
-      volumeSeriesRef.current = null;
-      maSeriesRef.current = [];
-      supportLevelsRef.current = [];
-      resistanceLevelsRef.current = [];
-    }
-
-    // Create chart with professional trading platform appearance
-    const chart = createChart(container, {
-      width: container.clientWidth,
-      height: container.clientHeight,
+    // Create chart instance
+    const chart = createChart(chartContainerRef.current, {
       layout: {
-        backgroundColor: colors.panelBg,
+        background: { color: colors.chartBg },
         textColor: colors.primaryText,
-        fontSize: 12,
-        fontFamily: 'Roboto, sans-serif',
       },
       grid: {
-        vertLines: { color: 'rgba(42, 46, 57, 0.5)', style: LineStyle.Dotted },
-        horzLines: { color: 'rgba(42, 46, 57, 0.5)', style: LineStyle.Dotted },
+        vertLines: { color: colors.gridLines },
+        horzLines: { color: colors.gridLines },
       },
-      crosshair: {
-        mode: CrosshairMode.Normal,
-        vertLine: {
-          color: colors.accentBlue,
-          width: 1,
-          style: LineStyle.Solid,
-          labelBackgroundColor: colors.accentBlue,
-        },
-        horzLine: {
-          color: colors.accentBlue,
-          width: 1,
-          style: LineStyle.Solid,
-          labelBackgroundColor: colors.accentBlue,
-        },
-      },
+      width: chartContainerRef.current.clientWidth,
+      height: chartContainerRef.current.clientHeight,
       timeScale: {
-        borderColor: colors.borderColor,
         timeVisible: true,
         secondsVisible: false,
+        borderColor: colors.borderColor,
       },
       rightPriceScale: {
         borderColor: colors.borderColor,
       },
-      watermark: {
-        color: 'rgba(33, 150, 243, 0.05)',
-        visible: true,
-        text: 'MarketPulse FX',
-        fontSize: 36,
-        fontFamily: 'Roboto, sans-serif',
-        horzAlign: 'center',
-        vertAlign: 'center',
+      crosshair: {
+        mode: CrosshairMode.Normal,
+        vertLine: {
+          color: colors.crosshair,
+          width: 1,
+          style: LineStyle.Dashed,
+        },
+        horzLine: {
+          color: colors.crosshair,
+          width: 1,
+          style: LineStyle.Dashed,
+        },
+      },
+      handleScroll: {
+        vertTouchDrag: false,
       },
     });
-
+    
+    // Store chart reference
     chartRef.current = chart;
-
-    // Add main price series based on chart type
+    
+    // Set up candle series
+    const candleSeries = chartType === 'candles' 
+      ? chart.addCandlestickSeries({
+          upColor: colors.buyGreen,
+          downColor: colors.sellRed,
+          borderUpColor: colors.buyGreen,
+          borderDownColor: colors.sellRed,
+          wickUpColor: colors.buyGreen,
+          wickDownColor: colors.sellRed,
+        })
+      : chart.addLineSeries({
+          color: colors.accentBlue,
+          lineWidth: 2,
+        });
+    
+    candleSeriesRef.current = candleSeries;
+    
+    // Add volume histogram if in candle mode
     if (chartType === 'candles') {
-      candleSeriesRef.current = chart.addCandlestickSeries({
-        upColor: colors.buyGreen,
-        downColor: colors.sellRed,
-        borderVisible: false,
-        wickUpColor: colors.buyGreen,
-        wickDownColor: colors.sellRed,
-      });
-    } else {
-      candleSeriesRef.current = chart.addLineSeries({
-        color: colors.chartLine,
-        lineWidth: 2,
-        crosshairMarkerVisible: true,
-        crosshairMarkerRadius: 4,
-        crosshairMarkerBorderColor: colors.primaryText,
-        crosshairMarkerBackgroundColor: colors.accentBlue,
-      });
-    }
-
-    // Add volume series if chart type is candles
-    if (chartType === 'candles' && showIndicators) {
-      volumeSeriesRef.current = chart.addHistogramSeries({
-        color: '#26a69a',
+      // Create volume series with 30% panel height
+      const volumeSeries = chart.addHistogramSeries({
+        color: colors.secondaryText,
         priceFormat: {
           type: 'volume',
         },
-        priceScaleId: '',
+        priceScaleId: 'volume',
         scaleMargins: {
           top: 0.8,
           bottom: 0,
         },
       });
-    }
-
-    // Add moving averages if indicators are enabled
-    if (showIndicators) {
-      // 20 period MA
-      const ma20 = chart.addLineSeries({
-        color: '#2196F3',
-        lineWidth: 2,
-        priceLineVisible: false,
-      });
       
-      // 50 period MA
-      const ma50 = chart.addLineSeries({
-        color: '#FF9800',
-        lineWidth: 2,
-        priceLineVisible: false,
-      });
-      
-      // 200 period MA
-      const ma200 = chart.addLineSeries({
-        color: '#F44336',
-        lineWidth: 2,
-        priceLineVisible: false,
-      });
-      
-      maSeriesRef.current = [ma20, ma50, ma200];
+      volumeSeriesRef.current = volumeSeries;
     }
     
-    // Handle chart resizing
+    // Create moving average lines
+    if (showIndicators) {
+      const ma20Series = chart.addLineSeries({
+        color: '#FF6D00',
+        lineWidth: 1,
+        priceLineVisible: false,
+        title: 'MA 20',
+      });
+      
+      const ma50Series = chart.addLineSeries({
+        color: '#2962FF',
+        lineWidth: 1,
+        priceLineVisible: false,
+        title: 'MA 50',
+      });
+      
+      const ma200Series = chart.addLineSeries({
+        color: '#673AB7',
+        lineWidth: 1, 
+        priceLineVisible: false,
+        title: 'MA 200',
+      });
+      
+      maSeriesRef.current = [ma20Series, ma50Series, ma200Series];
+    }
+    
+    // Handle resize
     const handleResize = () => {
-      if (chartRef.current) {
-        chartRef.current.applyOptions({ 
-          width: container.clientWidth,
-          height: container.clientHeight 
+      if (chartRef.current && chartContainerRef.current) {
+        chartRef.current.applyOptions({
+          width: chartContainerRef.current.clientWidth,
+          height: chartContainerRef.current.clientHeight
         });
       }
     };
-
+    
     window.addEventListener('resize', handleResize);
-
-    // Generate market data for the chart
-    generateMarketData();
-    setChartLoading(false);
-
+    
+    // Generate initial data
+    if (!chartLoading && !marketData.length) {
+      generateMarketData();
+    }
+    
     return () => {
       window.removeEventListener('resize', handleResize);
+      
       if (chartRef.current) {
         chartRef.current.remove();
         chartRef.current = null;
       }
     };
-  }, [chartType, selectedPair.value, selectedTimeframe, showIndicators]);
+  }, [chartType, showIndicators, colors]);
 
   // Generate realistic forex price data
-  const generateMarketData = () => {
-    setChartLoading(true);
-    
-    // Fetch data from database or API in a real implementation
-    // For this example, we'll generate synthetic data based on the database values
-    
-    // Get base price for the selected forex pair from our database or from synthetic data
-    let basePrice;
-    
-    // Map from the database values in finals.sql
-    switch(selectedPair.value) {
-      case 'EURUSD=X':
-        basePrice = 1.09625089;
-        break;
-      case 'AUDUSD=X':
-        basePrice = 0.60459489;
-        break;
-      case 'USDCHF=X':
-        basePrice = 0.85993999;
-        break;
-      case 'NZDUSD=X':
-        basePrice = 0.55969107;
-        break;
-      default:
-        // Use synthetic base prices for pairs not in our database
-        basePrice = getBasePrice(selectedPair.value);
-    }
-    
-    // Set current price for the UI
-    setCurrentPrice(basePrice);
-    if (orderType === 'limit' && !limitPrice) {
-      setLimitPrice(basePrice.toFixed(5));
-    }
-    
-    // Generate price data for the chart
-    const data = generatePriceData(basePrice, selectedTimeframe);
-    setMarketData(data);
-    
-    // Calculate price change
-    const lastPrice = data[data.length - 1].close;
-    const prevPrice = data[data.length - 2]?.close || lastPrice;
-    const change = lastPrice - prevPrice;
-    const percentChange = (change / prevPrice) * 100;
-    
-    setPriceChange({
-      value: change.toFixed(5),
-      percentage: percentChange.toFixed(2)
-    });
-    
-    // Update chart with data
-    if (candleSeriesRef.current) {
-      if (chartType === 'candles') {
-        // Update candle data
-        candleSeriesRef.current.setData(data);
+  const generateMarketData = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Try to fetch live market data
+      const response = await axios.get(`/api/market-data/${selectedPair.value}`);
+      const data = response.data;
+
+      if (data && data.currentPrice) {
+        // Update current price
+        setCurrentPrice(data.currentPrice);
         
-        // Update volume data if available
-        if (volumeSeriesRef.current) {
-          const volumeData = data.map(item => ({
-            time: item.time,
-            value: item.volume || Math.floor(Math.random() * 100) + 50,
-            color: item.close >= item.open ? 'rgba(76, 175, 80, 0.5)' : 'rgba(244, 67, 54, 0.5)'
+        // Update indicators
+        const indicators = {
+          rsi: data.technicalIndicators?.rsi || 50,
+          macd: data.technicalIndicators?.macd || { macd: 0, signal: 0, histogram: 0 },
+          sma: data.technicalIndicators?.sma || [0, 0, 0]
+        };
+        setTechnicalIndicators(indicators);
+        
+        // Update support and resistance
+        setSupportResistance({
+          support: data.supportResistance?.support || [data.currentPrice * 0.98, data.currentPrice * 0.95],
+          resistance: data.supportResistance?.resistance || [data.currentPrice * 1.02, data.currentPrice * 1.05]
+        });
+        
+        // Process historical data for chart
+        if (data.historicalData && data.historicalData.length > 0) {
+          const chartData = data.historicalData.map(item => ({
+            time: new Date(item.date).getTime() / 1000,
+            open: item.open,
+            high: item.high,
+            low: item.low,
+            close: item.close
           }));
-          volumeSeriesRef.current.setData(volumeData);
+          
+          // Calculate moving averages
+          const [ma20, ma50, ma200] = calculateMovingAverages(chartData);
+          
+          // Update chart with data
+          setChartData(chartData);
+          updateChart(chartData, ma20, ma50, ma200);
+        } else {
+          // Generate fallback data if no historical data
+          generateFallbackData(data.currentPrice);
         }
       } else {
-        // Update line chart data
-        const lineData = data.map(item => ({
-          time: item.time,
-          value: item.close
-        }));
-        candleSeriesRef.current.setData(lineData);
+        throw new Error("Invalid data format received from API");
       }
+    } catch (error) {
+      console.error("Error fetching market data:", error);
+      setError(`Unable to fetch market data: ${error.message}`);
       
-      // Update MAs if available
-      if (maSeriesRef.current.length > 0 && showIndicators) {
-        // Calculate and set MA values
-        const closes = data.map(item => item.close);
-        
-        // 20 period MA
-        const ma20Values = calculateMA(closes, 20);
-        const ma20Data = ma20Values.map((value, index) => ({
-          time: data[index + 19]?.time,
-          value
-        })).filter(item => item.time !== undefined);
-        
-        // 50 period MA
-        const ma50Values = calculateMA(closes, 50);
-        const ma50Data = ma50Values.map((value, index) => ({
-          time: data[index + 49]?.time,
-          value
-        })).filter(item => item.time !== undefined);
-        
-        // 200 period MA
-        const ma200Values = calculateMA(closes, 200);
-        const ma200Data = ma200Values.map((value, index) => ({
-          time: data[index + 199]?.time,
-          value
-        })).filter(item => item.time !== undefined);
-        
-        // Set data to series
-        if (ma20Data.length > 0) maSeriesRef.current[0].setData(ma20Data);
-        if (ma50Data.length > 0) maSeriesRef.current[1].setData(ma50Data);
-        if (ma200Data.length > 0) maSeriesRef.current[2].setData(ma200Data);
-      }
+      // Fallback to simulated data
+      generateFallbackData();
+    }
+
+    setLoading(false);
+  };
+
+  const generateFallbackData = (basePrice = 100) => {
+    // Generate a random base price near 100 if not provided
+    const actualBasePrice = basePrice || (95 + Math.random() * 10);
+    setCurrentPrice(actualBasePrice);
+    
+    // Set default indicators
+    setTechnicalIndicators({
+      rsi: 45 + Math.random() * 10,
+      macd: { 
+        macd: -0.5 + Math.random(), 
+        signal: -0.5 + Math.random(), 
+        histogram: -0.5 + Math.random() 
+      },
+      sma: [
+        actualBasePrice * (0.98 + Math.random() * 0.04),
+        actualBasePrice * (0.97 + Math.random() * 0.06),
+        actualBasePrice * (0.96 + Math.random() * 0.08)
+      ]
+    });
+    
+    // Set support and resistance
+    setSupportResistance({
+      support: [actualBasePrice * 0.98, actualBasePrice * 0.95],
+      resistance: [actualBasePrice * 1.02, actualBasePrice * 1.05]
+    });
+    
+    // Generate historical data based on timeframe
+    const now = new Date();
+    const data = [];
+    const volatility = 0.005; // 0.5% volatility
+    
+    // Number of data points based on timeframe
+    let dataPoints = 200;
+    let interval = 24 * 60 * 60; // 1 day in seconds
+    
+    if (timeframe === '1h') {
+      dataPoints = 60;
+      interval = 60 * 60; // 1 hour in seconds
+    } else if (timeframe === '4h') {
+      dataPoints = 60;
+      interval = 4 * 60 * 60; // 4 hours in seconds
+    } else if (timeframe === '1d') {
+      dataPoints = 60;
+      interval = 24 * 60 * 60; // 1 day in seconds
+    } else if (timeframe === '1w') {
+      dataPoints = 52;
+      interval = 7 * 24 * 60 * 60; // 1 week in seconds
     }
     
-    // Generate and set technical indicators
-    const indicators = generateTechnicalIndicators(data);
-    setTechnicalIndicators(indicators);
+    let price = actualBasePrice * (0.9 + Math.random() * 0.2);
     
-    // Add support and resistance levels to chart
-    addSupportResistanceLevels(indicators.supports, indicators.resistances);
+    // Generate data points
+    for (let i = 0; i < dataPoints; i++) {
+      const time = Math.floor(now.getTime() / 1000) - (dataPoints - i) * interval;
+      const change = (Math.random() - 0.5) * volatility * price;
+      price += change;
+      
+      const dailyVolatility = price * volatility;
+      const open = price;
+      const close = price + (Math.random() - 0.5) * dailyVolatility;
+      const high = Math.max(open, close) + Math.random() * dailyVolatility * 0.5;
+      const low = Math.min(open, close) - Math.random() * dailyVolatility * 0.5;
+      
+      data.push({
+        time,
+        open,
+        high,
+        low,
+        close
+      });
+    }
     
-    setChartLoading(false);
+    // Calculate moving averages
+    const [ma20, ma50, ma200] = calculateMovingAverages(data);
+    
+    // Update chart data
+    setChartData(data);
+    updateChart(data, ma20, ma50, ma200);
   };
-  
-  // Helper function to get base price for a forex pair
-  const getBasePrice = (symbol) => {
-    // Default prices for common pairs
-    const defaultPrices = {
-      'EURUSD=X': 1.0853,
-      'GBPUSD=X': 1.2701,
-      'USDJPY=X': 151.68,
-      'USDCHF=X': 0.8987,
-      'AUDUSD=X': 0.6578,
-      'NZDUSD=X': 0.6142,
-      'USDCAD=X': 1.3642,
-      'EURGBP=X': 0.8547,
-      'EURJPY=X': 164.64,
-      'GBPJPY=X': 192.65
-    };
-    
-    return defaultPrices[symbol] || 1.0;
+
+  const updateChart = (data, ma20 = [], ma50 = [], ma200 = []) => {
+    if (chartRef.current && data?.length > 0) {
+      const chart = chartRef.current;
+      
+      // Clear previous series
+      chart.removeAllSeries();
+      
+      // Add candlestick series
+      const mainSeries = chart.addCandlestickSeries({
+        upColor: '#26a69a', 
+        downColor: '#ef5350',
+        borderVisible: false,
+        wickUpColor: '#26a69a', 
+        wickDownColor: '#ef5350'
+      });
+      
+      mainSeries.setData(data);
+      
+      // Add moving average series
+      if (ma20.length > 0) {
+        const ma20Series = chart.addLineSeries({
+          color: '#2196F3',
+          lineWidth: 2,
+          title: 'MA20'
+        });
+        ma20Series.setData(ma20);
+      }
+      
+      if (ma50.length > 0) {
+        const ma50Series = chart.addLineSeries({
+          color: '#FF9800',
+          lineWidth: 2,
+          title: 'MA50'
+        });
+        ma50Series.setData(ma50);
+      }
+      
+      if (ma200.length > 0) {
+        const ma200Series = chart.addLineSeries({
+          color: '#E91E63',
+          lineWidth: 2,
+          title: 'MA200'
+        });
+        ma200Series.setData(ma200);
+      }
+      
+      // Fit content
+      chart.timeScale().fitContent();
+    }
   };
   
   // Generate candle data based on base price and timeframe
   const generatePriceData = (basePrice, timeframe) => {
-    const now = new Date();
-    const data = [];
-    let lastClose = basePrice;
-    let trend = 0; // -1 = down, 0 = sideways, 1 = up
-    let trendStrength = 0.5; // 0 = weak, 1 = strong
-    let trendDuration = 0;
-    const maxTrendDuration = 20;
-    
-    // Determine time interval in minutes
-    let intervalMinutes;
-    switch(timeframe) {
-      case '1m': intervalMinutes = 1; break;
-      case '5m': intervalMinutes = 5; break;
-      case '15m': intervalMinutes = 15; break;
-      case '30m': intervalMinutes = 30; break;
-      case '1h': intervalMinutes = 60; break;
-      case '4h': intervalMinutes = 240; break;
-      case '1d': intervalMinutes = 1440; break;
-      default: intervalMinutes = 60; // Default to 1h
-    }
-    
-    // Generate more realistic data with trends and volatility based on timeframe
-    for (let i = 300; i >= 0; i--) {
-      const time = new Date(now);
-      time.setMinutes(time.getMinutes() - (i * intervalMinutes));
+    try {
+      const now = new Date();
+      const data = [];
+      let lastClose = basePrice;
+      let trend = 0; // -1 = down, 0 = sideways, 1 = up
+      let trendStrength = 0.5; // 0 = weak, 1 = strong
+      let trendDuration = 0;
+      const maxTrendDuration = 20;
       
-      // Adjust volatility based on timeframe
-      let volatility;
+      // Determine time interval in minutes
+      let intervalMinutes;
       switch(timeframe) {
-        case '1m': volatility = 0.0001; break;
-        case '5m': volatility = 0.0002; break;
-        case '15m': volatility = 0.0003; break;
-        case '30m': volatility = 0.0004; break;
-        case '1h': volatility = 0.0005; break;
-        case '4h': volatility = 0.0008; break;
-        case '1d': volatility = 0.001; break;
-        default: volatility = 0.0005;
+        case '1m': intervalMinutes = 1; break;
+        case '5m': intervalMinutes = 5; break;
+        case '15m': intervalMinutes = 15; break;
+        case '30m': intervalMinutes = 30; break;
+        case '1h': intervalMinutes = 60; break;
+        case '4h': intervalMinutes = 240; break;
+        case '1d': intervalMinutes = 1440; break;
+        default: intervalMinutes = 60; // Default to 1h
       }
       
-      // Randomly change trend
-      if (trendDuration >= maxTrendDuration || Math.random() < 0.05) {
-        trend = Math.floor(Math.random() * 3) - 1; // -1, 0, or 1
-        trendStrength = 0.2 + Math.random() * 0.8; // Between 0.2 and 1
-        trendDuration = 0;
-      } else {
-        trendDuration++;
+      // Generate more realistic data with trends and volatility based on timeframe
+      for (let i = 300; i >= 0; i--) {
+        const time = new Date(now);
+        time.setMinutes(time.getMinutes() - (i * intervalMinutes));
+        
+        // Adjust volatility based on timeframe
+        let volatility;
+        switch(timeframe) {
+          case '1m': volatility = 0.0001; break;
+          case '5m': volatility = 0.0002; break;
+          case '15m': volatility = 0.0003; break;
+          case '30m': volatility = 0.0004; break;
+          case '1h': volatility = 0.0005; break;
+          case '4h': volatility = 0.0008; break;
+          case '1d': volatility = 0.001; break;
+          default: volatility = 0.0005;
+        }
+        
+        // Randomly change trend
+        if (trendDuration >= maxTrendDuration || Math.random() < 0.05) {
+          trend = Math.floor(Math.random() * 3) - 1; // -1, 0, or 1
+          trendStrength = 0.2 + Math.random() * 0.8; // Between 0.2 and 1
+          trendDuration = 0;
+        } else {
+          trendDuration++;
+        }
+        
+        // Create price movement with trend bias
+        const trendBias = trend * trendStrength * volatility;
+        const randomChange = (Math.random() - 0.5) * volatility;
+        const change = randomChange + trendBias;
+        
+        // Calculate OHLC values
+        const open = lastClose;
+        const close = parseFloat((open + change).toFixed(5));
+        
+        // Higher volatility for high/low based on timeframe
+        const wickVolatility = volatility * (1 + Math.random() * 0.5);
+        const high = parseFloat(Math.max(open, close, open + (Math.random() * wickVolatility)).toFixed(5));
+        const low = parseFloat(Math.min(open, close, open - (Math.random() * wickVolatility)).toFixed(5));
+        
+        // Generate volume
+        const volume = Math.floor(Math.random() * 100) + 50;
+        
+        // Add data point
+        data.push({
+          time: Math.floor(time.getTime() / 1000),
+          open,
+          high,
+          low,
+          close,
+          volume
+        });
+        
+        lastClose = close;
       }
       
-      // Create price movement with trend bias
-      const trendBias = trend * trendStrength * volatility;
-      const randomChange = (Math.random() - 0.5) * volatility;
-      const change = randomChange + trendBias;
-      
-      // Calculate OHLC values
-      const open = lastClose;
-      const close = parseFloat((open + change).toFixed(5));
-      
-      // Higher volatility for high/low based on timeframe
-      const wickVolatility = volatility * (1 + Math.random() * 0.5);
-      const high = parseFloat(Math.max(open, close, open + (Math.random() * wickVolatility)).toFixed(5));
-      const low = parseFloat(Math.min(open, close, open - (Math.random() * wickVolatility)).toFixed(5));
-      
-      // Generate volume
-      const volume = Math.floor(Math.random() * 100) + 50;
-      
-      // Add data point
-      data.push({
-        time: Math.floor(time.getTime() / 1000),
-        open,
-        high,
-        low,
-        close,
-        volume
-      });
-      
-      lastClose = close;
+      return data;
+    } catch (error) {
+      console.error('Error generating price data:', error);
+      return [];
     }
-    
-    return data;
   };
   
   // Calculate Moving Average
@@ -736,60 +784,81 @@ const ShortTermTrading = () => {
     };
   };
   
-  // Add support and resistance levels to chart
+  // Function to add support and resistance levels to the chart
   const addSupportResistanceLevels = (supports, resistances) => {
-    // Remove old levels
-    if (supportLevelsRef.current.length > 0) {
-      supportLevelsRef.current.forEach(level => {
-        if (chartRef.current) {
-          chartRef.current.removePriceLine(level);
-        }
-      });
-      supportLevelsRef.current = [];
+    try {
+      // Clear previous levels
+      if (supportLevelsRef.current.length > 0) {
+        supportLevelsRef.current.forEach(line => line.remove());
+        supportLevelsRef.current = [];
+      }
+      
+      if (resistanceLevelsRef.current.length > 0) {
+        resistanceLevelsRef.current.forEach(line => line.remove());
+        resistanceLevelsRef.current = [];
+      }
+      
+      // Add support levels
+      if (supports && supports.length > 0 && chartRef.current) {
+        supports.forEach(level => {
+          const supportLine = chartRef.current.addLineSeries({
+            color: 'rgba(76, 175, 80, 0.5)',
+            lineWidth: 1,
+            lineStyle: LineStyle.Dashed,
+            priceLineVisible: false,
+          });
+          
+          // Create horizontal line data
+          const lineData = [];
+          for (let i = 0; i < marketData.length; i++) {
+            lineData.push({
+              time: marketData[i].time,
+              value: level
+            });
+          }
+          
+          supportLine.setData(lineData);
+          supportLevelsRef.current.push(supportLine);
+        });
+      }
+      
+      // Add resistance levels
+      if (resistances && resistances.length > 0 && chartRef.current) {
+        resistances.forEach(level => {
+          const resistanceLine = chartRef.current.addLineSeries({
+            color: 'rgba(244, 67, 54, 0.5)',
+            lineWidth: 1,
+            lineStyle: LineStyle.Dashed,
+            priceLineVisible: false,
+          });
+          
+          // Create horizontal line data
+          const lineData = [];
+          for (let i = 0; i < marketData.length; i++) {
+            lineData.push({
+              time: marketData[i].time,
+              value: level
+            });
+          }
+          
+          resistanceLine.setData(lineData);
+          resistanceLevelsRef.current.push(resistanceLine);
+        });
+      }
+    } catch (error) {
+      console.error('Error adding support/resistance levels:', error);
     }
-    
-    if (resistanceLevelsRef.current.length > 0) {
-      resistanceLevelsRef.current.forEach(level => {
-        if (chartRef.current) {
-          chartRef.current.removePriceLine(level);
-        }
-      });
-      resistanceLevelsRef.current = [];
-    }
-    
-    // Don't add levels if indicators are disabled
-    if (!showIndicators || !candleSeriesRef.current) return;
-    
-    // Add new support levels
-    supports.forEach(level => {
-      const priceLine = candleSeriesRef.current.createPriceLine({
-        price: level,
-        color: 'rgba(76, 175, 80, 0.7)',
-        lineWidth: 2,
-        lineStyle: LineStyle.Dashed,
-        axisLabelVisible: true,
-        title: 'S',
-      });
-      supportLevelsRef.current.push(priceLine);
-    });
-    
-    // Add new resistance levels
-    resistances.forEach(level => {
-      const priceLine = candleSeriesRef.current.createPriceLine({
-        price: level,
-        color: 'rgba(244, 67, 54, 0.7)',
-        lineWidth: 2,
-        lineStyle: LineStyle.Dashed,
-        axisLabelVisible: true,
-        title: 'R',
-      });
-      resistanceLevelsRef.current.push(priceLine);
-    });
   };
 
   // Update market price simulation
   useEffect(() => {
-    if (chartLoading || !currentPrice) return;
+    if (chartLoading) return;
+    
+    // Initialize the market data if needed
+    if (!currentPrice) {
+      generateMarketData();
+      return;
+    }
     
     // Update interval based on timeframe
     const interval = selectedTimeframe === '1m' ? 1000 : 
@@ -1190,6 +1259,52 @@ const ShortTermTrading = () => {
     resetOrderForm();
   };
 
+  // Calculate moving averages from price data
+  const calculateMovingAverages = (data) => {
+    try {
+      // Extract close prices
+      const closes = data.map(item => item.close);
+      
+      // Calculate 20-period moving average
+      const ma20 = [];
+      for (let i = 19; i < closes.length; i++) {
+        const sum = closes.slice(i - 19, i + 1).reduce((a, b) => a + b, 0);
+        const avg = sum / 20;
+        ma20.push({
+          time: data[i].time,
+          value: parseFloat(avg.toFixed(5))
+        });
+      }
+      
+      // Calculate 50-period moving average
+      const ma50 = [];
+      for (let i = 49; i < closes.length; i++) {
+        const sum = closes.slice(i - 49, i + 1).reduce((a, b) => a + b, 0);
+        const avg = sum / 50;
+        ma50.push({
+          time: data[i].time,
+          value: parseFloat(avg.toFixed(5))
+        });
+      }
+      
+      // Calculate 200-period moving average
+      const ma200 = [];
+      for (let i = 199; i < closes.length; i++) {
+        const sum = closes.slice(i - 199, i + 1).reduce((a, b) => a + b, 0);
+        const avg = sum / 200;
+        ma200.push({
+          time: data[i].time,
+          value: parseFloat(avg.toFixed(5))
+        });
+      }
+      
+      return [ma20, ma50, ma200];
+    } catch (error) {
+      console.error('Error calculating moving averages:', error);
+      return [[], [], []];
+    }
+  };
+
   return (
     <Box sx={{
       display: 'flex',
@@ -1220,7 +1335,7 @@ const ShortTermTrading = () => {
             </Grid>
             
             <Grid item xs={12} md={6}>
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+              <Box sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' }, gap: 2, flexWrap: 'wrap' }}>
                 <FormControl size="small" sx={{ minWidth: 120 }}>
                   <InputLabel id="pair-select-label">Pair</InputLabel>
                   <Select
@@ -1356,8 +1471,8 @@ const ShortTermTrading = () => {
                 </Box>
               </Grid>
               
-              <Grid item xs={12} sm={4} sx={{ textAlign: 'right' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+              <Grid item xs={12} sm={4} sx={{ textAlign: { xs: 'center', sm: 'right' }, mt: { xs: 2, sm: 0 } }}>
+                <Box sx={{ display: 'flex', justifyContent: { xs: 'center', sm: 'flex-end' }, gap: 2 }}>
                   <Button 
                     variant="contained" 
                     color="success"
@@ -1402,7 +1517,7 @@ const ShortTermTrading = () => {
                   backgroundColor: colors.panelBg,
                   borderRadius: 2,
                   border: `1px solid ${colors.borderColor}`,
-                  height: 500,
+                  height: { xs: 350, md: 500 },
                   position: 'relative'
                 }}
               >
@@ -1411,9 +1526,14 @@ const ShortTermTrading = () => {
                     display: 'flex', 
                     justifyContent: 'center', 
                     alignItems: 'center',
-                    height: '100%' 
+                    height: '100%',
+                    flexDirection: 'column',
+                    gap: 2
                   }}>
                     <CircularProgress />
+                    <Typography variant="body2" color="textSecondary">
+                      Loading chart data...
+                    </Typography>
                   </Box>
                 ) : (
                   <Box 
