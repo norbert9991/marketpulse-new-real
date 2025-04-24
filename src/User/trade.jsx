@@ -274,6 +274,7 @@ const Trade = () => {
       id: 1,
       name: 'Triumph',
       description: 'Conservative trend-following strategy using major currency pairs',
+      tooltip: 'Triumph follows market trends with minimal risk. It uses a combination of moving averages and momentum indicators to identify sustained trends across major forex pairs, particularly EUR/USD and USD/JPY. Ideal for stable, consistent returns.',
       totalNetPL: 121.00,
       oneYearNetPL: 14.37,
       sixMonthNetPL: 8.24,
@@ -289,6 +290,7 @@ const Trade = () => {
       id: 2,
       name: 'Legacy',
       description: 'Momentum-based strategy focusing on breakouts and pullbacks',
+      tooltip: 'Legacy capitalizes on strong market momentum and breakouts. It identifies key support/resistance levels and trades when price breaks through these levels with volume. Good performance in volatile markets with clear directional movement.',
       totalNetPL: 538.00,
       oneYearNetPL: 10.29,
       sixMonthNetPL: 6.40,
@@ -304,6 +306,7 @@ const Trade = () => {
       id: 3,
       name: 'Alpine',
       description: 'Range-trading strategy exploiting overbought and oversold conditions',
+      tooltip: 'Alpine excels in range-bound markets by identifying overbought and oversold conditions. It uses oscillators like RSI and Stochastic to find potential reversal points. Most effective during sideways market conditions with predictable trading ranges.',
       totalNetPL: 317.00,
       oneYearNetPL: 12.10,
       sixMonthNetPL: 12.26,
@@ -319,6 +322,7 @@ const Trade = () => {
       id: 4,
       name: 'Ivory',
       description: 'Contrarian strategy that trades against extreme market movements',
+      tooltip: 'Ivory is a contrarian strategy that trades against extreme market moves. It looks for overextended price actions and takes positions in the opposite direction. Higher risk but potentially rewarding during market reversals after strong trends.',
       totalNetPL: 125.00,
       oneYearNetPL: -1.30,
       sixMonthNetPL: 2.50,
@@ -334,6 +338,7 @@ const Trade = () => {
       id: 5,
       name: 'Quantum',
       description: 'High-frequency scalping algorithm targeting small price movements',
+      tooltip: 'Quantum employs high-frequency trading techniques to capture small price movements across multiple currency pairs. It makes many rapid trades with tight profit targets. Highest risk profile but potential for steady returns in all market conditions.',
       totalNetPL: 87.00,
       oneYearNetPL: 2.40,
       sixMonthNetPL: 1.20,
@@ -516,29 +521,32 @@ const Trade = () => {
                   ${simulationAmount.toLocaleString()}
               </Typography>
               
-                <Box sx={{ width: '100%', px: 4, position: 'relative', mt: 2 }}>
-                  {/* Progress fill effect */}
+                <Box sx={{ width: '100%', maxWidth: '600px', px: 4, position: 'relative', mt: 2 }}>
+                  {/* Progress fill effect - fixed to stay within bounds */}
                   <Box sx={{ 
                     position: 'absolute', 
                     top: '50%', 
-                    left: 40, 
-                    right: 40, 
+                    left: 0, 
+                    right: 0, 
                     height: '6px', 
                     transform: 'translateY(-50%)',
                     backgroundColor: colors.borderColor,
                     borderRadius: '3px',
+                    mx: 4
                   }} />
                   
                   <Box sx={{ 
                     position: 'absolute', 
                     top: '50%', 
-                    left: 40, 
-                    width: `${(simulationAmount - 1000) / 990}%`,
+                    left: 0,
+                    width: `${(Math.min(simulationAmount, 100000) - 1000) / (100000 - 1000) * 100}%`, 
                     height: '6px', 
                     transform: 'translateY(-50%)',
                     background: `linear-gradient(90deg, ${colors.accentBlue}, ${colors.buyGreen})`,
                     borderRadius: '3px',
-                    transition: 'width 0.3s ease'
+                    transition: 'width 0.3s ease',
+                    ml: 4,
+                    maxWidth: 'calc(100% - 32px)'
                   }} />
                   
                   <input
@@ -614,7 +622,7 @@ const Trade = () => {
                   `}</style>
                 </Box>
                 
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', px: 4, mt: 1 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', maxWidth: '600px', px: 4, mt: 1 }}>
                   <Typography variant="body2" sx={{ color: colors.secondaryText }}>$1,000</Typography>
                   <Typography variant="body2" sx={{ color: colors.secondaryText }}>$100,000</Typography>
                 </Box>
@@ -1474,7 +1482,41 @@ const Trade = () => {
                     {strategies.map((strategy, index) => (
                       <TableRow key={strategy.id} sx={{ '&:hover': { backgroundColor: colors.hoverBg } }}>
                         <TableCell sx={{ color: colors.primaryText, borderBottom: `1px solid ${colors.borderColor}` }}>
-                          {strategy.name}
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            {strategy.name}
+                            <Tooltip
+                              title={
+                                <Box sx={{ p: 1 }}>
+                                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>{strategy.name}</Typography>
+                                  <Typography variant="body2" sx={{ mb: 1 }}>{strategy.description}</Typography>
+                                  <Grid container spacing={1} sx={{ mt: 1 }}>
+                                    <Grid item xs={6}>
+                                      <Typography variant="caption" sx={{ color: colors.secondaryText }}>Risk Level:</Typography>
+                                      <Typography variant="body2">{strategy.riskLevel.charAt(0).toUpperCase() + strategy.riskLevel.slice(1)}</Typography>
+                                    </Grid>
+                                    <Grid item xs={6}>
+                                      <Typography variant="caption" sx={{ color: colors.secondaryText }}>Avg. Duration:</Typography>
+                                      <Typography variant="body2">{strategy.avgDuration}</Typography>
+                                    </Grid>
+                                    <Grid item xs={6}>
+                                      <Typography variant="caption" sx={{ color: colors.secondaryText }}>Max Drawdown:</Typography>
+                                      <Typography variant="body2">{strategy.maxDrawdown}%</Typography>
+                                    </Grid>
+                                    <Grid item xs={6}>
+                                      <Typography variant="caption" sx={{ color: colors.secondaryText }}>Sharpe Ratio:</Typography>
+                                      <Typography variant="body2">{strategy.sharpeRatio}</Typography>
+                                    </Grid>
+                                  </Grid>
+                                </Box>
+                              }
+                              arrow
+                              placement="right"
+                            >
+                              <IconButton size="small" sx={{ ml: 1, color: colors.secondaryText }}>
+                                <HelpOutlineIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
                         </TableCell>
                         <TableCell align="right" sx={{ 
                           color: strategy.totalNetPL >= 0 ? colors.profitGreen : colors.lossRed,
