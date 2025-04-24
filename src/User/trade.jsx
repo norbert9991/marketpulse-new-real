@@ -1175,47 +1175,99 @@ const Trade = () => {
                         </Button>
                       </Box>
                       
-                      {/* Currency pair distribution in text format instead of donut chart */}
-                      <Box sx={{ height: 250, overflowY: 'auto', pr: 1 }}>
-                        {simulationResults.symbols.map((symbol, i) => (
-                          <Box 
-                            key={symbol.symbol} 
-                            sx={{ 
-                              display: 'flex', 
-                              justifyContent: 'space-between', 
-                              alignItems: 'center',
-                              py: 1.5,
-                              borderBottom: i < simulationResults.symbols.length - 1 ? `1px solid ${colors.borderColor}` : 'none'
-                            }}
-                          >
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              <Typography variant="body2" sx={{ color: colors.primaryText, mr: 1 }}>
-                                {symbol.symbol}
-                              </Typography>
-                              <Chip 
-                                label={`${symbol.winRate}% win`} 
-                                size="small" 
-                                sx={{ 
-                                  backgroundColor: colors.cardBg, 
-                                  color: colors.secondaryText,
-                                  height: 20,
-                                  '& .MuiChip-label': {
-                                    px: 1,
-                                    fontSize: '0.65rem'
-                                  }
-                                }} 
-                              />
-                            </Box>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                              <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
-                                {symbol.weight.toFixed(1)}%
-                              </Typography>
-                              <Typography variant="caption" sx={{ color: colors.secondaryText }}>
-                                {symbol.trades} trades
-                              </Typography>
-                            </Box>
-                          </Box>
-                        ))}
+                      {/* Revert to donut/pie chart display */}
+                      <Box sx={{ display: 'flex', height: 250 }}>
+                        {/* Donut chart */}
+                        <Box sx={{ 
+                          width: 240, 
+                          height: 240, 
+                          position: 'relative',
+                          margin: '0 auto'
+                        }}>
+                          <svg width="240" height="240" viewBox="0 0 240 240">
+                            <g transform="translate(120, 120)">
+                              {simulationResults.symbols.map((symbol, i) => {
+                                const startAngle = i > 0 
+                                  ? simulationResults.symbols.slice(0, i).reduce((sum, s) => sum + s.weight, 0) / 100 * Math.PI * 2 
+                                  : 0;
+                                const endAngle = startAngle + (symbol.weight / 100) * Math.PI * 2;
+                                
+                                const x1 = Math.sin(startAngle) * 100;
+                                const y1 = -Math.cos(startAngle) * 100;
+                                const x2 = Math.sin(endAngle) * 100;
+                                const y2 = -Math.cos(endAngle) * 100;
+                                
+                                const largeArcFlag = endAngle - startAngle > Math.PI ? 1 : 0;
+                                
+                                const pathData = [
+                                  `M ${x1} ${y1}`,
+                                  `A 100 100 0 ${largeArcFlag} 1 ${x2} ${y2}`,
+                                  `L 0 0`,
+                                  `Z`
+                                ].join(' ');
+                                
+                                const chartColors = [
+                                  '#00E676', // Green
+                                  '#2196F3', // Blue
+                                  '#FF9800', // Orange
+                                  '#E91E63', // Pink
+                                  '#9C27B0', // Purple
+                                  '#FFEB3B', // Yellow
+                                  '#00BCD4'  // Cyan
+                                ];
+                                
+                                return (
+                                  <path 
+                                    key={symbol.symbol}
+                                    d={pathData}
+                                    fill={chartColors[i % chartColors.length]}
+                                    stroke={colors.cardBg}
+                                    strokeWidth="1"
+                                  />
+                                );
+                              })}
+                              <circle cx="0" cy="0" r="60" fill={colors.cardBg} />
+                            </g>
+                          </svg>
+                        </Box>
+                        
+                        {/* Legend */}
+                        <Box sx={{ mt: 2, ml: 2, maxHeight: 240, overflow: 'auto' }}>
+                          {simulationResults.symbols.map((symbol, i) => {
+                            const chartColors = [
+                              '#00E676', // Green
+                              '#2196F3', // Blue
+                              '#FF9800', // Orange
+                              '#E91E63', // Pink
+                              '#9C27B0', // Purple
+                              '#FFEB3B', // Yellow
+                              '#00BCD4'  // Cyan
+                            ];
+                            
+                            return (
+                              <Box key={symbol.symbol} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                <Box 
+                                  sx={{ 
+                                    width: 12, 
+                                    height: 12, 
+                                    borderRadius: '2px', 
+                                    backgroundColor: chartColors[i % chartColors.length],
+                                    mr: 1
+                                  }} 
+                                />
+                                <Typography variant="body2" sx={{ mr: 1, color: colors.primaryText }}>
+                                  {symbol.symbol}
+                                </Typography>
+                                <Typography variant="caption" sx={{ mr: 1, color: colors.secondaryText }}>
+                                  ({symbol.trades} trades)
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: colors.secondaryText, ml: 'auto', fontWeight: 'bold' }}>
+                                  {symbol.weight.toFixed(1)}%
+                                </Typography>
+                              </Box>
+                            );
+                          })}
+                        </Box>
                       </Box>
                     </Paper>
                   </Grid>
