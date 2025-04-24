@@ -15,8 +15,7 @@ import {
   Tooltip,
   Chip,
   CircularProgress,
-  Alert,
-  Badge
+  Alert
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
@@ -102,9 +101,6 @@ const UserDashboard = () => {
   const [marketData, setMarketData] = useState(null);
   const [marketLoading, setMarketLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [notifications, setNotifications] = useState([]);
-  const [notificationAnchorEl, setNotificationAnchorEl] = useState(null);
-  const [lastCheckedMarkets, setLastCheckedMarkets] = useState({});
   const navigate = useNavigate();
 
   // Debug current location
@@ -347,283 +343,6 @@ const UserDashboard = () => {
     handleMenuClose();
   }
 
-  // Add a function to handle notification click
-  const handleNotificationClick = (event) => {
-    setNotificationAnchorEl(event.currentTarget);
-  };
-
-  const handleNotificationClose = () => {
-    setNotificationAnchorEl(null);
-  };
-
-  // Function to generate notifications from market data
-  const generateMarketNotifications = (marketData, symbol) => {
-    if (!marketData || !symbol) return [];
-
-    const newNotifications = [];
-    const currentTime = new Date();
-    const notificationId = Date.now();
-
-    // Check for RSI conditions (overbought/oversold)
-    if (marketData.technical_indicators?.rsi) {
-      const rsi = marketData.technical_indicators.rsi;
-      if (rsi > 70) {
-        newNotifications.push({
-          id: notificationId + 1,
-          title: 'Overbought Alert',
-          message: `${symbol} RSI is ${rsi.toFixed(2)} - market may be overbought`,
-          time: '1 minute ago',
-          read: false,
-          type: 'market',
-          symbol: symbol
-        });
-      } else if (rsi < 30) {
-        newNotifications.push({
-          id: notificationId + 2,
-          title: 'Oversold Alert',
-          message: `${symbol} RSI is ${rsi.toFixed(2)} - market may be oversold`,
-          time: '1 minute ago',
-          read: false,
-          type: 'market',
-          symbol: symbol
-        });
-      }
-    }
-
-    // Check for MACD crossover
-    if (marketData.technical_indicators?.macd && marketData.technical_indicators?.macd_signal) {
-      const macd = marketData.technical_indicators.macd;
-      const signal = marketData.technical_indicators.macd_signal;
-      
-      // Only generate notification if we have previous data to compare to
-      if (lastCheckedMarkets[symbol]?.technical_indicators?.macd && 
-          lastCheckedMarkets[symbol]?.technical_indicators?.macd_signal) {
-        
-        const prevMacd = lastCheckedMarkets[symbol].technical_indicators.macd;
-        const prevSignal = lastCheckedMarkets[symbol].technical_indicators.macd_signal;
-        
-        // Check for bullish crossover (MACD crosses above signal line)
-        if (prevMacd < prevSignal && macd > signal) {
-          newNotifications.push({
-            id: notificationId + 3,
-            title: 'Bullish MACD Crossover',
-            message: `${symbol} MACD crossed above signal line - potential bullish momentum`,
-            time: '1 minute ago',
-            read: false,
-            type: 'market',
-            symbol: symbol
-          });
-        }
-        
-        // Check for bearish crossover (MACD crosses below signal line)
-        if (prevMacd > prevSignal && macd < signal) {
-          newNotifications.push({
-            id: notificationId + 4,
-            title: 'Bearish MACD Crossover',
-            message: `${symbol} MACD crossed below signal line - potential bearish momentum`,
-            time: '1 minute ago',
-            read: false,
-            type: 'market',
-            symbol: symbol
-          });
-        }
-      }
-    }
-
-    // Check for price approaching support/resistance levels
-    if (marketData.current_price && marketData.support_resistance) {
-      const price = marketData.current_price;
-      
-      // Check if price is near resistance levels
-      for (const resistance of marketData.support_resistance.resistance || []) {
-        const priceDifference = Math.abs(price - resistance) / price;
-        
-        // If price is within 0.5% of a resistance level
-        if (priceDifference < 0.005) {
-          newNotifications.push({
-            id: notificationId + 5,
-            title: 'Resistance Level Alert',
-            message: `${symbol} approaching resistance level at ${resistance.toFixed(5)}`,
-            time: '1 minute ago',
-            read: false,
-            type: 'market',
-            symbol: symbol
-          });
-          break; // Only notify about one resistance level at a time
-        }
-      }
-      
-      // Check if price is near support levels
-      for (const support of marketData.support_resistance.support || []) {
-        const priceDifference = Math.abs(price - support) / price;
-        
-        // If price is within 0.5% of a support level
-        if (priceDifference < 0.005) {
-          newNotifications.push({
-            id: notificationId + 6,
-            title: 'Support Level Alert',
-            message: `${symbol} approaching support level at ${support.toFixed(5)}`,
-            time: '1 minute ago',
-            read: false,
-            type: 'market',
-            symbol: symbol
-          });
-          break; // Only notify about one support level at a time
-        }
-      }
-    }
-
-    // Update the last checked market data for this symbol
-    setLastCheckedMarkets(prev => ({
-      ...prev,
-      [symbol]: marketData
-    }));
-
-    return newNotifications;
-  };
-
-  // Function to fetch and generate forex news notifications
-  const generateForexNewsNotifications = () => {
-    // In a real app, this would make an API call to a news service
-    // For this demo, we'll create synthetic news notifications
-    const forexNewsSamples = [
-      {
-        id: Date.now() + 100,
-        title: 'Fed Interest Rate Decision',
-        message: 'The Federal Reserve kept interest rates unchanged as expected, signaling potential cuts later this year',
-        time: '2 hours ago',
-        read: false,
-        type: 'news',
-        url: '#'
-      },
-      {
-        id: Date.now() + 101,
-        title: 'EUR/USD Analysis',
-        message: 'EUR/USD faces resistance at 1.0900 level after ECB comments on inflation concerns',
-        time: '4 hours ago', 
-        read: false,
-        type: 'news',
-        url: '#'
-      },
-      {
-        id: Date.now() + 102,
-        title: 'UK GDP Data Release',
-        message: 'GBP pairs volatile after UK GDP shows 0.2% growth, slightly above expectations',
-        time: '1 day ago',
-        read: true,
-        type: 'news',
-        url: '#'
-      }
-    ];
-    
-    // Only return one random news item to avoid flooding notifications
-    return [forexNewsSamples[Math.floor(Math.random() * forexNewsSamples.length)]];
-  };
-
-  // Function to generate system notifications
-  const generateSystemNotifications = () => {
-    // These could be app updates, feature announcements, account status updates, etc.
-    return [
-      {
-        id: Date.now() + 200,
-        title: 'Welcome to MarketPulse',
-        message: `Hello ${user?.username || 'trader'}, check out the new simulation tool for testing your trading strategies`,
-        time: 'Just now',
-        read: false,
-        type: 'system'
-      }
-    ];
-  };
-
-  // Effect hook to fetch and update notifications
-  useEffect(() => {
-    if (!user) return;
-    
-    const fetchNotifications = () => {
-      let newNotifications = [];
-      
-      // 1. Get the latest news notifications
-      if (Math.random() > 0.7) { // Only show news occasionally
-        newNotifications = [...newNotifications, ...generateForexNewsNotifications()];
-      }
-      
-      // 2. Get system notifications on first load
-      if (notifications.length === 0) {
-        newNotifications = [...newNotifications, ...generateSystemNotifications()];
-      }
-      
-      // 3. Add new notifications to existing ones
-      if (newNotifications.length > 0) {
-        setNotifications(prev => {
-          // Limit to maximum 10 notifications by removing oldest if needed
-          const combined = [...newNotifications, ...prev];
-          return combined.slice(0, 10);
-        });
-      }
-    };
-    
-    fetchNotifications();
-    
-    // Set up periodic checking for news notifications
-    const notificationInterval = setInterval(fetchNotifications, 60000); // Check every minute
-    
-    return () => clearInterval(notificationInterval);
-  }, [user]);
-
-  // Effect hook to check for market-based notifications when market data changes
-  useEffect(() => {
-    if (marketData && selectedSymbol) {
-      const marketNotifications = generateMarketNotifications(marketData, selectedSymbol);
-      
-      if (marketNotifications.length > 0) {
-        setNotifications(prev => {
-          // Limit to maximum 10 notifications by removing oldest if needed
-          const combined = [...marketNotifications, ...prev];
-          return combined.slice(0, 10);
-        });
-      }
-    }
-  }, [marketData, selectedSymbol]);
-
-  const markNotificationAsRead = (id) => {
-    setNotifications(prev => 
-      prev.map(notif => 
-        notif.id === id ? { ...notif, read: true } : notif
-      )
-    );
-    handleNotificationClose();
-  };
-  
-  // Handle notification click based on type
-  const handleNotificationItemClick = (notification) => {
-    // Mark as read
-    markNotificationAsRead(notification.id);
-    
-    // Handle different notification types
-    if (notification.type === 'market' && notification.symbol) {
-      // Set the selected symbol to view that market
-      setSelectedSymbol(notification.symbol);
-      
-      // Could also scroll to the market analysis section
-      // Using setTimeout to ensure the component has time to render
-      setTimeout(() => {
-        const marketAnalysisElement = document.getElementById('market-analysis-section');
-        if (marketAnalysisElement) {
-          marketAnalysisElement.scrollIntoView({ behavior: 'smooth' });
-        }
-      }, 100);
-    } 
-    else if (notification.type === 'news' && notification.url) {
-      // Open news in new tab or navigate to news page
-      window.open(notification.url, '_blank');
-    }
-    else if (notification.type === 'system') {
-      // For system notifications, just mark as read
-    }
-  };
-
-  const unreadCount = notifications.filter(n => !n.read).length;
-
   if (error) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: colors.darkBg }}>
@@ -671,100 +390,15 @@ const UserDashboard = () => {
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <Tooltip title="Notifications">
-                <IconButton 
-                  sx={{ color: colors.secondaryText }}
-                  onClick={handleNotificationClick}
-                >
-                  <Badge badgeContent={unreadCount} color="error">
-                    <NotificationsIcon />
-                  </Badge>
+                <IconButton sx={{ color: colors.secondaryText }}>
+                  <NotificationsIcon />
                 </IconButton>
               </Tooltip>
-              <Menu
-                anchorEl={notificationAnchorEl}
-                open={Boolean(notificationAnchorEl)}
-                onClose={handleNotificationClose}
-                PaperProps={{
-                  sx: {
-                    backgroundColor: colors.panelBg,
-                    border: `1px solid ${colors.borderColor}`,
-                    borderRadius: '10px',
-                    mt: 1,
-                    minWidth: '300px',
-                    maxWidth: '400px'
-                  }
-                }}
-              >
-                <Box sx={{ p: 1 }}>
-                  <Typography variant="h6" sx={{ color: colors.primaryText, p: 1 }}>
-                    Notifications
-                  </Typography>
-                  <Divider sx={{ backgroundColor: colors.borderColor }} />
-                  {notifications.length === 0 ? (
-                    <Typography sx={{ p: 2, color: colors.secondaryText }}>
-                      No notifications
-                    </Typography>
-                  ) : (
-                    notifications.map(notification => (
-                      <MenuItem 
-                        key={notification.id} 
-                        onClick={() => handleNotificationItemClick(notification)}
-                        sx={{ 
-                          p: 1,
-                          backgroundColor: notification.read ? 'transparent' : colors.hoverBg,
-                          borderRadius: '4px',
-                          mb: 1
-                        }}
-                      >
-                        <Box sx={{ width: '100%' }}>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Typography 
-                              variant="subtitle2" 
-                              sx={{ 
-                                fontWeight: notification.read ? 'normal' : 'bold', 
-                                color: colors.primaryText,
-                                display: 'flex',
-                                alignItems: 'center'
-                              }}
-                            >
-                              {/* Add icon based on notification type */}
-                              {notification.type === 'market' && (
-                                <TrendingUpIcon fontSize="small" sx={{ mr: 0.5, color: colors.accentBlue }} />
-                              )}
-                              {notification.type === 'news' && (
-                                <NotificationsIcon fontSize="small" sx={{ mr: 0.5, color: colors.warningOrange }} />
-                              )}
-                              {notification.type === 'system' && (
-                                <PersonIcon fontSize="small" sx={{ mr: 0.5, color: colors.primaryText }} />
-                              )}
-                              {notification.title}
-                            </Typography>
-                            <Typography variant="caption" sx={{ color: colors.secondaryText }}>
-                              {notification.time}
-                            </Typography>
-                          </Box>
-                          <Typography variant="body2" sx={{ color: colors.secondaryText, mt: 0.5 }}>
-                            {notification.message}
-                          </Typography>
-                          {notification.type === 'market' && notification.symbol && (
-                            <Chip 
-                              label={notification.symbol} 
-                              size="small" 
-                              sx={{ 
-                                mt: 1, 
-                                backgroundColor: colors.panelBg,
-                                color: colors.accentBlue,
-                                fontSize: '0.7rem',
-                                height: '20px'
-                              }} 
-                            />
-                          )}
-                        </Box>
-                      </MenuItem>
-                    ))
-                  )}
-                </Box>
-              </Menu>
+              <Tooltip title="Settings">
+                <IconButton sx={{ color: colors.secondaryText }} onClick={handleSettings}>
+                  <SettingsIcon />
+                </IconButton>
+              </Tooltip>
               <Button 
                 startIcon={<Avatar sx={{ width: 30, height: 30, backgroundColor: colors.accentBlue }}>{user.username ? user.username.charAt(0).toUpperCase() : 'U'}</Avatar>}
                 onClick={handleMenuOpen}
@@ -884,9 +518,7 @@ const UserDashboard = () => {
                   borderRadius: '12px',
                   boxShadow: `0 4px 12px ${colors.shadowColor}`,
                   height: '100%'
-                }}
-                id="market-analysis-section"
-                >
+                }}>
                   <MarketAnalysis selectedSymbol={selectedSymbol} />
                 </Paper>
               </Box>
