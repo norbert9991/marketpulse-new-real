@@ -15,7 +15,8 @@ import {
   Tooltip,
   Chip,
   CircularProgress,
-  Alert
+  Alert,
+  Badge
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
@@ -101,6 +102,8 @@ const UserDashboard = () => {
   const [marketData, setMarketData] = useState(null);
   const [marketLoading, setMarketLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [notificationAnchorEl, setNotificationAnchorEl] = useState(null);
   const navigate = useNavigate();
 
   // Debug current location
@@ -343,6 +346,60 @@ const UserDashboard = () => {
     handleMenuClose();
   }
 
+  // Add a function to handle notification click
+  const handleNotificationClick = (event) => {
+    setNotificationAnchorEl(event.currentTarget);
+  };
+
+  const handleNotificationClose = () => {
+    setNotificationAnchorEl(null);
+  };
+
+  // Mock function to fetch notifications - in a real app, this would call an API
+  useEffect(() => {
+    const fetchNotifications = () => {
+      // Mock notifications data
+      const mockNotifications = [
+        {
+          id: 1,
+          title: 'Market Alert',
+          message: 'EUR/USD has crossed above the 50-day moving average',
+          time: '10 minutes ago',
+          read: false
+        },
+        {
+          id: 2,
+          title: 'Account Update',
+          message: 'Your account settings have been updated',
+          time: '1 hour ago',
+          read: true
+        },
+        {
+          id: 3,
+          title: 'New Feature',
+          message: 'Check out our new market simulation tool',
+          time: '1 day ago',
+          read: true
+        }
+      ];
+      
+      setNotifications(mockNotifications);
+    };
+    
+    fetchNotifications();
+  }, []);
+
+  const markNotificationAsRead = (id) => {
+    setNotifications(prev => 
+      prev.map(notif => 
+        notif.id === id ? { ...notif, read: true } : notif
+      )
+    );
+    handleNotificationClose();
+  };
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+
   if (error) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: colors.darkBg }}>
@@ -390,15 +447,69 @@ const UserDashboard = () => {
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <Tooltip title="Notifications">
-                <IconButton sx={{ color: colors.secondaryText }}>
-                  <NotificationsIcon />
+                <IconButton 
+                  sx={{ color: colors.secondaryText }}
+                  onClick={handleNotificationClick}
+                >
+                  <Badge badgeContent={unreadCount} color="error">
+                    <NotificationsIcon />
+                  </Badge>
                 </IconButton>
               </Tooltip>
-              <Tooltip title="Settings">
-                <IconButton sx={{ color: colors.secondaryText }} onClick={handleSettings}>
-                  <SettingsIcon />
-                </IconButton>
-              </Tooltip>
+              <Menu
+                anchorEl={notificationAnchorEl}
+                open={Boolean(notificationAnchorEl)}
+                onClose={handleNotificationClose}
+                PaperProps={{
+                  sx: {
+                    backgroundColor: colors.panelBg,
+                    border: `1px solid ${colors.borderColor}`,
+                    borderRadius: '10px',
+                    mt: 1,
+                    minWidth: '300px',
+                    maxWidth: '400px'
+                  }
+                }}
+              >
+                <Box sx={{ p: 1 }}>
+                  <Typography variant="h6" sx={{ color: colors.primaryText, p: 1 }}>
+                    Notifications
+                  </Typography>
+                  <Divider sx={{ backgroundColor: colors.borderColor }} />
+                  {notifications.length === 0 ? (
+                    <Typography sx={{ p: 2, color: colors.secondaryText }}>
+                      No notifications
+                    </Typography>
+                  ) : (
+                    notifications.map(notification => (
+                      <MenuItem 
+                        key={notification.id} 
+                        onClick={() => markNotificationAsRead(notification.id)}
+                        sx={{ 
+                          p: 1,
+                          backgroundColor: notification.read ? 'transparent' : colors.hoverBg,
+                          borderRadius: '4px',
+                          mb: 1
+                        }}
+                      >
+                        <Box sx={{ width: '100%' }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: notification.read ? 'normal' : 'bold', color: colors.primaryText }}>
+                              {notification.title}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: colors.secondaryText }}>
+                              {notification.time}
+                            </Typography>
+                          </Box>
+                          <Typography variant="body2" sx={{ color: colors.secondaryText, mt: 0.5 }}>
+                            {notification.message}
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                    ))
+                  )}
+                </Box>
+              </Menu>
               <Button 
                 startIcon={<Avatar sx={{ width: 30, height: 30, backgroundColor: colors.accentBlue }}>{user.username ? user.username.charAt(0).toUpperCase() : 'U'}</Avatar>}
                 onClick={handleMenuOpen}
