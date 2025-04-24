@@ -240,6 +240,9 @@ const Trade = () => {
 
   // Remove short-term trading specific functions (checkPendingOrders, executeOrder, placeOrder, etc.)
   
+  // Add missing state variable needed for compatibility
+  const [activeTradingTab, setActiveTradingTab] = useState(0);
+  
   // Keep the handleTabChange for UI compatibility
   const handleTabChange = (event, newValue) => {
     setActiveTradingTab(newValue);
