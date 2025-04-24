@@ -13,7 +13,6 @@ import ForexNews from './User/ForexNews';
 import ProtectedRoute from './components/ProtectedRoute';
 import Settings from './User/settings';
 import AdminSettings from './Admin/adminsettings';
-import ShortTermTrading from './User/ShortTermTrading';
 
 // Create a custom theme
 const theme = createTheme({
@@ -107,14 +106,6 @@ function App() {
             element={
               <ProtectedRoute>
                 <Trade />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/short-term-trading" 
-            element={
-              <ProtectedRoute>
-                <ShortTermTrading />
               </ProtectedRoute>
             } 
           />
