@@ -145,6 +145,8 @@ const AdminFAQ = () => {
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
+  const messagesAreaRef = useRef(null);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   
   // Sample FAQ categories
   const faqCategories = [
@@ -246,10 +248,28 @@ const AdminFAQ = () => {
     });
   }
 
-  // Scroll to bottom of chat on new message
+  // More intelligent scroll handling
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (shouldAutoScroll && messagesEndRef.current) {
+      // Use a small timeout to ensure DOM updates are complete
+      const scrollTimeout = setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }, 100);
+      
+      return () => clearTimeout(scrollTimeout);
+    }
+  }, [messages, shouldAutoScroll]);
+
+  // Detect if user has manually scrolled up
+  const handleScroll = () => {
+    if (messagesAreaRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = messagesAreaRef.current;
+      // If user scrolled up (not at bottom), disable auto-scroll
+      // But if they scrolled back to bottom, re-enable it
+      const isAtBottom = scrollHeight - scrollTop - clientHeight < 50; // 50px threshold
+      setShouldAutoScroll(isAtBottom);
+    }
+  };
 
   // Simulate AI response
   const generateResponse = (question) => {
@@ -281,6 +301,8 @@ const AdminFAQ = () => {
           ...prev, 
           { id: Date.now(), text: foundAnswer, isUser: false }
         ]);
+        // Re-enable auto-scroll for the response
+        setShouldAutoScroll(true);
       } else if (matchingQuestions.length > 0) {
         // Suggestions
         const suggestionsText = `I'm not sure I understand completely. Are you asking about one of these?\n\n${matchingQuestions.map(q => `• ${q}`).join('\n')}`;
@@ -288,6 +310,7 @@ const AdminFAQ = () => {
           ...prev, 
           { id: Date.now(), text: suggestionsText, isUser: false }
         ]);
+        setShouldAutoScroll(true);
       } else {
         // No match
         const noMatchText = "I don't have specific information about that. Please try to rephrase your question or browse the FAQ categories below.";
@@ -295,6 +318,7 @@ const AdminFAQ = () => {
           ...prev, 
           { id: Date.now(), text: noMatchText, isUser: false }
         ]);
+        setShouldAutoScroll(true);
       }
       setIsTyping(false);
     }, 1500);
@@ -307,6 +331,9 @@ const AdminFAQ = () => {
     // Add user message
     const userMessage = { id: Date.now(), text: inputValue, isUser: true };
     setMessages(prev => [...prev, userMessage]);
+    
+    // Ensure scrolling is enabled for user messages
+    setShouldAutoScroll(true);
     
     // Generate response
     generateResponse(inputValue);
@@ -321,6 +348,9 @@ const AdminFAQ = () => {
       ...prev, 
       { id: Date.now(), text: question, isUser: true }
     ]);
+    
+    // Ensure scrolling is enabled for FAQ clicks
+    setShouldAutoScroll(true);
     
     // Simulate response with slight delay
     setIsTyping(true);
@@ -354,7 +384,10 @@ const AdminFAQ = () => {
                 <Typography variant="h6">Admin Assistant</Typography>
               </Box>
               
-              <MessagesArea>
+              <MessagesArea 
+                ref={messagesAreaRef} 
+                onScroll={handleScroll}
+              >
                 {messages.map((message) => (
                   <MessageBubble key={message.id} isUser={message.isUser}>
                     <Typography variant="body2" sx={{ color: colors.primaryText, whiteSpace: 'pre-line' }}>
@@ -375,7 +408,7 @@ const AdminFAQ = () => {
                 <div ref={messagesEndRef} />
               </MessagesArea>
               
-              <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex' }}>
+              <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', position: 'relative', zIndex: 2 }}>
                 <TextField
                   fullWidth
                   variant="outlined"
