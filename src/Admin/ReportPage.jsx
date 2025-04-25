@@ -87,16 +87,12 @@ const MainContent = styled('div')({
 });
 
 const StyledCard = styled(Paper)({
-  padding: '32px',
+  padding: '20px',
   backgroundColor: colors.cardBg,
   border: `1px solid ${colors.borderColor}`,
-  borderRadius: '16px',
-  boxShadow: '0 4px 24px rgba(0, 0, 0, 0.15)',
-  height: '100%',
-  minHeight: '420px',
-  display: 'flex',
-  flexDirection: 'column',
-  justifyContent: 'center',
+  borderRadius: '10px',
+  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+  height: '100%'
 });
 
 const StyledTabs = styled(Tabs)({
@@ -368,8 +364,8 @@ const ReportPage = () => {
         )}
         
         {/* Summary Stats Cards */}
-        <Grid container spacing={4} sx={{ mb: 2 }}>
-          <Grid item xs={12} md={4}>
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid item xs={12} sm={6} md={4}>
             <StatCard>
               <CardContent>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
@@ -414,7 +410,7 @@ const ReportPage = () => {
             </StatCard>
           </Grid>
           
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} sm={6} md={4}>
             <StatCard>
               <CardContent>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
@@ -448,7 +444,7 @@ const ReportPage = () => {
             </StatCard>
           </Grid>
           
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} sm={6} md={4}>
             <StatCard>
               <CardContent>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
@@ -520,21 +516,22 @@ const ReportPage = () => {
         </StyledTabs>
         
         {/* Report Content */}
-        <Grid container spacing={4}>
+        <Grid container spacing={3}>
           {/* Main Chart */}
           <Grid item xs={12}>
             <StyledCard>
-              <Typography variant="h6" sx={{ mb: 3, color: colors.primaryText, fontWeight: 600, fontSize: '1.3rem' }}>
+              <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText, fontWeight: 600 }}>
                 {reportType === 0 ? 'User Growth Trend' : 
                  reportType === 1 ? 'Popular Currency Pairs' : 
                  'Market Sentiment Analysis'}
               </Typography>
+              
               {loading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 420 }}>
-                  <CircularProgress size={48} sx={{ color: colors.primary }} />
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 600, width: 550 }}>
+                  <CircularProgress size={40} sx={{ color: colors.primary }} />
                 </Box>
               ) : (
-                <ResponsiveContainer width="100%" height={500}>
+                <ResponsiveContainer width="100%" height={400}>
                   {reportType === 0 ? (
                     <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                       <defs>
@@ -613,20 +610,21 @@ const ReportPage = () => {
           </Grid>
           
           {/* Secondary Charts in a row */}
-          <Grid container item spacing={4}>
+          <Grid container item spacing={3}>
             <Grid item xs={12} md={6}>
-              <StyledCard>
-                <Typography variant="h6" sx={{ mb: 3, color: colors.primaryText, fontWeight: 600, fontSize: '1.15rem' }}>
+              <StyledCard sx={{ height: 600, width: 550 }}>
+                <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText, fontWeight: 600 }}>
                   {reportType === 0 ? 'User Distribution by Role' : 
                    reportType === 1 ? 'Currency Pair Distribution' : 
                    'Market Sentiment Breakdown'}
                 </Typography>
+                
                 {loading ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 420 }}>
-                    <CircularProgress size={48} sx={{ color: colors.primary }} />
+                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
+                    <CircularProgress size={40} sx={{ color: colors.primary }} />
                   </Box>
                 ) : (
-                  <ResponsiveContainer width="100%" height={420}>
+                  <ResponsiveContainer width="100%" height={350}>
                     {reportType === 0 ? (
                       <PieChart>
                         <Pie
@@ -705,18 +703,19 @@ const ReportPage = () => {
             </Grid>
             
             <Grid item xs={12} md={6}>
-              <StyledCard>
-                <Typography variant="h6" sx={{ mb: 3, color: colors.primaryText, fontWeight: 600, fontSize: '1.15rem' }}>
+              <StyledCard sx={{ height: 600, width: 550 }}>
+                <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText, fontWeight: 600 }}>
                   {reportType === 0 ? 'Monthly Registration Trend' : 
                    reportType === 1 ? 'Symbol Popularity Trend' : 
                    'Market Trend Distribution'}
                 </Typography>
+                
                 {loading ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 420 }}>
-                    <CircularProgress size={48} sx={{ color: colors.primary }} />
+                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
+                    <CircularProgress size={40} sx={{ color: colors.primary }} />
                   </Box>
                 ) : (
-                  <ResponsiveContainer width="100%" height={420}>
+                  <ResponsiveContainer width="100%" height={350}>
                     {reportType === 0 ? (
                       <BarChart data={chartData.slice(-6)} margin={{ top: 10, right: 30, left: 20, bottom: 20 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke={colors.borderColor} />
@@ -780,7 +779,8 @@ const ReportPage = () => {
                     )}
                   </ResponsiveContainer>
                 )}
-                <Box sx={{ mt: 3, textAlign: 'center' }}>
+                
+                <Box sx={{ mt: 2, textAlign: 'center' }}>
                   <Button
                     variant="outlined"
                     startIcon={<DownloadIcon />}
