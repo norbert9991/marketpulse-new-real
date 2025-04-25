@@ -1167,8 +1167,8 @@ const Trade = () => {
                       
                       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         {/* Donut chart */}
-                        <Box sx={{ width: 240, height: 240, position: 'relative' }}>
-                          <svg width="240" height="240" viewBox="0 0 240 240">
+                        <Box sx={{ width: 400, height: 240, position: 'relative' }}>
+                          <svg width="400" height="240" viewBox="0 0 240 240">
                             <defs>
                               <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
                                 <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
@@ -1248,11 +1248,12 @@ const Trade = () => {
                         Symbols P/L
                       </Typography>
                       
-                      <Box sx={{ height: 280, position: 'relative', mt: 2 }}>
+                      <Box sx={{ height: 280, width: 400, position: 'relative', mt: 2 }}>
                         {/* Bar chart matching Monthly P/L style */}
                         <Box sx={{ 
                           display: 'flex',
-                          height: '100%',
+                          height: '280',
+                          width: '400px',
                           alignItems: 'flex-end',
                           justifyContent: 'space-between',
                           px: 2,
