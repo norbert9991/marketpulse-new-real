@@ -1252,7 +1252,7 @@ const Trade = () => {
                         {/* Bar chart matching Monthly P/L style */}
                         <Box sx={{ 
                           display: 'flex',
-                          height: '280',
+                          height: '280px',
                           width: '400px',
                           alignItems: 'flex-end',
                           justifyContent: 'space-between',
