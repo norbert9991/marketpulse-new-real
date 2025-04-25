@@ -5,7 +5,7 @@ import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import AdminDashboard from './Admin/admin-dashboard';
 import UserDashboard from './User/user-dashboard';
 import UserManagement from './Admin/UserManagement';
-import TransactionPage from './Admin/TransactionPage';
+import AdminFAQ from './Admin/AdminFAQ';
 import ReportPage from './Admin/ReportPage';
 import Trade from './User/trade';
 import Market from './User/market';
@@ -71,7 +71,7 @@ function App() {
             path="/TransactionPage" 
             element={
               <ProtectedRoute requiredRole="admin">
-                <TransactionPage />
+                <AdminFAQ />
               </ProtectedRoute>
             } 
           />
