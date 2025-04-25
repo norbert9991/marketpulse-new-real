@@ -8,6 +8,7 @@ from user_settings_routes import settings_bp  # Import the settings blueprint
 from market_analysis_routes import market_analysis_bp  # Import the market analysis blueprint
 from admin_settings_routes import admin_settings_bp  # Import the admin settings blueprint
 from news_routes import news_bp  # Import the news blueprint
+from password_reset_routes import password_reset_bp  # Import the password reset blueprint
 from db_connection import db_manager
 from market_analysis import analyze_stock
 import os
@@ -19,9 +20,13 @@ load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fb4f4f255fb38f23a4d7379be97c837b')
 
-# Configure CORS to allow requests from any origin to ensure maximum compatibility
+# Get frontend URL from environment variable
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://marketpulse-new-real-static-2-0.onrender.com')
+print(f"Allowing CORS for: {FRONTEND_URL}")
+
+# Configure CORS to allow requests from specific origins
 CORS(app, 
-     origins=["*"],
+     origins=[FRONTEND_URL, "https://marketpulse-new-real-static-2-0.onrender.com", "https://marketpulse-new-real-2-0.onrender.com"],
      allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
      supports_credentials=True)
@@ -29,10 +34,16 @@ CORS(app,
 # Additional CORS headers added to all responses
 @app.after_request
 def after_request(response):
-    # Don't add Access-Control-Allow-Origin since flask-cors is already adding it
-    # response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    # Check if the request came from the allowed origin
+    origin = request.headers.get('Origin')
+    if origin in [FRONTEND_URL, "https://marketpulse-new-real-static-2-0.onrender.com", "https://marketpulse-new-real-2-0.onrender.com"]:
+        response.headers.add('Access-Control-Allow-Origin', origin)
+    
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
     response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    response.headers.add('Access-Control-Max-Age', '3600')  # Cache preflight response for 1 hour
+    
     return response
 
 # Register blueprints
@@ -43,6 +54,7 @@ app.register_blueprint(settings_bp)  # Register the settings blueprint
 app.register_blueprint(market_analysis_bp)  # Register the market analysis blueprint
 app.register_blueprint(admin_settings_bp)  # Register the admin settings blueprint
 app.register_blueprint(news_bp)  # Register the news blueprint
+app.register_blueprint(password_reset_bp)  # Register the password reset blueprint
 
 # Root route for testing
 @app.route('/', methods=['GET'])

@@ -5,8 +5,12 @@ import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from db_connection import db_manager
+from password_reset_routes import password_reset_bp
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
+
+# Register the password reset routes with the auth blueprint
+auth_bp.register_blueprint(password_reset_bp)
 
 def token_required(f):
     @wraps(f)
