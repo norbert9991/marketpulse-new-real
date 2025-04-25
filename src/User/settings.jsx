@@ -16,6 +16,7 @@ import {
   DialogActions,
   CircularProgress
 } from '@mui/material';
+import { styled } from '@mui/system';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PersonIcon from '@mui/icons-material/Person';
@@ -41,6 +42,32 @@ const colors = {
   errorRed: '#FF3D57',
   successGreen: '#00E676'
 };
+
+// Add these styled components after the colors definition
+const StyledTextField = styled(TextField)({
+  '& .MuiOutlinedInput-root': {
+    color: colors.primaryText,
+    '& fieldset': {
+      borderColor: colors.borderColor,
+      borderRadius: '12px',
+    },
+    '&:hover fieldset': {
+      borderColor: colors.accentBlue,
+    },
+    '&.Mui-focused fieldset': {
+      borderColor: colors.accentBlue,
+    },
+  },
+  '& .MuiInputLabel-root': {
+    color: colors.secondaryText,
+  },
+  '& .MuiInputLabel-root.Mui-focused': {
+    color: colors.accentBlue,
+  },
+  '& .MuiInputBase-input': {
+    padding: '14px',
+  }
+});
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -184,18 +211,48 @@ const Settings = () => {
       <Sidebar />
       <Box component="main" sx={{ flexGrow: 1, p: 3, ml: '250px' }}>
         <Box sx={{ maxWidth: 1000, mx: 'auto', mt: 4, mb: 4 }}>
-          <Typography 
-            variant="h4" 
-            component="div"
-            gutterBottom 
+          {/* Gradient Header */}
+          <Box 
             sx={{ 
-              color: colors.primaryText,
-              fontWeight: 'bold',
-              mb: 4
+              mb: 4, 
+              p: 4, 
+              borderRadius: 3,
+              background: `linear-gradient(135deg, ${colors.gradientStart}40, ${colors.gradientEnd}40)`,
+              backdropFilter: 'blur(10px)',
+              border: `1px solid ${colors.borderColor}`,
+              boxShadow: `0 8px 32px rgba(0, 0, 0, 0.2)`,
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                boxShadow: `0 12px 40px rgba(0, 0, 0, 0.25)`,
+                transform: 'translateY(-5px)'
+              }
             }}
           >
-            Account Settings
-          </Typography>
+            <Typography 
+              variant="h4" 
+              component="div"
+              sx={{ 
+                color: colors.primaryText,
+                fontWeight: 'bold',
+                background: `linear-gradient(135deg, ${colors.gradientStart}, ${colors.gradientEnd})`,
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                display: 'inline-block'
+              }}
+            >
+              Account Settings
+            </Typography>
+            <Typography 
+              variant="body1" 
+              sx={{ 
+                color: colors.secondaryText,
+                mt: 1,
+                maxWidth: '600px'
+              }}
+            >
+              Manage your profile information, update email, change password, and control security settings
+            </Typography>
+          </Box>
           
           {message.text && (
             <Alert 
@@ -204,7 +261,17 @@ const Settings = () => {
                 mb: 3,
                 bgcolor: message.type === 'success' ? 'rgba(0, 230, 118, 0.1)' : 'rgba(255, 61, 87, 0.1)',
                 color: message.type === 'success' ? colors.successGreen : colors.errorRed,
-                border: `1px solid ${message.type === 'success' ? colors.successGreen : colors.errorRed}`
+                border: `1px solid ${message.type === 'success' ? 'rgba(0, 230, 118, 0.3)' : 'rgba(255, 61, 87, 0.3)'}`,
+                borderRadius: 2,
+                boxShadow: `0 4px 12px ${message.type === 'success' ? 'rgba(0, 230, 118, 0.2)' : 'rgba(255, 61, 87, 0.2)'}`,
+                '& .MuiAlert-icon': {
+                  color: message.type === 'success' ? colors.successGreen : colors.errorRed,
+                },
+                animation: 'fadeIn 0.5s ease',
+                '@keyframes fadeIn': {
+                  '0%': { opacity: 0, transform: 'translateY(-10px)' },
+                  '100%': { opacity: 1, transform: 'translateY(0)' }
+                }
               }}
               onClose={() => setMessage({ type: '', text: '' })}
             >
@@ -217,101 +284,232 @@ const Settings = () => {
             <Grid item xs={12}>
               <Paper 
                 sx={{ 
-                  p: 3,
+                  p: 4,
                   bgcolor: colors.cardBg,
                   border: `1px solid ${colors.borderColor}`,
-                  borderRadius: 2
+                  borderRadius: 3,
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    boxShadow: '0 12px 32px rgba(0, 0, 0, 0.2)',
+                    borderColor: colors.accentBlue,
+                  }
                 }}
               >
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                  <Avatar 
-                    sx={{ 
-                      width: 80, 
-                      height: 80, 
+                <Box sx={{ display: 'flex', flexDirection: {xs: 'column', sm: 'row'}, alignItems: {xs: 'center', sm: 'flex-start'}, mb: 4, gap: 3 }}>
+                  <Box sx={{ 
+                    position: 'relative', 
+                    transition: 'transform 0.3s ease',
+                    '&:hover': { transform: 'scale(1.05)' }
+                  }}>
+                    <Avatar 
+                      sx={{ 
+                        width: 100, 
+                        height: 100, 
+                        bgcolor: `${colors.accentBlue}80`,
+                        border: `4px solid ${colors.borderColor}`,
+                        boxShadow: `0 4px 20px rgba(0, 0, 0, 0.2)`,
+                      }}
+                    >
+                      <PersonIcon sx={{ fontSize: 50 }} />
+                    </Avatar>
+                    <Box sx={{ 
+                      position: 'absolute', 
+                      bottom: 0, 
+                      right: 0, 
                       bgcolor: colors.accentBlue,
-                      mr: 2
-                    }}
-                  >
-                    <PersonIcon sx={{ fontSize: 40 }} />
-                  </Avatar>
-                  <Box>
+                      borderRadius: '50%',
+                      p: 0.5,
+                      border: `2px solid ${colors.cardBg}`,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        bgcolor: colors.gradientEnd,
+                        transform: 'scale(1.1)'
+                      }
+                    }}>
+                      <EditIcon sx={{ fontSize: 18 }} />
+                    </Box>
+                  </Box>
+                  <Box sx={{ textAlign: {xs: 'center', sm: 'left'} }}>
                     <Typography 
                       variant="h5" 
                       component="div"
-                      sx={{ color: colors.primaryText, fontWeight: 'bold' }}
+                      sx={{ 
+                        color: colors.primaryText, 
+                        fontWeight: 'bold',
+                        background: `linear-gradient(135deg, ${colors.primaryText}, ${colors.secondaryText})`,
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                      }}
                     >
                       {user?.username || 'User'}
                     </Typography>
                     <Typography 
                       variant="body1" 
-                      sx={{ color: colors.secondaryText }}
+                      sx={{ 
+                        color: colors.secondaryText,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        flexWrap: 'wrap',
+                        justifyContent: {xs: 'center', sm: 'flex-start'}
+                      }}
                     >
+                      <EmailIcon fontSize="small" />
                       {user?.email || 'No email provided'}
                     </Typography>
-                    <Typography 
-                      variant="body2" 
-                      sx={{ color: colors.secondaryText, mt: 0.5 }}
-                    >
-                      User ID: {user?.user_id || 'N/A'}
-                    </Typography>
+                    <Box sx={{ 
+                      display: 'inline-block',
+                      mt: 1,
+                      px: 2,
+                      py: 0.5,
+                      bgcolor: `${colors.accentBlue}20`,
+                      color: colors.accentBlue,
+                      borderRadius: 5,
+                      fontSize: '0.8rem',
+                      border: `1px solid ${colors.accentBlue}40`
+                    }}>
+                      Active Account
+                    </Box>
                   </Box>
                 </Box>
                 
-                <Divider sx={{ bgcolor: colors.borderColor, mb: 3 }} />
+                <Divider sx={{ 
+                  bgcolor: `${colors.borderColor}80`, 
+                  mb: 4, 
+                  position: 'relative',
+                  '&::after': {
+                    content: '""',
+                    position: 'absolute',
+                    width: '80px',
+                    height: '3px',
+                    background: `linear-gradient(90deg, ${colors.accentBlue}, ${colors.gradientEnd})`,
+                    bottom: 0,
+                    left: 0,
+                    borderRadius: '3px'
+                  }
+                }} />
                 
-                <Grid container spacing={2}>
+                <Grid container spacing={4}>
                   <Grid item xs={12} md={6}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      <EmailIcon sx={{ color: colors.accentBlue, mr: 1 }} />
-                      <Typography sx={{ color: colors.primaryText, mr: 1 }}>
-                        Email:
-                      </Typography>
-                      <Typography sx={{ color: colors.secondaryText }}>
-                        {user?.email || 'Not set'}
-                      </Typography>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      flexDirection: 'column',
+                      p: 3,
+                      bgcolor: `${colors.panelBg}60`,
+                      borderRadius: 3,
+                      border: `1px solid ${colors.borderColor}`,
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        bgcolor: colors.panelBg,
+                        transform: 'translateY(-5px)',
+                        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)'
+                      }
+                    }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                        <Box sx={{ 
+                          p: 1.5,
+                          borderRadius: '12px',
+                          bgcolor: `${colors.accentBlue}20`,
+                          mr: 2,
+                          display: 'flex',
+                          justifyContent: 'center',
+                          alignItems: 'center'
+                        }}>
+                          <EmailIcon sx={{ color: colors.accentBlue }} />
+                        </Box>
+                        <Box>
+                          <Typography sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                            Email Address
+                          </Typography>
+                          <Typography sx={{ color: colors.secondaryText, fontSize: '0.9rem' }}>
+                            {user?.email || 'Not set'}
+                          </Typography>
+                        </Box>
+                      </Box>
+                      <Button
+                        variant="contained"
+                        startIcon={<EditIcon />}
+                        onClick={() => setOpenEmailDialog(true)}
+                        sx={{ 
+                          mt: 'auto',
+                          background: `linear-gradient(135deg, ${colors.accentBlue}, ${colors.gradientEnd})`,
+                          borderRadius: '12px',
+                          textTransform: 'none',
+                          fontWeight: 'bold',
+                          py: 1.5,
+                          '&:hover': {
+                            background: `linear-gradient(135deg, ${colors.gradientEnd}, ${colors.accentBlue})`,
+                            boxShadow: `0 8px 16px ${colors.accentBlue}40`,
+                            transform: 'translateY(-2px)'
+                          },
+                          transition: 'all 0.3s ease'
+                        }}
+                      >
+                        Change Email
+                      </Button>
                     </Box>
-                    <Button
-                      variant="outlined"
-                      startIcon={<EditIcon />}
-                      onClick={() => setOpenEmailDialog(true)}
-                      sx={{ 
-                        color: colors.accentBlue,
-                        borderColor: colors.accentBlue,
-                        '&:hover': {
-                          borderColor: colors.gradientEnd,
-                          bgcolor: 'rgba(33, 150, 243, 0.1)'
-                        }
-                      }}
-                    >
-                      Change Email
-                    </Button>
                   </Grid>
                   
                   <Grid item xs={12} md={6}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      <LockIcon sx={{ color: colors.accentBlue, mr: 1 }} />
-                      <Typography sx={{ color: colors.primaryText, mr: 1 }}>
-                        Password:
-                      </Typography>
-                      <Typography sx={{ color: colors.secondaryText }}>
-                        ••••••••
-                      </Typography>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      flexDirection: 'column',
+                      p: 3,
+                      bgcolor: `${colors.panelBg}60`,
+                      borderRadius: 3,
+                      border: `1px solid ${colors.borderColor}`,
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        bgcolor: colors.panelBg,
+                        transform: 'translateY(-5px)',
+                        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)'
+                      }
+                    }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                        <Box sx={{ 
+                          p: 1.5,
+                          borderRadius: '12px',
+                          bgcolor: `${colors.accentBlue}20`,
+                          mr: 2,
+                          display: 'flex',
+                          justifyContent: 'center',
+                          alignItems: 'center'
+                        }}>
+                          <LockIcon sx={{ color: colors.accentBlue }} />
+                        </Box>
+                        <Box>
+                          <Typography sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                            Password
+                          </Typography>
+                          <Typography sx={{ color: colors.secondaryText, fontSize: '0.9rem' }}>
+                            Last changed: Not available
+                          </Typography>
+                        </Box>
+                      </Box>
+                      <Button
+                        variant="contained"
+                        startIcon={<EditIcon />}
+                        onClick={() => setOpenPasswordDialog(true)}
+                        sx={{ 
+                          mt: 'auto',
+                          background: `linear-gradient(135deg, ${colors.accentBlue}, ${colors.gradientEnd})`,
+                          borderRadius: '12px',
+                          textTransform: 'none',
+                          fontWeight: 'bold',
+                          py: 1.5,
+                          '&:hover': {
+                            background: `linear-gradient(135deg, ${colors.gradientEnd}, ${colors.accentBlue})`,
+                            boxShadow: `0 8px 16px ${colors.accentBlue}40`,
+                            transform: 'translateY(-2px)'
+                          },
+                          transition: 'all 0.3s ease'
+                        }}
+                      >
+                        Change Password
+                      </Button>
                     </Box>
-                    <Button
-                      variant="outlined"
-                      startIcon={<EditIcon />}
-                      onClick={() => setOpenPasswordDialog(true)}
-                      sx={{ 
-                        color: colors.accentBlue,
-                        borderColor: colors.accentBlue,
-                        '&:hover': {
-                          borderColor: colors.gradientEnd,
-                          bgcolor: 'rgba(33, 150, 243, 0.1)'
-                        }
-                      }}
-                    >
-                      Change Password
-                    </Button>
                   </Grid>
                 </Grid>
               </Paper>
@@ -321,45 +519,91 @@ const Settings = () => {
             <Grid item xs={12}>
               <Paper 
                 sx={{ 
-                  p: 3,
+                  p: 4,
                   bgcolor: colors.cardBg,
                   border: `1px solid ${colors.borderColor}`,
-                  borderRadius: 2
+                  borderRadius: 3,
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    boxShadow: '0 12px 32px rgba(0, 0, 0, 0.2)',
+                    borderColor: `${colors.errorRed}40`,
+                  }
                 }}
               >
-                <Typography 
-                  variant="h6" 
-                  component="div"
-                  sx={{ color: colors.primaryText, mb: 2, display: 'flex', alignItems: 'center' }}
-                >
-                  <SecurityIcon sx={{ mr: 1, color: colors.accentBlue }} />
-                  Security Settings
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                  <Box sx={{ 
+                    p: 1.5,
+                    borderRadius: '12px',
+                    bgcolor: `${colors.errorRed}20`,
+                    mr: 2,
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center'
+                  }}>
+                    <SecurityIcon sx={{ color: colors.errorRed }} />
+                  </Box>
+                  <Typography 
+                    variant="h6" 
+                    component="div"
+                    sx={{ color: colors.primaryText, fontWeight: 'bold' }}
+                  >
+                    Danger Zone
+                  </Typography>
+                </Box>
                 
-                <Divider sx={{ bgcolor: colors.borderColor, mb: 3 }} />
+                <Divider sx={{ 
+                  bgcolor: `${colors.borderColor}80`, 
+                  mb: 3,
+                  position: 'relative',
+                  '&::after': {
+                    content: '""',
+                    position: 'absolute',
+                    width: '80px',
+                    height: '3px',
+                    background: `linear-gradient(90deg, ${colors.errorRed}, ${colors.errorRed}60)`,
+                    bottom: 0,
+                    left: 0,
+                    borderRadius: '3px'
+                  }
+                }} />
                 
-                <Button
-                  variant="outlined"
-                  color="error"
-                  startIcon={<DeleteIcon />}
-                  onClick={() => setOpenDeleteDialog(true)}
-                  sx={{ 
-                    color: colors.errorRed,
-                    borderColor: colors.errorRed,
-                    '&:hover': {
-                      borderColor: colors.errorRed,
-                      bgcolor: 'rgba(255, 61, 87, 0.1)'
-                    }
-                  }}
-                >
-                  Delete Account
-                </Button>
-                <Typography 
-                  variant="body2" 
-                  sx={{ color: colors.secondaryText, mt: 1 }}
-                >
-                  Warning: This action cannot be undone. All your data will be permanently deleted.
-                </Typography>
+                <Box sx={{ 
+                  p: 3, 
+                  border: `1px dashed ${colors.errorRed}60`,
+                  borderRadius: 3,
+                  bgcolor: `${colors.errorRed}10`,
+                }}>
+                  <Typography sx={{ color: colors.primaryText, mb: 2, fontWeight: 'medium' }}>
+                    Delete Your Account
+                  </Typography>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ color: colors.secondaryText, mb: 3 }}
+                  >
+                    Warning: This action cannot be undone. All your data will be permanently deleted, including your profile, favorites, and account history.
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    color="error"
+                    startIcon={<DeleteIcon />}
+                    onClick={() => setOpenDeleteDialog(true)}
+                    sx={{ 
+                      bgcolor: colors.errorRed,
+                      borderRadius: '12px',
+                      textTransform: 'none',
+                      fontWeight: 'bold',
+                      py: 1.5,
+                      '&:hover': {
+                        bgcolor: `${colors.errorRed}D0`,
+                        boxShadow: `0 8px 16px ${colors.errorRed}40`,
+                      },
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    Delete Account
+                  </Button>
+                </Box>
               </Paper>
             </Grid>
           </Grid>
@@ -374,17 +618,31 @@ const Settings = () => {
           sx: {
             bgcolor: colors.cardBg,
             color: colors.primaryText,
-            borderRadius: 2,
-            border: `1px solid ${colors.borderColor}`
+            borderRadius: 3,
+            border: `1px solid ${colors.borderColor}`,
+            maxWidth: '450px',
+            width: '100%'
           }
         }}
       >
-        <DialogTitle sx={{ color: colors.primaryText }}>
-          Update Email Address
+        <DialogTitle sx={{ 
+          color: colors.primaryText, 
+          borderBottom: `1px solid ${colors.borderColor}`,
+          pb: 2
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <EmailIcon sx={{ color: colors.accentBlue, mr: 1.5 }} />
+            <Typography variant="h6" component="span" sx={{ fontWeight: 'bold' }}>
+              Update Email Address
+            </Typography>
+          </Box>
         </DialogTitle>
-        <DialogContent>
-          <Box component="form" onSubmit={handleEmailUpdate} sx={{ mt: 2 }}>
-            <TextField
+        <DialogContent sx={{ pt: 3, pb: 2 }}>
+          <Typography sx={{ color: colors.secondaryText, mb: 3 }}>
+            Enter your new email address and current password to verify your identity.
+          </Typography>
+          <Box component="form" onSubmit={handleEmailUpdate} sx={{ mt: 1 }}>
+            <StyledTextField
               fullWidth
               label="New Email"
               value={email}
@@ -392,22 +650,10 @@ const Settings = () => {
               margin="normal"
               type="email"
               required
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  color: colors.primaryText,
-                  '& fieldset': {
-                    borderColor: colors.borderColor,
-                  },
-                  '&:hover fieldset': {
-                    borderColor: colors.accentBlue,
-                  },
-                },
-                '& .MuiInputLabel-root': {
-                  color: colors.secondaryText,
-                },
-              }}
+              variant="outlined"
+              sx={{ mb: 2 }}
             />
-            <TextField
+            <StyledTextField
               fullWidth
               label="Current Password"
               value={currentPassword}
@@ -415,28 +661,21 @@ const Settings = () => {
               margin="normal"
               type="password"
               required
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  color: colors.primaryText,
-                  '& fieldset': {
-                    borderColor: colors.borderColor,
-                  },
-                  '&:hover fieldset': {
-                    borderColor: colors.accentBlue,
-                  },
-                },
-                '& .MuiInputLabel-root': {
-                  color: colors.secondaryText,
-                },
-              }}
+              variant="outlined"
             />
           </Box>
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
+        <DialogActions sx={{ p: 3, pt: 1 }}>
           <Button 
             onClick={() => setOpenEmailDialog(false)} 
             disabled={processing}
-            sx={{ color: colors.secondaryText }}
+            sx={{ 
+              color: colors.secondaryText,
+              '&:hover': {
+                color: colors.primaryText,
+                backgroundColor: 'transparent'
+              }
+            }}
           >
             Cancel
           </Button>
@@ -446,8 +685,13 @@ const Settings = () => {
             disabled={processing}
             sx={{ 
               background: `linear-gradient(135deg, ${colors.gradientStart}, ${colors.gradientEnd})`,
+              borderRadius: '12px',
+              textTransform: 'none',
+              px: 3,
+              py: 1,
               '&:hover': {
                 background: `linear-gradient(135deg, ${colors.gradientEnd}, ${colors.gradientStart})`,
+                boxShadow: `0 4px 12px ${colors.accentBlue}40`,
               }
             }}
           >
@@ -456,7 +700,7 @@ const Settings = () => {
         </DialogActions>
       </Dialog>
       
-      {/* Password Update Dialog */}
+      {/* Password Update Dialog - update using the same styling pattern as the email dialog */}
       <Dialog 
         open={openPasswordDialog} 
         onClose={() => !processing && setOpenPasswordDialog(false)}
@@ -464,17 +708,31 @@ const Settings = () => {
           sx: {
             bgcolor: colors.cardBg,
             color: colors.primaryText,
-            borderRadius: 2,
-            border: `1px solid ${colors.borderColor}`
+            borderRadius: 3,
+            border: `1px solid ${colors.borderColor}`,
+            maxWidth: '450px',
+            width: '100%'
           }
         }}
       >
-        <DialogTitle sx={{ color: colors.primaryText }}>
-          Change Password
+        <DialogTitle sx={{ 
+          color: colors.primaryText, 
+          borderBottom: `1px solid ${colors.borderColor}`,
+          pb: 2
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <LockIcon sx={{ color: colors.accentBlue, mr: 1.5 }} />
+            <Typography variant="h6" component="span" sx={{ fontWeight: 'bold' }}>
+              Change Password
+            </Typography>
+          </Box>
         </DialogTitle>
-        <DialogContent>
-          <Box component="form" onSubmit={handlePasswordUpdate} sx={{ mt: 2 }}>
-            <TextField
+        <DialogContent sx={{ pt: 3, pb: 2 }}>
+          <Typography sx={{ color: colors.secondaryText, mb: 3 }}>
+            Create a strong password that's at least 8 characters long. Include a mix of letters, numbers, and symbols for better security.
+          </Typography>
+          <Box component="form" onSubmit={handlePasswordUpdate} sx={{ mt: 1 }}>
+            <StyledTextField
               fullWidth
               label="Current Password"
               value={currentPassword}
@@ -482,22 +740,10 @@ const Settings = () => {
               margin="normal"
               type="password"
               required
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  color: colors.primaryText,
-                  '& fieldset': {
-                    borderColor: colors.borderColor,
-                  },
-                  '&:hover fieldset': {
-                    borderColor: colors.accentBlue,
-                  },
-                },
-                '& .MuiInputLabel-root': {
-                  color: colors.secondaryText,
-                },
-              }}
+              variant="outlined"
+              sx={{ mb: 2 }}
             />
-            <TextField
+            <StyledTextField
               fullWidth
               label="New Password"
               value={newPassword}
@@ -505,22 +751,10 @@ const Settings = () => {
               margin="normal"
               type="password"
               required
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  color: colors.primaryText,
-                  '& fieldset': {
-                    borderColor: colors.borderColor,
-                  },
-                  '&:hover fieldset': {
-                    borderColor: colors.accentBlue,
-                  },
-                },
-                '& .MuiInputLabel-root': {
-                  color: colors.secondaryText,
-                },
-              }}
+              variant="outlined"
+              sx={{ mb: 2 }}
             />
-            <TextField
+            <StyledTextField
               fullWidth
               label="Confirm New Password"
               value={confirmPassword}
@@ -528,28 +762,21 @@ const Settings = () => {
               margin="normal"
               type="password"
               required
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  color: colors.primaryText,
-                  '& fieldset': {
-                    borderColor: colors.borderColor,
-                  },
-                  '&:hover fieldset': {
-                    borderColor: colors.accentBlue,
-                  },
-                },
-                '& .MuiInputLabel-root': {
-                  color: colors.secondaryText,
-                },
-              }}
+              variant="outlined"
             />
           </Box>
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
+        <DialogActions sx={{ p: 3, pt: 1 }}>
           <Button 
             onClick={() => setOpenPasswordDialog(false)} 
             disabled={processing}
-            sx={{ color: colors.secondaryText }}
+            sx={{ 
+              color: colors.secondaryText,
+              '&:hover': {
+                color: colors.primaryText,
+                backgroundColor: 'transparent'
+              }
+            }}
           >
             Cancel
           </Button>
@@ -559,8 +786,13 @@ const Settings = () => {
             disabled={processing}
             sx={{ 
               background: `linear-gradient(135deg, ${colors.gradientStart}, ${colors.gradientEnd})`,
+              borderRadius: '12px',
+              textTransform: 'none',
+              px: 3,
+              py: 1,
               '&:hover': {
                 background: `linear-gradient(135deg, ${colors.gradientEnd}, ${colors.gradientStart})`,
+                boxShadow: `0 4px 12px ${colors.accentBlue}40`,
               }
             }}
           >
@@ -577,19 +809,41 @@ const Settings = () => {
           sx: {
             bgcolor: colors.cardBg,
             color: colors.primaryText,
-            borderRadius: 2,
-            border: `1px solid ${colors.borderColor}`
+            borderRadius: 3,
+            border: `1px solid ${colors.errorRed}40`,
+            maxWidth: '450px',
+            width: '100%'
           }
         }}
       >
-        <DialogTitle sx={{ color: colors.errorRed }}>
-          Delete Account
+        <DialogTitle sx={{ 
+          color: colors.errorRed, 
+          borderBottom: `1px solid ${colors.borderColor}`,
+          pb: 2
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <DeleteIcon sx={{ color: colors.errorRed, mr: 1.5 }} />
+            <Typography variant="h6" component="span" sx={{ fontWeight: 'bold' }}>
+              Delete Account
+            </Typography>
+          </Box>
         </DialogTitle>
-        <DialogContent>
-          <Typography sx={{ color: colors.primaryText, mb: 2 }}>
-            Are you sure you want to delete your account? This action cannot be undone.
-          </Typography>
-          <TextField
+        <DialogContent sx={{ pt: 3, pb: 2 }}>
+          <Box sx={{ 
+            p: 2, 
+            mb: 3, 
+            bgcolor: `${colors.errorRed}10`, 
+            borderRadius: 2,
+            border: `1px solid ${colors.errorRed}30`,
+          }}>
+            <Typography sx={{ color: colors.primaryText, fontWeight: 'medium' }}>
+              This action cannot be undone
+            </Typography>
+            <Typography sx={{ color: colors.secondaryText, mt: 1, fontSize: '0.9rem' }}>
+              All your data, including your profile, preferences, and trading history will be permanently deleted.
+            </Typography>
+          </Box>
+          <StyledTextField
             fullWidth
             label="Enter your password to confirm"
             value={deletePassword}
@@ -597,27 +851,33 @@ const Settings = () => {
             margin="normal"
             type="password"
             required
+            variant="outlined"
             sx={{
               '& .MuiOutlinedInput-root': {
-                color: colors.primaryText,
-                '& fieldset': {
-                  borderColor: colors.borderColor,
-                },
                 '&:hover fieldset': {
                   borderColor: colors.errorRed,
                 },
+                '&.Mui-focused fieldset': {
+                  borderColor: colors.errorRed,
+                },
               },
-              '& .MuiInputLabel-root': {
-                color: colors.secondaryText,
+              '& .MuiInputLabel-root.Mui-focused': {
+                color: colors.errorRed,
               },
             }}
           />
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
+        <DialogActions sx={{ p: 3, pt: 1 }}>
           <Button 
             onClick={() => setOpenDeleteDialog(false)} 
             disabled={processing}
-            sx={{ color: colors.secondaryText }}
+            sx={{ 
+              color: colors.secondaryText,
+              '&:hover': {
+                color: colors.primaryText,
+                backgroundColor: 'transparent'
+              }
+            }}
           >
             Cancel
           </Button>
@@ -627,8 +887,13 @@ const Settings = () => {
             disabled={processing}
             sx={{ 
               bgcolor: colors.errorRed,
+              borderRadius: '12px',
+              textTransform: 'none',
+              px: 3,
+              py: 1,
               '&:hover': {
-                bgcolor: '#d32f2f',
+                bgcolor: `${colors.errorRed}D0`,
+                boxShadow: `0 4px 12px ${colors.errorRed}40`,
               }
             }}
           >
