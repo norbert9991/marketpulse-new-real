@@ -89,13 +89,21 @@ const UserManagement = () => {
       const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       
+      // Ensure accurate count of users from the response data
+      const totalCount = response.data.users.length;
+      const activeCount = response.data.users.filter(user => user.account_status === 'active').length;
+      const adminCount = response.data.users.filter(user => user.role === 'admin').length;
+      
       setStats({
-        totalUsers: response.data.users.length,
-        activeUsers: response.data.users.filter(user => user.account_status === 'active').length,
-        admins: response.data.users.filter(user => user.role === 'admin').length,
+        totalUsers: totalCount,
+        activeUsers: activeCount,
+        admins: adminCount,
         recentLogins: response.data.users.filter(user => new Date(user.last_login) > dayAgo).length,
         newUsers: response.data.users.filter(user => new Date(user.created_at) > weekAgo).length
       });
+      
+      // Log the actual user count for debugging
+      console.log(`UserManagement: Total users fetched: ${totalCount}, Active: ${activeCount}, Admins: ${adminCount}`);
       
       setLoading(false);
     } catch (error) {
