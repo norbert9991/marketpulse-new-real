@@ -10,7 +10,7 @@ import {
   Assessment as ReportsIcon,
   Settings as SettingsIcon,
   Logout as LogoutIcon,
-  Notifications as NotificationsIcon
+  ExitToApp as LogoutIconAlt
 } from '@mui/icons-material';
 import { API } from '../axiosConfig';
 
@@ -27,79 +27,14 @@ const colors = {
   sellRed: '#f44336',
   hoverBg: '#2a2a2a',
   activeItemBg: 'rgba(25, 118, 210, 0.15)',
-  gradientPrimary: 'linear-gradient(45deg, #1976d2 30%, #2196f3 90%)'
+  gradientStart: '#1976d2',
+  gradientEnd: '#2196f3',
+  errorRed: '#f44336'
 };
-
-const SidebarContainer = styled('div')(({ theme }) => ({
-  width: '250px',
-  background: colors.background,
-  color: colors.primaryText,
-  height: '100vh',
-  position: 'fixed',
-  left: 0,
-  top: 0,
-  display: 'flex',
-  flexDirection: 'column',
-  borderRight: `1px solid ${colors.borderColor}`,
-  boxShadow: '4px 0 15px rgba(0, 0, 0, 0.1)',
-  zIndex: 1200,
-  transition: 'width 0.3s ease-in-out'
-}));
-
-const SidebarHeader = styled(Box)({
-  padding: '24px 20px',
-  textAlign: 'center',
-  borderBottom: `1px solid ${colors.borderColor}30`,
-  marginBottom: '16px'
-});
-
-const NavItem = styled(Button)(({ active }) => ({
-  justifyContent: 'flex-start',
-  padding: '12px 16px',
-  margin: '4px 16px',
-  color: active ? colors.primary : colors.primaryText,
-  backgroundColor: active ? colors.activeItemBg : 'transparent',
-  borderRadius: '12px',
-  position: 'relative',
-  '&:hover': {
-    backgroundColor: active ? colors.activeItemBg : colors.hoverBg
-  },
-  '&::before': active ? {
-    content: '""',
-    position: 'absolute',
-    left: -16,
-    top: '50%',
-    transform: 'translateY(-50%)',
-    width: 4,
-    height: '60%',
-    backgroundColor: colors.primary,
-    borderRadius: '0 4px 4px 0'
-  } : {}
-}));
-
-const NavIcon = styled(Box)(({ active }) => ({
-  color: active ? colors.primary : colors.secondaryText,
-  marginRight: '12px',
-  display: 'flex',
-  alignItems: 'center'
-}));
-
-const NavText = styled(Typography)(({ active }) => ({
-  color: active ? colors.primary : colors.primaryText,
-  fontWeight: active ? 600 : 400,
-  transition: 'all 0.2s'
-}));
-
-const ProfileSection = styled(Box)({
-  marginTop: 'auto',
-  padding: '16px',
-  borderTop: `1px solid ${colors.borderColor}30`
-});
 
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('');
   const [pendingRequests, setPendingRequests] = useState(0);
   const [user, setUser] = useState(null);
@@ -134,23 +69,14 @@ const Sidebar = () => {
     fetchPendingRequests();
   }, [location.pathname]);
 
-  const handleTabClick = (path) => {
-    setLoading(true);
-    setActiveTab(path);
-    
-    // Navigate using the router
+  const handleNavigation = (path) => {
     navigate(path);
-    
-    // Reset loading after a short delay
-    setTimeout(() => {
-      setLoading(false);
-    }, 500);
   };
   
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    navigate('/home');
+    window.location.href = window.location.origin + '/#/';
   };
 
   const menuItems = [
@@ -162,40 +88,162 @@ const Sidebar = () => {
   ];
 
   return (
-    <SidebarContainer>
-      <SidebarHeader>
-        <Typography variant="h5" sx={{ 
-          fontWeight: 'bold', 
-          background: colors.gradientPrimary,
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-        }}>
+    <Box 
+      sx={{ 
+        width: 250, 
+        bgcolor: colors.background,
+        borderRight: `1px solid ${colors.borderColor}`,
+        p: '20px 0',
+        height: '100vh',
+        position: 'fixed',
+        left: 0,
+        top: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        boxShadow: '4px 0 15px rgba(0, 0, 0, 0.1)',
+        zIndex: 1200,
+        overflow: 'hidden'
+      }}
+    >
+      {/* Logo Area */}
+      <Box sx={{ textAlign: 'center', mb: 3, px: 2 }}>
+        <Typography 
+          variant="h6" 
+          sx={{ 
+            fontWeight: 'bold',
+            background: `linear-gradient(135deg, ${colors.gradientStart}, ${colors.gradientEnd})`,
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            mb: 0.5,
+            letterSpacing: '1px',
+            fontSize: '1.5rem'
+          }}
+        >
           MARKETPULSE
         </Typography>
-        <Typography variant="caption" sx={{ color: colors.secondaryText, textTransform: 'uppercase', letterSpacing: '1.2px' }}>
+        <Typography 
+          variant="caption" 
+          sx={{ 
+            color: colors.secondaryText,
+            letterSpacing: '0.5px',
+            fontSize: '0.7rem',
+            textTransform: 'uppercase'
+          }}
+        >
           Admin Dashboard
         </Typography>
-      </SidebarHeader>
+      </Box>
 
-      <Box sx={{ flexGrow: 1, overflow: 'auto', pb: 2 }}>
-        {menuItems.map((item) => (
-          <NavItem
-            key={item.path}
-            fullWidth
-            active={location.pathname === item.path ? 1 : 0}
-            onClick={() => handleTabClick(item.path)}
-            startIcon={
-              <NavIcon active={location.pathname === item.path ? 1 : 0}>
-                {loading && activeTab === item.path ? 
-                  <CircularProgress size={20} color="inherit" /> : 
-                  item.icon
-                }
-              </NavIcon>
-            }
+      {/* User Profile Area */}
+      {user && (
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center',
+          mb: 3,
+          px: 3,
+          pb: 3,
+          borderBottom: `1px solid ${colors.borderColor}`
+        }}>
+          <Avatar 
+            sx={{ 
+              width: 60, 
+              height: 60, 
+              bgcolor: `${colors.primary}80`,
+              mb: 1,
+              border: `2px solid ${colors.borderColor}`
+            }}
           >
-            <NavText active={location.pathname === item.path ? 1 : 0} variant="body2">
-              {item.name}
-            </NavText>
+            {user.username ? user.username.charAt(0).toUpperCase() : 'A'}
+          </Avatar>
+          <Typography 
+            sx={{ 
+              color: colors.primaryText,
+              fontWeight: 'medium',
+              mb: 0.5
+            }}
+          >
+            {user.username || 'Admin'}
+          </Typography>
+          <Typography 
+            variant="caption" 
+            sx={{ 
+              color: colors.secondaryText,
+              fontSize: '0.7rem',
+              mb: 1,
+              textAlign: 'center',
+              display: '-webkit-box',
+              WebkitLineClamp: 1,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden'
+            }}
+          >
+            {user.email || ''}
+          </Typography>
+        </Box>
+      )}
+
+      {/* Navigation Menu */}
+      <Box sx={{ 
+        px: 2, 
+        flex: 1,
+        overflow: 'auto'
+      }}>
+        {menuItems.map((item) => (
+          <Button 
+            key={item.name} 
+            onClick={() => handleNavigation(item.path)}
+            fullWidth 
+            startIcon={item.icon}
+            sx={{
+              justifyContent: 'flex-start',
+              color: (location.pathname === item.path) ? colors.primaryText : colors.secondaryText,
+              mb: 1.5,
+              borderRadius: '12px',
+              px: 2,
+              py: 1.5,
+              backgroundColor: (location.pathname === item.path) ? colors.activeItemBg : 'transparent',
+              position: 'relative',
+              transition: 'all 0.3s ease',
+              overflow: 'hidden',
+              '&:hover': {
+                backgroundColor: colors.hoverBg,
+                color: colors.primaryText,
+                transform: 'translateX(3px)',
+                '& .MuiSvgIcon-root': {
+                  color: colors.primary,
+                  transform: 'scale(1.2)'
+                }
+              },
+              '& .MuiSvgIcon-root': {
+                color: (location.pathname === item.path) ? colors.primary : colors.secondaryText,
+                transition: 'all 0.3s ease',
+                mr: 1
+              },
+              '&::before': (location.pathname === item.path) ? {
+                content: '""',
+                position: 'absolute',
+                left: 0,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '4px',
+                height: '60%',
+                background: `linear-gradient(to bottom, ${colors.gradientStart}, ${colors.gradientEnd})`,
+                borderRadius: '0 4px 4px 0'
+              } : {},
+              '&::after': {
+                content: '""',
+                position: 'absolute',
+                bottom: 0,
+                left: '10%',
+                width: '80%',
+                height: '1px',
+                backgroundColor: `${colors.borderColor}50`,
+                opacity: 0.5
+              }
+            }}
+          >
+            {item.name}
             {item.badge > 0 && (
               <Badge 
                 badgeContent={item.badge} 
@@ -203,80 +251,44 @@ const Sidebar = () => {
                 sx={{ ml: 'auto' }}
               />
             )}
-          </NavItem>
+          </Button>
         ))}
       </Box>
-      
-      <ProfileSection>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <Avatar 
-            src={user?.profile_image || undefined}
-            alt={user?.username || 'Admin'} 
-            sx={{ 
-              width: 42, 
-              height: 42, 
-              bgcolor: colors.secondary,
-              border: `2px solid ${colors.borderColor}`
+
+      {/* Logout Button */}
+      <Box sx={{ 
+        mt: 'auto', 
+        pt: 2, 
+        px: 2, 
+        pb: 3,
+        borderTop: `1px solid ${colors.borderColor}`
+      }}>
+        <Tooltip title="Logout" placement="right">
+          <Button
+            variant="outlined"
+            fullWidth
+            startIcon={<LogoutIconAlt />}
+            onClick={handleLogout}
+            sx={{
+              color: colors.errorRed,
+              borderColor: `${colors.errorRed}40`,
+              borderRadius: '12px',
+              py: 1.2,
+              justifyContent: 'flex-start',
+              '&:hover': {
+                backgroundColor: `${colors.errorRed}10`,
+                borderColor: colors.errorRed,
+                transform: 'translateY(-2px)',
+                boxShadow: `0 4px 12px ${colors.errorRed}30`
+              },
+              transition: 'all 0.3s ease'
             }}
           >
-            {user?.username ? user.username.charAt(0).toUpperCase() : 'A'}
-          </Avatar>
-          <Box sx={{ ml: 1.5 }}>
-            <Typography variant="body2" sx={{ fontWeight: 500, color: colors.primaryText }}>
-              {user?.username || 'Admin User'}
-            </Typography>
-            <Typography variant="caption" sx={{ color: colors.secondaryText }}>
-              {user?.role || 'Admin'} • Online
-            </Typography>
-          </Box>
-        </Box>
-        
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Tooltip title="Notifications">
-            <Button 
-              variant="outlined"
-              size="small"
-              sx={{ 
-                minWidth: 0, 
-                padding: '6px', 
-                borderRadius: '8px',
-                color: colors.secondaryText,
-                borderColor: colors.borderColor,
-                flex: 1,
-                '&:hover': {
-                  borderColor: colors.primary,
-                  backgroundColor: `${colors.primary}15`
-                }
-              }}
-            >
-              <NotificationsIcon fontSize="small" />
-            </Button>
-          </Tooltip>
-          
-          <Tooltip title="Logout">
-            <Button 
-              variant="outlined"
-              size="small"
-              onClick={handleLogout}
-              sx={{ 
-                minWidth: 0, 
-                padding: '6px', 
-                borderRadius: '8px',
-                color: colors.sellRed,
-                borderColor: colors.borderColor,
-                flex: 1,
-                '&:hover': {
-                  borderColor: colors.sellRed,
-                  backgroundColor: `${colors.sellRed}15`
-                }
-              }}
-            >
-              <LogoutIcon fontSize="small" />
-            </Button>
-          </Tooltip>
-        </Box>
-      </ProfileSection>
-    </SidebarContainer>
+            Logout
+          </Button>
+        </Tooltip>
+      </Box>
+    </Box>
   );
 };
 

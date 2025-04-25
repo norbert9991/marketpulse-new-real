@@ -13,7 +13,9 @@ import {
   Stack,
   CircularProgress,
   Chip,
-  Grid
+  Grid,
+  IconButton,
+  Tooltip
 } from '@mui/material';
 import { styled } from '@mui/system';
 import axios from 'axios';
@@ -28,7 +30,8 @@ import {
   TrendingFlat as TrendingFlatIcon,
   Logout as LogoutIcon,
   Person as PersonIcon,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Notifications as NotificationsIcon
 } from '@mui/icons-material';
 import { API } from '../axiosConfig';
 
@@ -163,7 +166,6 @@ const AdminDashboard = () => {
   const [favoriteSymbolsData, setFavoriteSymbolsData] = useState([]);
   const [marketTrendsData, setMarketTrendsData] = useState(null);
   const [loadingChart, setLoadingChart] = useState(true);
-  const [anchorEl, setAnchorEl] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
@@ -203,20 +205,6 @@ const AdminDashboard = () => {
 
     fetchDashboardData();
   }, []);
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    navigate('/home');
-  };
-
-  const handleMenuOpen = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-  };
 
   // Get trend icon based on market trend
   const getTrendIcon = (trend) => {
@@ -301,48 +289,28 @@ const AdminDashboard = () => {
           <StyledToolbar>
             <DashboardTitle variant="h4">Admin Dashboard</DashboardTitle>
             <UserInfo>
-            <Button 
-              onClick={handleMenuOpen}
-                sx={{ 
-                  color: colors.primaryText,
-                  textTransform: 'none',
-                  fontWeight: 'medium',
-                  '&:hover': {
-                    backgroundColor: 'transparent'
-                  }
-                }}
-            >
-              {user.username}
-            </Button>
-              <UserAvatar>{user.username.charAt(0).toUpperCase()}</UserAvatar>
+              <Tooltip title="Notifications">
+                <IconButton sx={{ color: colors.secondaryText }}>
+                  <NotificationsIcon />
+                </IconButton>
+              </Tooltip>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 1,
+                py: 1, 
+                px: 2, 
+                borderRadius: 2,
+                backgroundColor: `${colors.hoverBg}50`
+              }}>
+                <UserAvatar>{user.username.charAt(0).toUpperCase()}</UserAvatar>
+                <Typography variant="body2" sx={{ color: colors.primaryText }}>
+                  {user.username}
+                </Typography>
+              </Box>
             </UserInfo>
           </StyledToolbar>
         </StyledAppBar>
-
-        <StyledMenu
-              anchorEl={anchorEl}
-              open={Boolean(anchorEl)}
-              onClose={handleMenuClose}
-          anchorOrigin={{
-            vertical: 'bottom',
-            horizontal: 'right',
-          }}
-          transformOrigin={{
-            vertical: 'top',
-            horizontal: 'right',
-          }}
-        >
-          <StyledMenuItem onClick={handleMenuClose}>
-            <PersonIcon sx={{ mr: 1, fontSize: 20 }} /> Profile
-          </StyledMenuItem>
-          <StyledMenuItem onClick={handleMenuClose}>
-            <SettingsIcon sx={{ mr: 1, fontSize: 20 }} /> Settings
-          </StyledMenuItem>
-          <StyledDivider />
-          <StyledMenuItem onClick={handleLogout}>
-            <LogoutIcon sx={{ mr: 1, fontSize: 20 }} /> Logout
-          </StyledMenuItem>
-        </StyledMenu>
 
         <MetricsGrid>
           {metrics.map((metric, index) => (
