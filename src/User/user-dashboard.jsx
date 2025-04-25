@@ -189,14 +189,7 @@ const UserDashboard = () => {
         // Fetch favorite markets
         const favoritesResponse = await API.favorites.getAll();
         console.log('UserDashboard - Got favorites:', favoritesResponse.data);
-        
-        // Ensure we're using the actual data from the API
-        const favoritesList = favoritesResponse.data.favorites || [];
-        setFavoriteMarkets(favoritesList);
-        
-        // Log the actual count of favorites for debugging
-        console.log(`UserDashboard: Total favorites fetched: ${favoritesList.length}`);
-        
+        setFavoriteMarkets(favoritesResponse.data.favorites || []);
         setLoading(false);
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
