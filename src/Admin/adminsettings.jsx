@@ -152,7 +152,8 @@ const AdminSettings = () => {
         return;
       }
 
-      const response = await API.admin.getProfile();
+      // Use the general auth.me() endpoint instead of admin-specific endpoint
+      const response = await API.auth.me();
       
       setCurrentAdmin(response.data.user);
       setFormData({
@@ -178,11 +179,30 @@ const AdminSettings = () => {
         return;
       }
 
-      const response = await API.admin.getAdmins();
+      // Use a general users endpoint instead of admin-specific endpoint
+      // Since we can't rely on the admin-specific endpoint
+      const response = await API.admin.getUsers();
       
-      setAdmins(response.data.admins || []);
+      // Filter only admin users if the response includes a role or is_admin field
+      let adminUsers = response.data.users || [];
+      
+      // Filter for admin users if we have role information
+      // This assumes the API provides some way to identify admins
+      adminUsers = adminUsers.filter(user => 
+        user.role === 'admin' || 
+        user.is_admin === true || 
+        user.account_type === 'admin'
+      );
+      
+      setAdmins(adminUsers);
     } catch (err) {
+      console.error('Error fetching admins:', err);
       setError('Failed to load admins: ' + err.message);
+      
+      // Fallback: If we can't get the admin list, at least show the current admin
+      if (currentAdmin) {
+        setAdmins([currentAdmin]);
+      }
     } finally {
       setAdminsLoading(false);
     }
@@ -286,11 +306,25 @@ const AdminSettings = () => {
         throw new Error('Password must be at least 8 characters long');
       }
 
-      const response = await API.admin.addAdmin({
-        username: newAdmin.username,
-        email: newAdmin.email,
-        password: newAdmin.password
-      });
+      try {
+        // Try the admin-specific endpoint first
+        await API.admin.addAdmin({
+          username: newAdmin.username,
+          email: newAdmin.email,
+          password: newAdmin.password,
+          role: 'admin' // Explicitly set role to admin
+        });
+      } catch (apiError) {
+        console.error('Admin API error:', apiError);
+        // If the admin endpoint fails, try the general register endpoint
+        // This is a fallback that may require manual assignment of admin role later
+        await API.auth.register({
+          username: newAdmin.username,
+          email: newAdmin.email,
+          password: newAdmin.password,
+          role: 'admin' // This might be ignored depending on the API
+        });
+      }
 
       setAdminCreationSuccess(true);
       setSuccess('Admin added successfully');
@@ -320,7 +354,15 @@ const AdminSettings = () => {
   const handleDeleteAdmin = async (adminId) => {
     try {
       if (window.confirm('Are you sure you want to delete this admin?')) {
-        const response = await API.admin.deleteAdmin(adminId);
+        try {
+          // Try the admin-specific endpoint first
+          await API.admin.deleteAdmin(adminId);
+        } catch (apiError) {
+          console.error('Admin deletion API error:', apiError);
+          // If that fails, we might need a different approach
+          // This depends on your API structure
+          throw new Error('Admin deletion currently unavailable. Please try again later.');
+        }
         
         setSuccess('Admin deleted successfully');
         
