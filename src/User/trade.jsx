@@ -1063,14 +1063,15 @@ const Trade = () => {
                         Simulation Results
                 </Typography>
                       <Box sx={{
-                        width: '200px',
-                        height: '180px',
+                          width: '80px',
+                          height: '28px',
                         backgroundColor: colors.accentBlue,
                         color: '#fff',
                         fontSize: '0.75rem',
                         fontWeight: 'bold',
-                        px: 1.5,
-                        py: 0.5,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
                         borderRadius: '4px'
                       }}>
                         1 Year
@@ -1247,15 +1248,15 @@ const Trade = () => {
                       }}
                     >
                       <Typography variant="h6" sx={{ color: colors.primaryText, mb: 3, fontWeight: 'bold' }}>
-                        Symbols P/L
-                      </Typography>
+                          Symbols P/L
+                        </Typography>
                       
-                      <Box sx={{ height: 280, width: 400, position: 'relative', mt: 2 }}>
+                      <Box sx={{ height: 280, width: 650, position: 'relative', mt: 2 }}>
                         {/* Bar chart matching Monthly P/L style */}
                         <Box sx={{ 
                           display: 'flex',
                           height: '280px',
-                          width: '480px',
+                          width: '550px',
                           alignItems: 'flex-end',
                           justifyContent: 'space-between',
                           px: 2,
@@ -1276,7 +1277,7 @@ const Trade = () => {
                             
                             return (
                               <Box 
-                                key={i} 
+                            key={i} 
                                 sx={{ 
                                   display: 'flex', 
                                   flexDirection: 'column', 
@@ -1286,16 +1287,16 @@ const Trade = () => {
                                 }}
                               >
                                 <Typography 
-                                  variant="caption" 
-                                  sx={{ 
-                                    color: colors.secondaryText,
+                            variant="caption" 
+                  sx={{ 
+                              color: colors.secondaryText,
                                     position: 'absolute',
                                     top: -20,
                                     fontSize: '11px'
                                   }}
                                 >
                                   +${item.value}
-                                </Typography>
+                </Typography>
                                 <Box 
                                   sx={{ 
                                     height: `${height}px`,
@@ -1341,7 +1342,7 @@ const Trade = () => {
                       Insights
                     </Typography>
                     
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <Box sx={{ height: 280, width: 1000, display: 'flex', flexDirection: 'column', gap: 2 }}>
                       {simulationResults.insights.map((insight, index) => (
                         <Typography key={index} variant="body2" sx={{ 
                           color: colors.primaryText,
