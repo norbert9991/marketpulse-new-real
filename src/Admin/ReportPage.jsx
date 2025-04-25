@@ -390,6 +390,7 @@ const ReportPage = () => {
             
             <Tooltip title="Export Report">
               <IconButton
+                onClick={() => exportReportToCSV(reportType)}
                 sx={{
                   color: colors.secondary,
                   '&:hover': {
