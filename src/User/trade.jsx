@@ -1251,7 +1251,7 @@ const Trade = () => {
                           Symbols P/L
                         </Typography>
                       
-                      <Box sx={{ height: 280, width: 570, position: 'relative', mt: 2 }}>
+                      <Box sx={{ height: 280, width: 530, position: 'relative', mt: 2 }}>
                         {/* Bar chart matching Monthly P/L style */}
                         <Box sx={{ 
                           display: 'flex',
@@ -1342,7 +1342,7 @@ const Trade = () => {
                       Insights
                     </Typography>
                     
-                    <Box sx={{ height: 100, width: 1200, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <Box sx={{ height: 140, width: 1180, display: 'flex', flexDirection: 'column', gap: 2 }}>
                       {simulationResults.insights.map((insight, index) => (
                         <Typography key={index} variant="body2" sx={{ 
                           color: colors.primaryText,
