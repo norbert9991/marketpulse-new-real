@@ -1,22 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Paper, TextField, Button, CircularProgress, Avatar, Grid, IconButton, Tooltip, Chip, Card, CardContent, Divider, List, ListItem, ListItemText, ListItemIcon } from '@mui/material';
+import { Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Chip, TextField, Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress, Alert, Avatar, Grid, IconButton, Tooltip, Card, CardContent } from '@mui/material';
 import { styled } from '@mui/system';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import Sidebar from './Sidebar';
 import { 
   Search as SearchIcon,
-  Send as SendIcon,
-  QuestionAnswer as QuestionAnswerIcon,
   Refresh as RefreshIcon,
-  HelpOutline as HelpOutlineIcon,
+  CheckCircle as CheckCircleIcon,
+  Cancel as CancelIcon,
+  ArrowUpward as ArrowUpwardIcon,
+  ArrowDownward as ArrowDownwardIcon,
+  FilterList as FilterListIcon,
+  MoreVert as MoreVertIcon,
+  AttachMoney as AttachMoneyIcon,
+  QuestionAnswer as QuestionIcon,
+  AdminPanelSettings as AdminIcon,
+  Person as PersonIcon,
   Settings as SettingsIcon,
   Security as SecurityIcon,
-  People as PeopleIcon,
-  BarChart as BarChartIcon,
-  Dashboard as DashboardIcon,
-  MenuBook as MenuBookIcon,
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon
+  BarChart as AnalyticsIcon,
+  Delete as DeleteIcon,
+  Send as SendIcon
 } from '@mui/icons-material';
+import { API } from '../axiosConfig';
 
 // Define theme colors to match the user components
 const colors = {
@@ -31,8 +37,7 @@ const colors = {
   sellRed: '#f44336',
   hoverBg: '#2a2a2a',
   warningOrange: '#ffa500',
-  userBlue: '#2196f3',
-  adminPurple: '#9c27b0'
+  accentBlue: '#2196f3'
 };
 
 const PageContainer = styled('div')({
@@ -64,264 +69,280 @@ const StyledCard = styled(Paper)({
   }
 });
 
-const ChatContainer = styled(Box)({
-  display: 'flex',
-  flexDirection: 'column',
-  height: '60vh',
-  backgroundColor: `${colors.background}`,
-  borderRadius: '10px',
+const StatusIndicator = styled(Box)(({ status }) => ({
+  width: 10,
+  height: 10,
+  borderRadius: '50%',
+  marginRight: '8px',
+  backgroundColor: 
+    status === 'approved' ? colors.buyGreen : 
+    status === 'rejected' ? colors.sellRed : 
+    colors.warningOrange,
+  boxShadow: 
+    status === 'approved' ? `0 0 10px ${colors.buyGreen}40` : 
+    status === 'rejected' ? `0 0 10px ${colors.sellRed}40` : 
+    `0 0 10px ${colors.warningOrange}40`
+}));
+
+const ChatContainer = styled(Paper)({
+  padding: '20px',
+  backgroundColor: colors.cardBg,
   border: `1px solid ${colors.borderColor}`,
-  padding: '16px',
-  marginBottom: '16px',
-  overflow: 'hidden'
+  borderRadius: '10px',
+  height: '400px',
+  display: 'flex',
+  flexDirection: 'column'
 });
 
-const MessagesContainer = styled(Box)({
+const MessageBubble = styled(Box)(({ isUser }) => ({
+  backgroundColor: isUser ? `${colors.primary}33` : `${colors.secondary}33`,
+  padding: '12px 16px',
+  borderRadius: isUser ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+  maxWidth: '80%',
+  marginBottom: '10px',
+  alignSelf: isUser ? 'flex-end' : 'flex-start',
+  position: 'relative',
+  border: `1px solid ${isUser ? `${colors.primary}44` : `${colors.secondary}44`}`,
+  wordBreak: 'break-word'
+}));
+
+const MessagesArea = styled(Box)({
   flexGrow: 1,
   overflowY: 'auto',
-  marginBottom: '16px',
-  padding: '8px',
+  display: 'flex',
+  flexDirection: 'column',
+  padding: '10px',
+  marginBottom: '10px',
   '&::-webkit-scrollbar': {
     width: '8px'
   },
   '&::-webkit-scrollbar-track': {
-    backgroundColor: colors.background
+    background: colors.background
   },
   '&::-webkit-scrollbar-thumb': {
-    backgroundColor: colors.borderColor,
-    borderRadius: '4px',
-    '&:hover': {
-      backgroundColor: colors.primary
-    }
+    background: colors.borderColor,
+    borderRadius: '4px'
   }
 });
 
-const MessageBubble = styled(Box)(({ isUser }) => ({
-  maxWidth: '75%',
-  padding: '12px 16px',
-  borderRadius: isUser ? '18px 18px 0 18px' : '18px 18px 18px 0',
-  backgroundColor: isUser ? `${colors.primary}22` : colors.cardBg,
-  border: `1px solid ${isUser ? colors.primary : colors.borderColor}`,
-  marginBottom: '8px',
-  alignSelf: isUser ? 'flex-end' : 'flex-start',
-  wordBreak: 'break-word',
-  position: 'relative'
-}));
-
-const FAQItem = styled(Box)({
-  border: `1px solid ${colors.borderColor}`,
-  borderRadius: '8px',
-  marginBottom: '8px',
-  overflow: 'hidden',
-  transition: 'all 0.3s ease',
-  '&:hover': {
-    borderColor: colors.primary
-  }
+const FAQSection = styled(Box)({
+  marginBottom: '20px'
 });
 
-const FAQQuestion = styled(Box)({
-  padding: '12px 16px',
-  backgroundColor: colors.cardBg,
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  cursor: 'pointer'
-});
-
-const FAQAnswer = styled(Box)({
+const FAQCard = styled(Paper)({
   padding: '16px',
-  borderTop: `1px solid ${colors.borderColor}`,
-  backgroundColor: `${colors.hoverBg}50`
+  backgroundColor: colors.cardBg,
+  border: `1px solid ${colors.borderColor}`,
+  borderRadius: '10px',
+  marginBottom: '12px',
+  cursor: 'pointer',
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    transform: 'translateY(-2px)',
+    boxShadow: `0 6px 12px rgba(0, 0, 0, 0.15)`,
+    backgroundColor: `${colors.hoverBg}`
+  }
 });
-
-// Sample FAQ data
-const faqData = [
-  {
-    id: 1,
-    question: "How do I manage user accounts?",
-    answer: "Navigate to the User Management page from the sidebar. From there, you can view all users, search for specific users, filter by role or status, and suspend or activate accounts as needed.",
-    category: "users"
-  },
-  {
-    id: 2,
-    question: "How can I monitor platform usage?",
-    answer: "The Admin Dashboard provides real-time statistics about platform usage, including user counts, active symbols, and market trends. Check the System Overview section for server and API status.",
-    category: "dashboard"
-  },
-  {
-    id: 3,
-    question: "How do I handle user support requests?",
-    answer: "When users submit support tickets, they will appear in the Support section. You can review, respond, and mark them as resolved from there. Make sure to provide detailed and helpful responses.",
-    category: "support"
-  },
-  {
-    id: 4,
-    question: "How can I add new forex pairs to the system?",
-    answer: "Go to the System Settings page and select the 'Markets' tab. From there, you can add new forex pairs by specifying the base and quote currencies. The system will automatically start tracking the new pair.",
-    category: "settings"
-  },
-  {
-    id: 5,
-    question: "What security features are available for administrators?",
-    answer: "Administrators have access to two-factor authentication, login history tracking, and IP restriction features. Go to your profile settings to enable these security features for your admin account.",
-    category: "security"
-  },
-  {
-    id: 6,
-    question: "How can I view system performance metrics?",
-    answer: "The System Health section in the Admin Dashboard provides real-time information about server status, API response times, database performance, and overall system load.",
-    category: "performance"
-  },
-  {
-    id: 7,
-    question: "How do I update the platform's terms of service?",
-    answer: "Navigate to System Settings → Legal Documents. You can edit the terms of service, privacy policy, and other legal documents from there. Changes will be reflected immediately to all users.",
-    category: "settings"
-  }
-];
-
-// Sample chatbot responses
-const botResponses = {
-  greeting: "Hello! I'm your Admin Assistant. How can I help you today? You can ask me any questions about managing the MarketPulse platform.",
-  fallback: "I'm not sure I understand that question. Could you try rephrasing it or select a topic from the suggestions below?",
-  categories: {
-    users: "What would you like to know about user management? I can help with account management, permissions, or user data.",
-    security: "I can provide information about platform security, permissions, authentication, or data protection measures.",
-    dashboard: "The dashboard shows key metrics about platform performance. What specific information are you looking for?",
-    settings: "System settings control how the platform operates. What specific setting would you like to learn about?",
-    support: "User support requests are managed through the support ticket system. What would you like to know about handling support?",
-    performance: "I can help with understanding system performance metrics and optimization techniques."
-  }
-};
-
-const suggestedQuestions = [
-  "How do I add a new administrator?",
-  "Where can I see login activity?",
-  "How do I update market information?",
-  "What analytics are available for user behavior?",
-  "How do I reset a user's password?"
-];
 
 const AdminFAQ = () => {
+  const [searchQuery, setSearchQuery] = useState('');
   const [messages, setMessages] = useState([
-    { text: botResponses.greeting, isUser: false, timestamp: new Date() }
+    { 
+      id: 1, 
+      text: "Hello! I'm your MarketPulse Admin Assistant. How can I help you today?", 
+      isUser: false 
+    }
   ]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [expandedFaq, setExpandedFaq] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filteredFaq, setFilteredFaq] = useState(faqData);
-  const [activeCategory, setActiveCategory] = useState(null);
-  
+  const [inputValue, setInputValue] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = React.useRef(null);
+  
+  // Sample FAQ categories
+  const faqCategories = [
+    { 
+      id: 'user', 
+      title: 'User Management', 
+      icon: <PersonIcon sx={{ color: colors.primary }} />,
+      color: colors.primary
+    },
+    { 
+      id: 'system', 
+      title: 'System Settings', 
+      icon: <SettingsIcon sx={{ color: colors.secondary }} />,
+      color: colors.secondary
+    },
+    { 
+      id: 'security', 
+      title: 'Security & Access', 
+      icon: <SecurityIcon sx={{ color: colors.buyGreen }} />,
+      color: colors.buyGreen
+    },
+    { 
+      id: 'analytics', 
+      title: 'Analytics & Reporting', 
+      icon: <AnalyticsIcon sx={{ color: colors.accentBlue }} />,
+      color: colors.accentBlue
+    }
+  ];
+  
+  // Sample FAQ items based on existing platform features
+  const faqItems = {
+    user: [
+      { 
+        id: 'user-1', 
+        question: 'How do I suspend or activate a user account?', 
+        answer: 'In the User Management page, find the user in the table and click the "Suspend" or "Activate" button in the Actions column. This will immediately change their account status.'
+      },
+      { 
+        id: 'user-2', 
+        question: 'Where can I see new user registrations?', 
+        answer: 'The User Management dashboard displays a "New Users (7d)" metric at the top that shows how many users registered in the past week. For more details, use the search and filter options in the user table.'
+      },
+      { 
+        id: 'user-3', 
+        question: 'How do I filter users by role?', 
+        answer: 'In the User Management page, use the "Filter by Role" buttons to show All users, only regular Users, or only Admins.'
+      }
+    ],
+    system: [
+      { 
+        id: 'system-1', 
+        question: 'How do I access system health metrics?', 
+        answer: 'On the Admin Dashboard, the System Health & Status cards show the current state of server, API, database, and security components. Click on "System Settings" in the quick actions for more detailed options.'
+      },
+      { 
+        id: 'system-2', 
+        question: 'Where can I find market trends data?', 
+        answer: 'Market trends data is available in the Admin Dashboard under the Market Trends card. It shows bullish, neutral, and bearish percentages, as well as the overall market sentiment.'
+      }
+    ],
+    security: [
+      { 
+        id: 'security-1', 
+        question: 'How do I review login activity?', 
+        answer: 'In the User Management page, the "Last Login" column shows when each user last accessed the platform. The color indicator shows their activity status - green for recently active, yellow for moderately active, and gray for inactive users.'
+      },
+      { 
+        id: 'security-2', 
+        question: 'What happens when I suspend a user account?', 
+        answer: 'When you suspend a user account, they will be immediately logged out and unable to log back in. Their status indicator will turn red, and all trading functions will be disabled for their account until reactivated.'
+      }
+    ],
+    analytics: [
+      { 
+        id: 'analytics-1', 
+        question: 'Where can I see user growth statistics?', 
+        answer: 'The Admin Dashboard displays user growth statistics in the Users card. It shows a line chart of user registrations over time. For more detailed analytics, check the User Management page metrics.'
+      },
+      { 
+        id: 'analytics-2', 
+        question: 'How can I view the most popular currency pairs?', 
+        answer: 'The Admin Dashboard includes a Favorite Symbols card that shows which currency pairs are most popular among users, displayed as a bar chart for easy visualization.'
+      }
+    ]
+  };
+  
+  // Filter FAQs based on search query
+  const filteredFAQs = {};
+  if (searchQuery) {
+    Object.keys(faqItems).forEach(category => {
+      filteredFAQs[category] = faqItems[category].filter(
+        item => item.question.toLowerCase().includes(searchQuery.toLowerCase()) || 
+               item.answer.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    });
+  } else {
+    Object.keys(faqItems).forEach(category => {
+      filteredFAQs[category] = faqItems[category];
+    });
+  }
 
+  // Scroll to bottom of chat on new message
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  useEffect(() => {
-    if (searchTerm) {
-      setFilteredFaq(faqData.filter(item => 
-        item.question.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        item.answer.toLowerCase().includes(searchTerm.toLowerCase())
-      ));
-    } else if (activeCategory) {
-      setFilteredFaq(faqData.filter(item => item.category === activeCategory));
-    } else {
-      setFilteredFaq(faqData);
-    }
-  }, [searchTerm, activeCategory]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  // Simulate AI response
+  const generateResponse = (question) => {
+    setIsTyping(true);
+    
+    // Find matching FAQs
+    let foundAnswer = null;
+    let matchingQuestions = [];
+    
+    Object.keys(faqItems).forEach(category => {
+      faqItems[category].forEach(item => {
+        // Exact match
+        if (item.question.toLowerCase() === question.toLowerCase()) {
+          foundAnswer = item.answer;
+        }
+        // Partial match for suggestions
+        else if (item.question.toLowerCase().includes(question.toLowerCase()) ||
+                question.toLowerCase().includes(item.question.toLowerCase().split(' ').filter(word => word.length > 3).join(' '))) {
+          matchingQuestions.push(item.question);
+        }
+      });
+    });
+    
+    // Simulate thinking time
+    setTimeout(() => {
+      if (foundAnswer) {
+        // Direct answer
+        setMessages(prev => [
+          ...prev, 
+          { id: Date.now(), text: foundAnswer, isUser: false }
+        ]);
+      } else if (matchingQuestions.length > 0) {
+        // Suggestions
+        const suggestionsText = `I'm not sure I understand completely. Are you asking about one of these?\n\n${matchingQuestions.map(q => `• ${q}`).join('\n')}`;
+        setMessages(prev => [
+          ...prev, 
+          { id: Date.now(), text: suggestionsText, isUser: false }
+        ]);
+      } else {
+        // No match
+        const noMatchText = "I don't have specific information about that. Please try to rephrase your question or browse the FAQ categories below.";
+        setMessages(prev => [
+          ...prev, 
+          { id: Date.now(), text: noMatchText, isUser: false }
+        ]);
+      }
+      setIsTyping(false);
+    }, 1500);
   };
 
-  const handleSendMessage = () => {
-    if (!input.trim()) return;
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!inputValue.trim()) return;
     
     // Add user message
-    const userMessage = { text: input, isUser: true, timestamp: new Date() };
+    const userMessage = { id: Date.now(), text: inputValue, isUser: true };
     setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setLoading(true);
     
-    // Simulate bot processing
+    // Generate response
+    generateResponse(inputValue);
+    
+    // Clear input
+    setInputValue('');
+  };
+
+  const handleFAQClick = (question, answer) => {
+    // Add the question as if user asked it
+    setMessages(prev => [
+      ...prev, 
+      { id: Date.now(), text: question, isUser: true }
+    ]);
+    
+    // Simulate response with slight delay
+    setIsTyping(true);
     setTimeout(() => {
-      let botResponse;
-      
-      // Simple keyword matching for demo
-      const lowerInput = input.toLowerCase();
-      if (lowerInput.includes('user') || lowerInput.includes('account') || lowerInput.includes('suspend')) {
-        botResponse = findRelevantFaq('users');
-      } else if (lowerInput.includes('security') || lowerInput.includes('password') || lowerInput.includes('authentication')) {
-        botResponse = findRelevantFaq('security');
-      } else if (lowerInput.includes('dashboard') || lowerInput.includes('metrics') || lowerInput.includes('statistics')) {
-        botResponse = findRelevantFaq('dashboard');
-      } else if (lowerInput.includes('settings') || lowerInput.includes('configuration') || lowerInput.includes('setup')) {
-        botResponse = findRelevantFaq('settings');
-      } else if (lowerInput.includes('support') || lowerInput.includes('help') || lowerInput.includes('ticket')) {
-        botResponse = findRelevantFaq('support');
-      } else if (lowerInput.includes('performance') || lowerInput.includes('speed') || lowerInput.includes('optimization')) {
-        botResponse = findRelevantFaq('performance');
-      } else {
-        botResponse = { text: botResponses.fallback, isUser: false, timestamp: new Date(), showSuggestions: true };
-      }
-      
-      setMessages(prev => [...prev, botResponse]);
-      setLoading(false);
-    }, 1000);
+      setMessages(prev => [
+        ...prev, 
+        { id: Date.now(), text: answer, isUser: false }
+      ]);
+      setIsTyping(false);
+    }, 800);
   };
-
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      handleSendMessage();
-    }
-  };
-
-  const findRelevantFaq = (category) => {
-    const relevantFaqs = faqData.filter(item => item.category === category);
-    if (relevantFaqs.length > 0) {
-      const randomIndex = Math.floor(Math.random() * relevantFaqs.length);
-      const selectedFaq = relevantFaqs[randomIndex];
-      return {
-        text: `${selectedFaq.answer}\n\nWould you like to know more about ${category}?`,
-        isUser: false,
-        timestamp: new Date(),
-        category: category
-      };
-    }
-    return { text: botResponses.fallback, isUser: false, timestamp: new Date() };
-  };
-
-  const handleSuggestedQuestion = (question) => {
-    setInput(question);
-    // Auto send after short delay to simulate clicking
-    setTimeout(() => {
-      handleSendMessage();
-    }, 100);
-  };
-
-  const handleCategoryClick = (category) => {
-    setActiveCategory(category === activeCategory ? null : category);
-    setSearchTerm('');
-  };
-
-  const toggleFaq = (id) => {
-    setExpandedFaq(expandedFaq === id ? null : id);
-  };
-
-  const formatTime = (date) => {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const categories = [
-    { id: 'users', name: 'User Management', icon: <PeopleIcon /> },
-    { id: 'dashboard', name: 'Dashboard', icon: <DashboardIcon /> },
-    { id: 'security', name: 'Security', icon: <SecurityIcon /> },
-    { id: 'settings', name: 'System Settings', icon: <SettingsIcon /> },
-    { id: 'support', name: 'Support', icon: <QuestionAnswerIcon /> },
-    { id: 'performance', name: 'Performance', icon: <BarChartIcon /> }
-  ];
 
   return (
     <PageContainer>
@@ -329,288 +350,97 @@ const AdminFAQ = () => {
       <MainContent>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h4" sx={{ color: colors.primaryText, display: 'flex', alignItems: 'center', gap: 1 }}>
-            <HelpOutlineIcon fontSize="large" sx={{ color: colors.primary }} />
-            Admin FAQ & Support
+            <QuestionIcon sx={{ color: colors.secondary }} /> Admin Help Center
           </Typography>
-          <Tooltip title="Refresh">
-            <IconButton 
-              sx={{ 
-                color: colors.primary,
-                '&:hover': { backgroundColor: `${colors.primary}22` }
-              }}
-            >
-              <RefreshIcon />
-            </IconButton>
-          </Tooltip>
         </Box>
-
+        
         <Grid container spacing={3}>
-          {/* Left sidebar with categories and FAQ search */}
-          <Grid item xs={12} md={3}>
-            <Paper sx={{ p: 2, backgroundColor: colors.cardBg, borderRadius: '10px', border: `1px solid ${colors.borderColor}` }}>
-              <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText }}>FAQ Categories</Typography>
-              
-              <List component="nav" sx={{ mb: 3 }}>
-                {categories.map((category) => (
-                  <ListItem 
-                    button 
-                    key={category.id}
-                    selected={activeCategory === category.id}
-                    onClick={() => handleCategoryClick(category.id)}
-                    sx={{
-                      borderRadius: '8px',
-                      mb: 0.5,
-                      backgroundColor: activeCategory === category.id ? `${colors.primary}22` : 'transparent',
-                      '&:hover': {
-                        backgroundColor: activeCategory === category.id ? `${colors.primary}33` : colors.hoverBg
-                      }
-                    }}
-                  >
-                    <ListItemIcon sx={{ color: activeCategory === category.id ? colors.primary : colors.secondaryText, minWidth: '40px' }}>
-                      {category.icon}
-                    </ListItemIcon>
-                    <ListItemText 
-                      primary={category.name} 
-                      primaryTypographyProps={{ 
-                        color: activeCategory === category.id ? colors.primary : colors.primaryText,
-                        fontWeight: activeCategory === category.id ? 'medium' : 'normal'
-                      }} 
-                    />
-                  </ListItem>
-                ))}
-              </List>
-              
-              <Typography variant="h6" sx={{ mt: 3, mb: 2, color: colors.primaryText }}>Popular Questions</Typography>
-              <List component="nav">
-                {suggestedQuestions.slice(0, 3).map((question, index) => (
-                  <ListItem 
-                    button 
-                    key={index}
-                    onClick={() => handleSuggestedQuestion(question)}
-                    sx={{
-                      borderRadius: '8px',
-                      mb: 0.5,
-                      '&:hover': {
-                        backgroundColor: colors.hoverBg
-                      }
-                    }}
-                  >
-                    <ListItemIcon sx={{ color: colors.secondary, minWidth: '40px' }}>
-                      <MenuBookIcon fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText 
-                      primary={question} 
-                      primaryTypographyProps={{ 
-                        color: colors.primaryText,
-                        fontSize: '0.9rem'
-                      }} 
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            </Paper>
-          </Grid>
-          
-          {/* Middle section with admin assistant chat */}
-          <Grid item xs={12} md={5}>
-            <Paper sx={{ p: 2, backgroundColor: colors.cardBg, borderRadius: '10px', border: `1px solid ${colors.borderColor}` }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Avatar sx={{ bgcolor: colors.primary, mr: 1.5 }}>
-                  <QuestionAnswerIcon />
+          {/* Chat section */}
+          <Grid item xs={12} lg={7}>
+            <ChatContainer>
+              <Box sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
+                <Avatar sx={{ bgcolor: colors.secondary, mr: 1.5 }}>
+                  <AdminIcon />
                 </Avatar>
-                <Typography variant="h6" sx={{ color: colors.primaryText }}>Admin Assistant</Typography>
+                <Typography variant="h6">Admin Assistant</Typography>
               </Box>
               
-              <ChatContainer>
-                <MessagesContainer>
-                  {messages.map((message, index) => (
-                    <Box 
-                      key={index} 
-                      sx={{ 
-                        display: 'flex', 
-                        flexDirection: 'column',
-                        alignItems: message.isUser ? 'flex-end' : 'flex-start',
-                        mb: 2
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                        {!message.isUser && (
-                          <Avatar 
-                            sx={{ 
-                              width: 24, 
-                              height: 24, 
-                              bgcolor: colors.primary,
-                              mr: 1,
-                              fontSize: '0.8rem'
-                            }}
-                          >
-                            A
-                          </Avatar>
-                        )}
-                        <Typography variant="caption" sx={{ color: colors.secondaryText }}>
-                          {message.isUser ? 'You' : 'Assistant'} • {formatTime(message.timestamp)}
-                        </Typography>
-                        {message.isUser && (
-                          <Avatar 
-                            sx={{ 
-                              width: 24, 
-                              height: 24, 
-                              bgcolor: colors.secondary,
-                              ml: 1,
-                              fontSize: '0.8rem'
-                            }}
-                          >
-                            A
-                          </Avatar>
-                        )}
-                      </Box>
-                      
-                      <MessageBubble isUser={message.isUser}>
-                        <Typography variant="body2" sx={{ color: colors.primaryText, whiteSpace: 'pre-line' }}>
-                          {message.text}
-                        </Typography>
-                      </MessageBubble>
-                      
-                      {message.showSuggestions && (
-                        <Box sx={{ alignSelf: 'flex-start', mt: 1, mb: 2 }}>
-                          <Typography variant="caption" sx={{ color: colors.secondaryText, mb: 1, display: 'block' }}>
-                            Try asking:
-                          </Typography>
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                            {suggestedQuestions.map((question, idx) => (
-                              <Chip 
-                                key={idx}
-                                label={question}
-                                onClick={() => handleSuggestedQuestion(question)}
-                                sx={{ 
-                                  backgroundColor: `${colors.primary}22`,
-                                  color: colors.primaryText,
-                                  borderRadius: '16px',
-                                  '&:hover': {
-                                    backgroundColor: `${colors.primary}44`
-                                  }
-                                }}
-                              />
-                            ))}
-                          </Box>
-                        </Box>
-                      )}
-                      
-                      {message.category && (
-                        <Box sx={{ alignSelf: 'flex-start', mt: 1 }}>
-                          <Button 
-                            variant="outlined" 
-                            size="small"
-                            onClick={() => handleCategoryClick(message.category)}
-                            sx={{ 
-                              borderColor: colors.primary,
-                              color: colors.primary,
-                              '&:hover': {
-                                backgroundColor: `${colors.primary}22`
-                              }
-                            }}
-                          >
-                            View related FAQs
-                          </Button>
-                        </Box>
-                      )}
+              <MessagesArea>
+                {messages.map((message) => (
+                  <MessageBubble key={message.id} isUser={message.isUser}>
+                    <Typography variant="body2" sx={{ color: colors.primaryText, whiteSpace: 'pre-line' }}>
+                      {message.text}
+                    </Typography>
+                  </MessageBubble>
+                ))}
+                {isTyping && (
+                  <MessageBubble isUser={false}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <CircularProgress size={16} sx={{ mr: 1, color: colors.primaryText }} />
+                      <Typography variant="body2" sx={{ color: colors.primaryText }}>
+                        Typing...
+                      </Typography>
                     </Box>
-                  ))}
-                  {loading && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      <Avatar 
-                        sx={{ 
-                          width: 24, 
-                          height: 24, 
-                          bgcolor: colors.primary,
-                          mr: 1,
-                          fontSize: '0.8rem'
-                        }}
-                      >
-                        A
-                      </Avatar>
-                      <Box sx={{ 
-                        display: 'flex', 
-                        alignItems: 'center',
-                        backgroundColor: colors.cardBg,
-                        borderRadius: '18px',
-                        padding: '8px 16px',
-                        border: `1px solid ${colors.borderColor}`
-                      }}>
-                        <CircularProgress size={16} sx={{ color: colors.primary, mr: 1 }} />
-                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>
-                          Thinking...
-                        </Typography>
-                      </Box>
-                    </Box>
-                  )}
-                  <div ref={messagesEndRef} />
-                </MessagesContainer>
-                
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <TextField
-                    fullWidth
-                    placeholder="Ask a question about admin features..."
-                    variant="outlined"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    InputProps={{
-                      sx: {
-                        color: colors.primaryText,
-                        backgroundColor: colors.hoverBg,
-                        borderRadius: '24px',
-                        '& .MuiOutlinedInput-notchedOutline': {
-                          borderColor: colors.borderColor
-                        },
-                        '&:hover .MuiOutlinedInput-notchedOutline': {
-                          borderColor: colors.primary
-                        },
-                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                          borderColor: colors.primary
-                        }
+                  </MessageBubble>
+                )}
+                <div ref={messagesEndRef} />
+              </MessagesArea>
+              
+              <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex' }}>
+                <TextField
+                  fullWidth
+                  variant="outlined"
+                  placeholder="Ask an admin-related question..."
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      color: colors.primaryText,
+                      backgroundColor: `${colors.background}80`,
+                      '& fieldset': {
+                        borderColor: colors.borderColor
+                      },
+                      '&:hover fieldset': {
+                        borderColor: colors.primary
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: colors.primary
                       }
-                    }}
-                  />
-                  <Button 
-                    variant="contained" 
-                    color="primary" 
-                    onClick={handleSendMessage}
-                    disabled={!input.trim()}
-                    sx={{ 
-                      borderRadius: '24px',
-                      minWidth: '50px',
-                      width: '50px',
-                      height: '50px',
-                      padding: 0
-                    }}
-                  >
-                    <SendIcon />
-                  </Button>
-                </Box>
-              </ChatContainer>
-            </Paper>
+                    }
+                  }}
+                  InputProps={{
+                    endAdornment: (
+                      <IconButton 
+                        type="submit" 
+                        disabled={!inputValue.trim() || isTyping}
+                        sx={{ color: colors.primary }}
+                      >
+                        <SendIcon />
+                      </IconButton>
+                    )
+                  }}
+                />
+              </Box>
+            </ChatContainer>
           </Grid>
           
-          {/* Right section with FAQ list */}
-          <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 2, backgroundColor: colors.cardBg, borderRadius: '10px', border: `1px solid ${colors.borderColor}` }}>
-              <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText }}>
-                {activeCategory ? `${categories.find(c => c.id === activeCategory)?.name} FAQs` : 'Frequently Asked Questions'}
+          {/* FAQ section */}
+          <Grid item xs={12} lg={5}>
+            <StyledCard sx={{ height: '400px', overflowY: 'auto' }}>
+              <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <QuestionIcon fontSize="small" sx={{ color: colors.secondary }} />
+                Frequently Asked Questions
               </Typography>
               
               <TextField
                 fullWidth
-                placeholder="Search FAQs..."
                 variant="outlined"
-                size="small"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                sx={{ mb: 2 }}
+                placeholder="Search FAQs..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                sx={{ mb: 3 }}
                 InputProps={{
-                  startAdornment: (
-                    <SearchIcon sx={{ color: colors.secondaryText, mr: 1 }} />
-                  ),
+                  startAdornment: <SearchIcon sx={{ mr: 1, color: colors.secondaryText }} />,
                   sx: {
                     color: colors.primaryText,
                     '& .MuiOutlinedInput-notchedOutline': {
@@ -618,53 +448,209 @@ const AdminFAQ = () => {
                     },
                     '&:hover .MuiOutlinedInput-notchedOutline': {
                       borderColor: colors.primary
-                    },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                      borderColor: colors.primary
                     }
                   }
                 }}
               />
               
-              <Box sx={{ maxHeight: '60vh', overflowY: 'auto', pr: 1 }}>
-                {filteredFaq.length > 0 ? (
-                  filteredFaq.map((faq) => (
-                    <FAQItem key={faq.id}>
-                      <FAQQuestion onClick={() => toggleFaq(faq.id)}>
-                        <Typography variant="body1" sx={{ color: colors.primaryText, fontWeight: expandedFaq === faq.id ? 'medium' : 'normal' }}>
-                          {faq.question}
+              {faqCategories.map((category) => {
+                // Skip empty categories after filtering
+                if (filteredFAQs[category.id] && filteredFAQs[category.id].length === 0) return null;
+                
+                return (
+                  <FAQSection key={category.id}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <Avatar sx={{ bgcolor: `${category.color}22`, width: 32, height: 32, mr: 1 }}>
+                        {category.icon}
+                      </Avatar>
+                      <Typography variant="h6" sx={{ color: category.color, fontSize: '1rem' }}>
+                        {category.title}
+                      </Typography>
+                      <Chip 
+                        label={filteredFAQs[category.id].length} 
+                        size="small" 
+                        sx={{ 
+                          ml: 1, 
+                          backgroundColor: `${category.color}22`,
+                          color: category.color,
+                          fontWeight: 'bold'
+                        }} 
+                      />
+                    </Box>
+                    
+                    {filteredFAQs[category.id].map((item) => (
+                      <FAQCard 
+                        key={item.id} 
+                        onClick={() => handleFAQClick(item.question, item.answer)}
+                      >
+                        <Typography variant="body1" sx={{ fontWeight: 500, mb: 0.5, color: colors.primaryText }}>
+                          {item.question}
                         </Typography>
-                        {expandedFaq === faq.id ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                      </FAQQuestion>
-                      {expandedFaq === faq.id && (
-                        <FAQAnswer>
-                          <Typography variant="body2" sx={{ color: colors.secondaryText }}>
-                            {faq.answer}
-                          </Typography>
-                          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-                            <Chip 
-                              label={faq.category} 
-                              size="small"
-                              sx={{ 
-                                backgroundColor: `${colors.primary}22`,
-                                color: colors.primaryText
-                              }}
-                              onClick={() => handleCategoryClick(faq.category)}
-                            />
-                          </Box>
-                        </FAQAnswer>
-                      )}
-                    </FAQItem>
-                  ))
-                ) : (
-                  <Box sx={{ textAlign: 'center', py: 4 }}>
-                    <Typography variant="body1" sx={{ color: colors.secondaryText }}>
-                      No FAQs match your search
-                    </Typography>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          {item.answer.length > 80 ? `${item.answer.substring(0, 80)}...` : item.answer}
+                        </Typography>
+                      </FAQCard>
+                    ))}
+                  </FAQSection>
+                );
+              })}
+              
+              {Object.values(filteredFAQs).every(items => items.length === 0) && (
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  height: '200px',
+                  color: colors.secondaryText
+                }}>
+                  <SearchIcon sx={{ fontSize: 48, mb: 2, opacity: 0.6 }} />
+                  <Typography>No matching FAQs found</Typography>
+                  <Typography variant="body2">Try different search terms</Typography>
+                </Box>
+              )}
+            </StyledCard>
+          </Grid>
+          
+          {/* Quick guides section */}
+          <Grid item xs={12} sx={{ mt: 3 }}>
+            <Typography variant="h5" sx={{ mb: 2, color: colors.primaryText }}>
+              Admin Quick Guides
+            </Typography>
+            
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={6} md={4}>
+                <StyledCard>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <Avatar sx={{ bgcolor: `${colors.primary}22`, mr: 1.5 }}>
+                      <PersonIcon sx={{ color: colors.primary }} />
+                    </Avatar>
+                    <Typography variant="h6">User Management Guide</Typography>
                   </Box>
-                )}
-              </Box>
-            </Paper>
+                  
+                  <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 2 }}>
+                    Learn how to effectively manage users on the MarketPulse platform.
+                  </Typography>
+                  
+                  <List sx={{ bgcolor: `${colors.background}50`, borderRadius: '8px', p: 1 }}>
+                    <ListItem dense>
+                      <ListItemText 
+                        primary="Suspending problematic users" 
+                        primaryTypographyProps={{ color: colors.primaryText }}
+                        secondary="Ban users who violate platform rules"
+                        secondaryTypographyProps={{ color: colors.secondaryText, fontSize: '0.8rem' }}
+                      />
+                    </ListItem>
+                    <Divider sx={{ backgroundColor: colors.borderColor }} />
+                    <ListItem dense>
+                      <ListItemText 
+                        primary="Monitoring user activity" 
+                        primaryTypographyProps={{ color: colors.primaryText }}
+                        secondary="Track login frequency and engagement"
+                        secondaryTypographyProps={{ color: colors.secondaryText, fontSize: '0.8rem' }}
+                      />
+                    </ListItem>
+                    <Divider sx={{ backgroundColor: colors.borderColor }} />
+                    <ListItem dense>
+                      <ListItemText 
+                        primary="Managing user roles" 
+                        primaryTypographyProps={{ color: colors.primaryText }}
+                        secondary="Assign user permissions appropriately"
+                        secondaryTypographyProps={{ color: colors.secondaryText, fontSize: '0.8rem' }}
+                      />
+                    </ListItem>
+                  </List>
+                </StyledCard>
+              </Grid>
+              
+              <Grid item xs={12} sm={6} md={4}>
+                <StyledCard>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <Avatar sx={{ bgcolor: `${colors.secondary}22`, mr: 1.5 }}>
+                      <SettingsIcon sx={{ color: colors.secondary }} />
+                    </Avatar>
+                    <Typography variant="h6">System Management</Typography>
+                  </Box>
+                  
+                  <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 2 }}>
+                    Understand how to monitor and maintain system performance.
+                  </Typography>
+                  
+                  <List sx={{ bgcolor: `${colors.background}50`, borderRadius: '8px', p: 1 }}>
+                    <ListItem dense>
+                      <ListItemText 
+                        primary="Checking system health" 
+                        primaryTypographyProps={{ color: colors.primaryText }}
+                        secondary="Monitor server and API status"
+                        secondaryTypographyProps={{ color: colors.secondaryText, fontSize: '0.8rem' }}
+                      />
+                    </ListItem>
+                    <Divider sx={{ backgroundColor: colors.borderColor }} />
+                    <ListItem dense>
+                      <ListItemText 
+                        primary="Managing market data" 
+                        primaryTypographyProps={{ color: colors.primaryText }}
+                        secondary="Ensure currency pairs are up to date"
+                        secondaryTypographyProps={{ color: colors.secondaryText, fontSize: '0.8rem' }}
+                      />
+                    </ListItem>
+                    <Divider sx={{ backgroundColor: colors.borderColor }} />
+                    <ListItem dense>
+                      <ListItemText 
+                        primary="System configuration" 
+                        primaryTypographyProps={{ color: colors.primaryText }}
+                        secondary="Adjust platform settings and parameters"
+                        secondaryTypographyProps={{ color: colors.secondaryText, fontSize: '0.8rem' }}
+                      />
+                    </ListItem>
+                  </List>
+                </StyledCard>
+              </Grid>
+              
+              <Grid item xs={12} sm={6} md={4}>
+                <StyledCard>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <Avatar sx={{ bgcolor: `${colors.accentBlue}22`, mr: 1.5 }}>
+                      <AnalyticsIcon sx={{ color: colors.accentBlue }} />
+                    </Avatar>
+                    <Typography variant="h6">Analytics Overview</Typography>
+                  </Box>
+                  
+                  <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 2 }}>
+                    Learn how to interpret platform analytics and usage statistics.
+                  </Typography>
+                  
+                  <List sx={{ bgcolor: `${colors.background}50`, borderRadius: '8px', p: 1 }}>
+                    <ListItem dense>
+                      <ListItemText 
+                        primary="User growth tracking" 
+                        primaryTypographyProps={{ color: colors.primaryText }}
+                        secondary="Analyze registration patterns"
+                        secondaryTypographyProps={{ color: colors.secondaryText, fontSize: '0.8rem' }}
+                      />
+                    </ListItem>
+                    <Divider sx={{ backgroundColor: colors.borderColor }} />
+                    <ListItem dense>
+                      <ListItemText 
+                        primary="Popular symbols analysis" 
+                        primaryTypographyProps={{ color: colors.primaryText }}
+                        secondary="Identify most-watched currency pairs"
+                        secondaryTypographyProps={{ color: colors.secondaryText, fontSize: '0.8rem' }}
+                      />
+                    </ListItem>
+                    <Divider sx={{ backgroundColor: colors.borderColor }} />
+                    <ListItem dense>
+                      <ListItemText 
+                        primary="Market trends overview" 
+                        primaryTypographyProps={{ color: colors.primaryText }}
+                        secondary="Track overall market sentiment"
+                        secondaryTypographyProps={{ color: colors.secondaryText, fontSize: '0.8rem' }}
+                      />
+                    </ListItem>
+                  </List>
+                </StyledCard>
+              </Grid>
+            </Grid>
           </Grid>
         </Grid>
       </MainContent>
