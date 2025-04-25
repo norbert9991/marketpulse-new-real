@@ -82,7 +82,7 @@ const Sidebar = () => {
   const menuItems = [
     { name: 'Dashboard', path: '/admin-dashboard', icon: <DashboardIcon />, badge: null },
     { name: 'Users', path: '/UserManagement', icon: <PeopleIcon />, badge: null },
-    { name: 'Help Center', path: '/TransactionPage', icon: <HelpIcon />, badge: null },
+    { name: 'Help Center', path: '/AdminFAQ', icon: <HelpIcon />, badge: null },
     { name: 'Reports', path: '/ReportPage', icon: <ReportsIcon />, badge: null },
     { name: 'Settings', path: '/adminsettings', icon: <SettingsIcon />, badge: null }
   ];
