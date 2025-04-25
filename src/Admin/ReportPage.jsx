@@ -518,7 +518,7 @@ const ReportPage = () => {
         {/* Report Content */}
         <Grid container spacing={3}>
           {/* Main Chart */}
-          <Grid item xs={12} md={8}>
+          <Grid item xs={12}>
             <StyledCard>
               <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText, fontWeight: 600 }}>
                 {reportType === 0 ? 'User Growth Trend' : 
@@ -531,7 +531,7 @@ const ReportPage = () => {
                   <CircularProgress size={40} sx={{ color: colors.primary }} />
                 </Box>
               ) : (
-                <ResponsiveContainer width="100%" height={350}>
+                <ResponsiveContainer width="100%" height={400}>
                   {reportType === 0 ? (
                     <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                       <defs>
@@ -560,10 +560,10 @@ const ReportPage = () => {
                       />
                     </AreaChart>
                   ) : reportType === 1 ? (
-                    <BarChart data={marketData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }} layout="vertical">
+                    <BarChart data={marketData} margin={{ top: 10, right: 30, left: 20, bottom: 0 }} layout="vertical">
                       <CartesianGrid strokeDasharray="3 3" stroke={colors.borderColor} />
                       <XAxis type="number" stroke={colors.secondaryText} />
-                      <YAxis dataKey="name" type="category" stroke={colors.secondaryText} width={80} />
+                      <YAxis dataKey="name" type="category" stroke={colors.secondaryText} width={100} />
                       <RechartsTooltip 
                         contentStyle={{ 
                           backgroundColor: colors.cardBg,
@@ -582,7 +582,7 @@ const ReportPage = () => {
                       </Bar>
                     </BarChart>
                   ) : (
-                    <BarChart data={marketTrendBarData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                    <BarChart data={marketTrendBarData} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke={colors.borderColor} />
                       <XAxis dataKey="name" stroke={colors.secondaryText} />
                       <YAxis stroke={colors.secondaryText} />
@@ -609,113 +609,195 @@ const ReportPage = () => {
             </StyledCard>
           </Grid>
           
-          {/* Secondary Chart/Table */}
-          <Grid item xs={12} md={4}>
-            <StyledCard sx={{ height: '100%' }}>
-              <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText, fontWeight: 600 }}>
-                {reportType === 0 ? 'User Distribution by Role' : 
-                 reportType === 1 ? 'Currency Pair Distribution' : 
-                 'Market Sentiment Breakdown'}
-              </Typography>
-              
-              {loading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
-                  <CircularProgress size={40} sx={{ color: colors.primary }} />
+          {/* Secondary Charts in a row */}
+          <Grid container item spacing={3}>
+            <Grid item xs={12} md={6}>
+              <StyledCard sx={{ height: '100%' }}>
+                <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText, fontWeight: 600 }}>
+                  {reportType === 0 ? 'User Distribution by Role' : 
+                   reportType === 1 ? 'Currency Pair Distribution' : 
+                   'Market Sentiment Breakdown'}
+                </Typography>
+                
+                {loading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
+                    <CircularProgress size={40} sx={{ color: colors.primary }} />
+                  </Box>
+                ) : (
+                  <ResponsiveContainer width="100%" height={350}>
+                    {reportType === 0 ? (
+                      <PieChart>
+                        <Pie
+                          data={[
+                            { name: 'Regular Users', value: stats.totalUsers - 1, color: colors.primary },
+                            { name: 'Admins', value: 1, color: colors.secondary }
+                          ]}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          outerRadius={120}
+                          fill="#8884d8"
+                          dataKey="value"
+                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        >
+                          <Cell fill={colors.primary} />
+                          <Cell fill={colors.secondary} />
+                        </Pie>
+                        <Legend />
+                        <RechartsTooltip 
+                          contentStyle={{ 
+                            backgroundColor: colors.cardBg,
+                            borderColor: colors.borderColor,
+                            color: colors.primaryText
+                          }} 
+                        />
+                      </PieChart>
+                    ) : reportType === 1 ? (
+                      <PieChart>
+                        <Pie
+                          data={marketData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          outerRadius={120}
+                          fill="#8884d8"
+                          dataKey="value"
+                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        >
+                          {marketData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Legend />
+                        <RechartsTooltip 
+                          contentStyle={{ 
+                            backgroundColor: colors.cardBg,
+                            borderColor: colors.borderColor,
+                            color: colors.primaryText
+                          }} 
+                        />
+                      </PieChart>
+                    ) : (
+                      <RadarChart cx="50%" cy="50%" outerRadius="70%" data={[
+                        { subject: 'Bullish', A: marketTrendsData.bullish_percentage, fullMark: 100 },
+                        { subject: 'Neutral', A: marketTrendsData.neutral_percentage, fullMark: 100 },
+                        { subject: 'Bearish', A: marketTrendsData.bearish_percentage, fullMark: 100 }
+                      ]}>
+                        <PolarGrid stroke={colors.borderColor} />
+                        <PolarAngleAxis dataKey="subject" stroke={colors.secondaryText} />
+                        <PolarRadiusAxis stroke={colors.secondaryText} />
+                        <Radar name="Market Sentiment" dataKey="A" stroke={colors.accentBlue} 
+                          fill={colors.accentBlue} fillOpacity={0.6} />
+                        <RechartsTooltip 
+                          contentStyle={{ 
+                            backgroundColor: colors.cardBg,
+                            borderColor: colors.borderColor,
+                            color: colors.primaryText
+                          }} 
+                        />
+                      </RadarChart>
+                    )}
+                  </ResponsiveContainer>
+                )}
+              </StyledCard>
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <StyledCard sx={{ height: '100%' }}>
+                <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText, fontWeight: 600 }}>
+                  {reportType === 0 ? 'Monthly Registration Trend' : 
+                   reportType === 1 ? 'Symbol Popularity Trend' : 
+                   'Market Trend Distribution'}
+                </Typography>
+                
+                {loading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
+                    <CircularProgress size={40} sx={{ color: colors.primary }} />
+                  </Box>
+                ) : (
+                  <ResponsiveContainer width="100%" height={350}>
+                    {reportType === 0 ? (
+                      <BarChart data={chartData.slice(-6)} margin={{ top: 10, right: 30, left: 20, bottom: 20 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={colors.borderColor} />
+                        <XAxis dataKey="name" stroke={colors.secondaryText} />
+                        <YAxis stroke={colors.secondaryText} />
+                        <RechartsTooltip 
+                          contentStyle={{ 
+                            backgroundColor: colors.cardBg,
+                            borderColor: colors.borderColor,
+                            color: colors.primaryText
+                          }} 
+                        />
+                        <Bar dataKey="users" fill={colors.accentBlue} name="New Users" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    ) : reportType === 1 ? (
+                      <BarChart 
+                        data={[...marketData].sort((a, b) => b.value - a.value)} 
+                        margin={{ top: 10, right: 30, left: 20, bottom: 20 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke={colors.borderColor} />
+                        <XAxis dataKey="name" stroke={colors.secondaryText} />
+                        <YAxis stroke={colors.secondaryText} />
+                        <RechartsTooltip 
+                          contentStyle={{ 
+                            backgroundColor: colors.cardBg,
+                            borderColor: colors.borderColor,
+                            color: colors.primaryText
+                          }} 
+                        />
+                        <Bar dataKey="value" fill={colors.secondary} name="Popularity" radius={[4, 4, 0, 0]}>
+                          {marketData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    ) : (
+                      <PieChart>
+                        <Pie
+                          data={marketTrendBarData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={true}
+                          outerRadius={120}
+                          fill="#8884d8"
+                          dataKey="value"
+                          label={({ name, value }) => `${name}: ${value}%`}
+                        >
+                          {marketTrendBarData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Legend />
+                        <RechartsTooltip 
+                          contentStyle={{ 
+                            backgroundColor: colors.cardBg,
+                            borderColor: colors.borderColor,
+                            color: colors.primaryText
+                          }} 
+                        />
+                      </PieChart>
+                    )}
+                  </ResponsiveContainer>
+                )}
+                
+                <Box sx={{ mt: 2, textAlign: 'center' }}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<DownloadIcon />}
+                    sx={{
+                      borderColor: colors.primary,
+                      color: colors.primary,
+                      '&:hover': {
+                        backgroundColor: `${colors.primary}20`,
+                        borderColor: colors.primary
+                      }
+                    }}
+                  >
+                    Export {reportType === 0 ? 'User' : reportType === 1 ? 'Distribution' : 'Sentiment'} Report
+                  </Button>
                 </Box>
-              ) : (
-                <ResponsiveContainer width="100%" height={350}>
-                  {reportType === 0 ? (
-                    <PieChart>
-                      <Pie
-                        data={[
-                          { name: 'Regular Users', value: stats.totalUsers - 1, color: colors.primary },
-                          { name: 'Admins', value: 1, color: colors.secondary }
-                        ]}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      >
-                        <Cell fill={colors.primary} />
-                        <Cell fill={colors.secondary} />
-                      </Pie>
-                      <Legend />
-                      <RechartsTooltip 
-                        contentStyle={{ 
-                          backgroundColor: colors.cardBg,
-                          borderColor: colors.borderColor,
-                          color: colors.primaryText
-                        }} 
-                      />
-                    </PieChart>
-                  ) : reportType === 1 ? (
-                    <PieChart>
-                      <Pie
-                        data={marketData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      >
-                        {marketData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Legend />
-                      <RechartsTooltip 
-                        contentStyle={{ 
-                          backgroundColor: colors.cardBg,
-                          borderColor: colors.borderColor,
-                          color: colors.primaryText
-                        }} 
-                      />
-                    </PieChart>
-                  ) : (
-                    <RadarChart cx="50%" cy="50%" outerRadius="80%" data={[
-                      { subject: 'Bullish', A: marketTrendsData.bullish_percentage, fullMark: 100 },
-                      { subject: 'Neutral', A: marketTrendsData.neutral_percentage, fullMark: 100 },
-                      { subject: 'Bearish', A: marketTrendsData.bearish_percentage, fullMark: 100 }
-                    ]}>
-                      <PolarGrid stroke={colors.borderColor} />
-                      <PolarAngleAxis dataKey="subject" stroke={colors.secondaryText} />
-                      <PolarRadiusAxis stroke={colors.secondaryText} />
-                      <Radar name="Market Sentiment" dataKey="A" stroke={colors.accentBlue} 
-                        fill={colors.accentBlue} fillOpacity={0.6} />
-                      <RechartsTooltip 
-                        contentStyle={{ 
-                          backgroundColor: colors.cardBg,
-                          borderColor: colors.borderColor,
-                          color: colors.primaryText
-                        }} 
-                      />
-                    </RadarChart>
-                  )}
-                </ResponsiveContainer>
-              )}
-              
-              <Box sx={{ mt: 2, textAlign: 'center' }}>
-                <Button
-                  variant="outlined"
-                  startIcon={<DownloadIcon />}
-                  sx={{
-                    borderColor: colors.primary,
-                    color: colors.primary,
-                    '&:hover': {
-                      backgroundColor: `${colors.primary}20`,
-                      borderColor: colors.primary
-                    }
-                  }}
-                >
-                  Export {reportType === 0 ? 'User' : reportType === 1 ? 'Distribution' : 'Sentiment'} Report
-                </Button>
-              </Box>
-            </StyledCard>
+              </StyledCard>
+            </Grid>
           </Grid>
         </Grid>
       </MainContent>
