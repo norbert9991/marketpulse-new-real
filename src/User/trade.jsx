@@ -703,46 +703,16 @@ const Trade = () => {
                 mb: 4
               }}
             >
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-                <Typography 
-                  variant="h4" 
-                  sx={{ 
-                    color: colors.primaryText,
-                    fontWeight: 'bold'
-                  }}
-                >
-                  Simulation Results
-                </Typography>
-                
-                <Box>
-              <Button 
-                variant="contained" 
-                    onClick={resetSimulation}
-                sx={{
-                  backgroundColor: colors.accentBlue,
-                  '&:hover': {
-                    backgroundColor: colors.accentBlue,
-                        opacity: 0.9,
-                  }
-                }}
+              <Typography 
+                variant="h4" 
+                sx={{ color: colors.primaryText, fontWeight: 'bold', mb: 4 }}
               >
-                    NEW SIMULATION
-              </Button>
-                </Box>
-          </Box>
-
-              {/* First row - 3 main panels */}
-              <Grid container spacing={4}>
-                <Grid item xs={12} lg={4}>
-          <Paper 
-            sx={{ 
-              p: 4, 
-                      backgroundColor: colors.panelBg,
-              border: `1px solid ${colors.borderColor}`,
-              borderRadius: '12px',
-                      height: '100%'
-                    }}
-                  >
+                Simulation Results
+              </Typography>
+              {/* Top summary panels: Balance, Monthly P/L, Simulation Results */}
+              <Grid container spacing={4} alignItems="stretch">
+                <Grid item xs={12} md={4}>
+                  <Paper sx={{ p: 4, backgroundColor: colors.panelBg, border: `1px solid ${colors.borderColor}`, borderRadius: '12px', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                     <Typography variant="h6" sx={{ color: colors.primaryText, mb: 3, fontWeight: 'bold' }}>
                       Balance
                     </Typography>
@@ -847,17 +817,8 @@ const Trade = () => {
                     </Box>
                   </Paper>
                 </Grid>
-                
-                <Grid item xs={12} lg={4}>
-                  <Paper 
-                sx={{ 
-                      p: 4, 
-                  backgroundColor: colors.panelBg, 
-                      border: `1px solid ${colors.borderColor}`,
-                      borderRadius: '12px',
-                      height: '100%'
-                    }}
-                  >
+                <Grid item xs={12} md={4}>
+                  <Paper sx={{ p: 4, backgroundColor: colors.panelBg, border: `1px solid ${colors.borderColor}`, borderRadius: '12px', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                     <Typography variant="h6" sx={{ color: colors.primaryText, mb: 3, fontWeight: 'bold' }}>
                       Monthly P/L
                     </Typography>
@@ -974,16 +935,8 @@ const Trade = () => {
                     </Box>
                   </Paper>
                 </Grid>
-                
-                <Grid item xs={12} lg={4}>
-                  <Paper 
-                    sx={{ 
-                      p: 4, 
-                      backgroundColor: colors.panelBg,
-                      border: `1px solid ${colors.borderColor}`,
-                      borderRadius: '12px'
-                    }}
-                  >
+                <Grid item xs={12} md={4}>
+                  <Paper sx={{ p: 4, backgroundColor: colors.panelBg, border: `1px solid ${colors.borderColor}`, borderRadius: '12px', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                       <Typography variant="h6" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
                         Simulation Results
@@ -1073,220 +1026,163 @@ const Trade = () => {
                     </Box>
                   </Paper>
                 </Grid>
-                
-                {/* Second row - 2 panels for symbols */}
-                <Grid container spacing={4} sx={{ flexWrap: 'nowrap', overflowX: 'auto' }}>
-                  <Grid item sx={{ width: '680px', flexShrink: 0, mr: 2 }}>
-                    <Paper 
-                      sx={{ 
-                        p: 4, 
-                        backgroundColor: colors.panelBg,
-                        border: `1px solid ${colors.borderColor}`,
-                        borderRadius: '12px'
-                      }}
-                    >
-                      <Typography variant="h6" sx={{ color: colors.primaryText, mb: 3, fontWeight: 'bold' }}>
-                        Symbols
-                      </Typography>
-                      
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        {/* Donut chart */}
-                        <Box sx={{ width: 220, height: 220, position: 'relative' }}>
-                          <svg width="220" height="220" viewBox="0 0 220 220">
-                            <defs>
-                              <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-                                <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
-                                <feOffset dx="0" dy="1" result="offsetblur" />
-                                <feComponentTransfer>
-                                  <feFuncA type="linear" slope="0.2" />
-                                </feComponentTransfer>
-                                <feMerge>
-                                  <feMergeNode />
-                                  <feMergeNode in="SourceGraphic" />
-                                </feMerge>
-                              </filter>
-                            </defs>
-                            
-                            {/* Ring segments */}
-                            <circle cx="110" cy="110" r="60" fill="none" stroke="#00E676" strokeWidth="22" strokeDasharray="150 230" transform="rotate(-90 110 110)" filter="url(#shadow)" />
-                            <circle cx="110" cy="110" r="60" fill="none" stroke="#2196F3" strokeWidth="22" strokeDasharray="100 280" transform="rotate(60 110 110)" filter="url(#shadow)" />
-                            <circle cx="110" cy="110" r="60" fill="none" stroke="#FFA726" strokeWidth="22" strokeDasharray="30 350" transform="rotate(160 110 110)" filter="url(#shadow)" />
-                            <circle cx="110" cy="110" r="60" fill="none" stroke="#FF3D57" strokeWidth="22" strokeDasharray="23 357" transform="rotate(190 110 110)" filter="url(#shadow)" />
-                            <circle cx="110" cy="110" r="60" fill="none" stroke="#9C27B0" strokeWidth="22" strokeDasharray="20 360" transform="rotate(213 110 110)" filter="url(#shadow)" />
-                            <circle cx="110" cy="110" r="60" fill="none" stroke="#CDDC39" strokeWidth="22" strokeDasharray="15 365" transform="rotate(233 110 110)" filter="url(#shadow)" />
-                            
-                            {/* Center hole */}
-                            <circle cx="110" cy="110" r="40" fill={colors.panelBg} />
-                          </svg>
-                        </Box>
-                        
-                        {/* Symbol list */}
-                        <Box sx={{ flex: 1, pl: 3 }}>
-                          {['EURUSD', 'EURJPY', 'GBPUSD', 'EURNZD', 'EURCAD', 'EURCHF'].map((symbol, i) => {
-                            const weights = [44.8, 32.0, 4.8, 3.3, 7.9, 5.5];
-                            const colors = ['#00E676', '#2196F3', '#FFA726', '#FF3D57', '#9C27B0', '#CDDC39'];
-                            
-                            return (
-                              <Box key={i} sx={{ 
-                                display: 'flex', 
-                                justifyContent: 'space-between', 
-                                alignItems: 'center', 
-                                mb: 1 
-                              }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                  <Box sx={{ 
-                                    width: 8, 
-                                    height: 8, 
-                                    borderRadius: '50%', 
-                                    backgroundColor: colors[i],
-                                    mr: 1 
-                                  }} />
-                                  <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
-                                    {symbol}
-                                  </Typography>
-                                </Box>
-                                <Typography variant="body2" sx={{ color: colors.secondaryText }}>
-                                  {weights[i]}%
-                                </Typography>
-                              </Box>
-                            );
-                          })}
-                        </Box>
-                      </Box>
-                    </Paper>
-                  </Grid>
-                  
-                  <Grid item xs={12} lg={6}>
-                    <Paper 
-                      sx={{ 
-                        p: 4, 
-                        backgroundColor: colors.panelBg,
-                        border: `1px solid ${colors.borderColor}`,
-                        borderRadius: '12px'
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                        <Typography variant="h6" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
-                          Symbols P/L
-                        </Typography>
-                        <Button
-                          variant="text"
-                          size="small"
-                          sx={{ 
-                            color: colors.accentBlue,
-                            textTransform: 'none',
-                            fontSize: '0.75rem',
-                            p: 0
-                          }}
-                        >
-                          All Symbols
-                        </Button>
+              </Grid>
+              {/* Lower section: Symbols and Symbols P/L */}
+              <Grid container spacing={4} sx={{ mt: 2 }} alignItems="stretch">
+                <Grid item xs={12} md={6}>
+                  <Paper sx={{ p: 4, backgroundColor: colors.panelBg, border: `1px solid ${colors.borderColor}`, borderRadius: '12px', height: '100%', minHeight: 340 }}>
+                    {/* Symbols donut chart and legend */}
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      {/* Donut chart */}
+                      <Box sx={{ width: 220, height: 220, position: 'relative' }}>
+                        <svg width="220" height="220" viewBox="0 0 220 220">
+                          <defs>
+                            <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                              <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
+                              <feOffset dx="0" dy="1" result="offsetblur" />
+                              <feComponentTransfer>
+                                <feFuncA type="linear" slope="0.2" />
+                              </feComponentTransfer>
+                              <feMerge>
+                                <feMergeNode />
+                                <feMergeNode in="SourceGraphic" />
+                              </feMerge>
+                            </filter>
+                          </defs>
+                          
+                          {/* Ring segments */}
+                          <circle cx="110" cy="110" r="60" fill="none" stroke="#00E676" strokeWidth="22" strokeDasharray="150 230" transform="rotate(-90 110 110)" filter="url(#shadow)" />
+                          <circle cx="110" cy="110" r="60" fill="none" stroke="#2196F3" strokeWidth="22" strokeDasharray="100 280" transform="rotate(60 110 110)" filter="url(#shadow)" />
+                          <circle cx="110" cy="110" r="60" fill="none" stroke="#FFA726" strokeWidth="22" strokeDasharray="30 350" transform="rotate(160 110 110)" filter="url(#shadow)" />
+                          <circle cx="110" cy="110" r="60" fill="none" stroke="#FF3D57" strokeWidth="22" strokeDasharray="23 357" transform="rotate(190 110 110)" filter="url(#shadow)" />
+                          <circle cx="110" cy="110" r="60" fill="none" stroke="#9C27B0" strokeWidth="22" strokeDasharray="20 360" transform="rotate(213 110 110)" filter="url(#shadow)" />
+                          <circle cx="110" cy="110" r="60" fill="none" stroke="#CDDC39" strokeWidth="22" strokeDasharray="15 365" transform="rotate(233 110 110)" filter="url(#shadow)" />
+                          
+                          {/* Center hole */}
+                          <circle cx="110" cy="110" r="40" fill={colors.panelBg} />
+                        </svg>
                       </Box>
                       
-                      <Box sx={{ height: 220, display: 'flex', alignItems: 'flex-end', position: 'relative' }}>
-                        {/* X-axis labels - rotated currency names */}
-                        <Box sx={{ 
-                          position: 'absolute',
-                          bottom: 0,
-                          left: 0,
-                          right: 0,
-                          display: 'flex',
-                          justifyContent: 'space-around',
-                          transform: 'translateY(20px)'
-                        }}>
-                          {['EURUSD', 'EURJPY', 'GBPUSD', 'EURNZD', 'EURCAD', 'EURCHF', 'AUDUSD'].map((symbol, i) => (
-                <Typography 
-                            key={i} 
-                            variant="caption" 
-                  sx={{ 
-                              color: colors.secondaryText,
-                              fontSize: '10px',
-                              transform: 'rotate(-45deg)',
-                              transformOrigin: 'top left',
-                              whiteSpace: 'nowrap'
-                            }}
-                          >
-                            {symbol}
-                </Typography>
-                          ))}
-                        </Box>
-                        
-                        {/* Bar chart */}
-                        <Box sx={{ 
-                          display: 'flex',
-                          height: 150,
-                          alignItems: 'flex-end',
-                          width: '100%',
-                          justifyContent: 'space-around',
-                          mb: 4
-                        }}>
-                          {[5380, 3840, 580, 390, 947, 670, 290].map((value, i) => {
-                            const maxValue = 5380;
-                            const height = (value / maxValue) * 130;
-                            
-                            return (
-                              <Box key={i} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                <Typography 
-                                  variant="caption" 
-                                  sx={{ 
-                                    color: colors.profitGreen,
-                                    fontSize: '10px',
-                                    mb: 0.5
-                                  }}
-                                >
-                                  +${value}
-                                </Typography>
+                      {/* Symbol list */}
+                      <Box sx={{ flex: 1, pl: 3 }}>
+                        {['EURUSD', 'EURJPY', 'GBPUSD', 'EURNZD', 'EURCAD', 'EURCHF'].map((symbol, i) => {
+                          const weights = [44.8, 32.0, 4.8, 3.3, 7.9, 5.5];
+                          const colors = ['#00E676', '#2196F3', '#FFA726', '#FF3D57', '#9C27B0', '#CDDC39'];
+                          
+                          return (
+                            <Box key={i} sx={{ 
+                              display: 'flex', 
+                              justifyContent: 'space-between', 
+                              alignItems: 'center', 
+                              mb: 1 
+                            }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                 <Box sx={{ 
-                                  height: `${height}px`,
-                                  width: 16,
-                                  backgroundColor: colors.profitGreen,
-                                  borderRadius: '2px'
+                                  width: 8, 
+                                  height: 8, 
+                                  borderRadius: '50%', 
+                                  backgroundColor: colors[i],
+                                  mr: 1 
                                 }} />
+                                <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                                  {symbol}
+                                </Typography>
                               </Box>
-                            );
-                          })}
-                        </Box>
+                              <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                                {weights[i]}%
+                              </Typography>
+                            </Box>
+                          );
+                        })}
                       </Box>
-                    </Paper>
-                  </Grid>
-                </Grid>
-                
-                {/* Insights row */}
-                <Grid item xs={12}>
-                  <Paper 
-                    sx={{ 
-                      p: 4, 
-                      backgroundColor: colors.panelBg,
-                      border: `1px solid ${colors.borderColor}`,
-                      borderRadius: '12px'
-                    }}
-                  >
-                    <Typography variant="h6" sx={{ color: colors.primaryText, mb: 3, fontWeight: 'bold' }}>
-                      Insights
-                    </Typography>
-                    
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      {simulationResults.insights.map((insight, index) => (
-                        <Typography key={index} variant="body2" sx={{ 
-                          color: colors.primaryText,
-                          pl: 2,
-                          borderLeft: `3px solid ${colors.accentBlue}`
-                        }}>
-                          {insight}
-                        </Typography>
-                      ))}
-                      
-                      <Typography variant="body2" sx={{ 
-                        color: colors.primaryText,
-                        pl: 2,
-                        borderLeft: `3px solid ${colors.profitGreen}`,
-                        mt: 1
-                      }}>
-                        Legacy with a copy ratio of 6 achieved the most profit of 69.24% Net P/L for the simulation amount and {simulationPeriod} selected.
-                      </Typography>
                     </Box>
                   </Paper>
                 </Grid>
+                <Grid item xs={12} md={6}>
+                  <Paper sx={{ p: 4, backgroundColor: colors.panelBg, border: `1px solid ${colors.borderColor}`, borderRadius: '12px', height: '100%', minHeight: 340 }}>
+                    {/* Symbols P/L bar chart */}
+                    <Box sx={{ height: 240, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="100%" height="180" viewBox="0 0 420 180" preserveAspectRatio="none">
+                        {simulationResults.symbols.map((symbol, i) => {
+                          const maxProfit = Math.max(...simulationResults.symbols.map(s => s.pl));
+                          const barHeight = (symbol.pl / maxProfit) * 120;
+                          const barWidth = 32;
+                          const spacing = 28;
+                          const x = i * (barWidth + spacing) + 30;
+                          return (
+                            <g key={symbol.symbol}>
+                              {/* Bar */}
+                              <rect
+                                x={x}
+                                y={150 - barHeight}
+                                width={barWidth}
+                                height={barHeight}
+                                rx={4}
+                                fill={colors.buyGreen}
+                              />
+                              {/* Value */}
+                              <text
+                                x={x + barWidth / 2}
+                                y={150 - barHeight - 10}
+                                textAnchor="middle"
+                                fontSize="12"
+                                fill={colors.primaryText}
+                              >
+                                +${symbol.pl.toFixed(0)}
+                              </text>
+                              {/* Symbol label */}
+                              <text
+                                x={x + barWidth / 2}
+                                y={170}
+                                textAnchor="middle"
+                                fontSize="12"
+                                fill={colors.secondaryText}
+                              >
+                                {symbol.symbol}
+                              </text>
+                            </g>
+                          );
+                        })}
+                      </svg>
+                    </Box>
+                  </Paper>
+                </Grid>
+              </Grid>
+              {/* Insights panel remains the same */}
+              <Grid item xs={12}>
+                <Paper 
+                  sx={{ 
+                    p: 4, 
+                    backgroundColor: colors.panelBg,
+                    border: `1px solid ${colors.borderColor}`,
+                    borderRadius: '12px'
+                  }}
+                >
+                  <Typography variant="h6" sx={{ color: colors.primaryText, mb: 3, fontWeight: 'bold' }}>
+                    Insights
+                  </Typography>
+                  
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {simulationResults.insights.map((insight, index) => (
+                      <Typography key={index} variant="body2" sx={{ 
+                        color: colors.primaryText,
+                        pl: 2,
+                        borderLeft: `3px solid ${colors.accentBlue}`
+                      }}>
+                        {insight}
+                      </Typography>
+                    ))}
+                    
+                    <Typography variant="body2" sx={{ 
+                      color: colors.primaryText,
+                      pl: 2,
+                      borderLeft: `3px solid ${colors.profitGreen}`,
+                      mt: 1
+                    }}>
+                      Legacy with a copy ratio of 6 achieved the most profit of 69.24% Net P/L for the simulation amount and {simulationPeriod} selected.
+                    </Typography>
+                  </Box>
+                </Paper>
               </Grid>
             </Paper>
           </Box>
@@ -1457,59 +1353,6 @@ const Trade = () => {
                           borderBottom: `1px solid ${colors.borderColor}` 
                         }}>
                           {strategy.oneYearNetPL >= 0 ? '+' : ''}{strategy.oneYearNetPL}%
-                        </TableCell>
-                        <TableCell align="right" sx={{ borderBottom: `1px solid ${colors.borderColor}` }}>
-                          <Box sx={{ width: '100%', px: 1 }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                              <Typography variant="caption" sx={{ color: colors.secondaryText }}>$0</Typography>
-                              <Typography variant="caption" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
-                                ${strategy.allocatedFunds.toLocaleString()}
-                  </Typography>
-                              <Typography variant="caption" sx={{ color: colors.secondaryText }}>${availableBalance.toLocaleString()}</Typography>
-                            </Box>
-                            <Box sx={{ position: 'relative' }}>
-                              {/* Track background */}
-                              <Box sx={{ 
-                                position: 'absolute', 
-                                height: '4px', 
-                                width: '100%', 
-                                backgroundColor: colors.borderColor,
-                                borderRadius: '2px',
-                                top: '50%',
-                                transform: 'translateY(-50%)'
-                              }} />
-                              
-                              {/* Filled portion */}
-                              <Box sx={{ 
-                                position: 'absolute', 
-                                height: '4px', 
-                                width: `${(strategy.allocatedFunds / availableBalance) * 100}%`, 
-                                background: `linear-gradient(90deg, ${colors.accentBlue}, ${colors.buyGreen})`,
-                                borderRadius: '2px',
-                                top: '50%',
-                                transform: 'translateY(-50%)'
-                              }} />
-                              
-                              <input
-                                type="range"
-                                min="0"
-                                max={availableBalance}
-                                step="100"
-                                value={strategy.allocatedFunds}
-                                onChange={(e) => handleAllocationChange(index, e.target.value)}
-                                className="allocation-slider"
-                                style={{ 
-                                  width: '100%',
-                                  height: '24px',
-                                  appearance: 'none',
-                                  background: 'transparent',
-                                  cursor: 'pointer',
-                                  position: 'relative',
-                                  zIndex: 2
-                                }}
-                              />
-                            </Box>
-                          </Box>
                         </TableCell>
                         <TableCell align="right" sx={{ borderBottom: `1px solid ${colors.borderColor}` }}>
                   <Typography 
