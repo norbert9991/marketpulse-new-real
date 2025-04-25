@@ -36,7 +36,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import API from '../../services/API';
+import { API } from '../../axiosConfig';
 
 // Forex Trading Color Palette
 const colors = {
@@ -198,6 +198,10 @@ const Home = () => {
   const [email, setEmail] = useState('');
   const [resetSent, setResetSent] = useState(false);
   const [resetError, setResetError] = useState('');
+  
+  // Add login/register state variables
+  const [loginError, setLoginError] = useState('');
+  const [registerError, setRegisterError] = useState('');
 
   const handleOpenLogin = () => {
     setDialogState('login');
@@ -237,6 +241,65 @@ const Home = () => {
 
   const handleToggleChart = (pair) => {
     setExpandedPair(expandedPair === pair.symbol ? null : pair.symbol);
+  };
+
+  // Add login handler
+  const handleLogin = async (event) => {
+    event.preventDefault();
+    setLoginError('');
+    
+    const formData = new FormData(event.target);
+    const username = formData.get('username');
+    const password = formData.get('password');
+    
+    if (!username || !password) {
+      setLoginError('Please enter both username and password');
+      return;
+    }
+    
+    try {
+      const response = await API.auth.login({ username, password });
+      // Store token in localStorage
+      localStorage.setItem('token', response.data.token);
+      // Redirect to dashboard
+      window.location.href = '/#/dashboard';
+    } catch (error) {
+      console.error('Login error:', error);
+      setLoginError(
+        error.response?.data?.message || 
+        'Invalid username or password. Please try again.'
+      );
+    }
+  };
+  
+  // Add register handler
+  const handleRegister = async (event) => {
+    event.preventDefault();
+    setRegisterError('');
+    
+    const formData = new FormData(event.target);
+    const username = formData.get('username');
+    const email = formData.get('email');
+    const password = formData.get('password');
+    
+    if (!username || !email || !password) {
+      setRegisterError('Please fill out all required fields');
+      return;
+    }
+    
+    try {
+      const response = await API.auth.register({ username, email, password });
+      // On successful registration, switch to login view
+      setDialogState('login');
+      // Optional: show success message
+      alert('Registration successful! Please log in with your new account.');
+    } catch (error) {
+      console.error('Registration error:', error);
+      setRegisterError(
+        error.response?.data?.message || 
+        'Registration failed. Please try again.'
+      );
+    }
   };
 
   // Add forgot password handler
