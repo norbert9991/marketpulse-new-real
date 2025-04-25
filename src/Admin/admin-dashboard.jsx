@@ -180,8 +180,9 @@ const AdminDashboard = () => {
         
         // Get all users
         const usersResponse = await API.admin.getUsers();
-        setUsers(usersResponse.data.users);
-        setUserCount(usersResponse.data.users.length);
+        const userData = usersResponse.data.users || [];
+        setUsers(userData);
+        setUserCount(userData.length);
         
         // Get user growth stats
         const growthResponse = await API.admin.getUserGrowth();
@@ -189,17 +190,42 @@ const AdminDashboard = () => {
         
         // Get popular symbols/pairs
         const symbolsResponse = await API.admin.getFavoriteSymbols();
-        setFavoriteSymbolsData(symbolsResponse.data?.data || []);
+        const symbolsData = symbolsResponse.data?.data || [];
+        setFavoriteSymbolsData(symbolsData);
         
         // Get current market trends
         const trendsResponse = await API.admin.getMarketTrends();
-        setMarketTrendsData(trendsResponse.data?.data || null);
+        const trendsData = trendsResponse.data?.data || {
+          overall_trend: 'neutral',
+          bullish_percentage: 33,
+          bearish_percentage: 33,
+          neutral_percentage: 34,
+          total_symbols: 30
+        };
+        setMarketTrendsData(trendsData);
+        
+        // Set chart loading false after small delay to allow rendering
+        setTimeout(() => {
+          setLoadingChart(false);
+        }, 500);
         
         setLoading(false);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
         setError('Failed to load dashboard data');
         setLoading(false);
+        
+        // Set default values for metrics on error
+        setUserCount(0);
+        setUsers([]);
+        setFavoriteSymbolsData([]);
+        setMarketTrendsData({
+          overall_trend: 'neutral',
+          bullish_percentage: 33,
+          bearish_percentage: 33,
+          neutral_percentage: 34,
+          total_symbols: 0
+        });
       }
     };
 
@@ -254,14 +280,16 @@ const AdminDashboard = () => {
   const metrics = [
     { 
       title: "Users", 
-      value: userCount ? `${userCount.toLocaleString()}` : "Loading...",
+      value: userCount !== null ? `${userCount.toLocaleString()}` : "Loading...",
       period: "Total registered users",
       icon: <PeopleIcon sx={{ color: colors.primary }} />,
       chart: true
     },
     { 
       title: "Favorite Symbols", 
-      value: favoriteSymbolsData.length ? `${favoriteSymbolsData.length} symbols` : "Loading...",
+      value: favoriteSymbolsData && favoriteSymbolsData.length 
+        ? `${favoriteSymbolsData.length} symbols` 
+        : "No favorites",
       period: "Top symbols by user favorites",
       icon: <StarIcon sx={{ color: colors.secondary }} />,
       chart: true,
@@ -269,13 +297,13 @@ const AdminDashboard = () => {
     },
     { 
       title: "Market Trends", 
-      value: marketTrendsData && marketTrendsData.overall_trend ? 
-        `${marketTrendsData.overall_trend.charAt(0).toUpperCase() + marketTrendsData.overall_trend.slice(1)}` : 
-        "Loading...",
+      value: marketTrendsData && marketTrendsData.overall_trend 
+        ? `${marketTrendsData.overall_trend.charAt(0).toUpperCase() + marketTrendsData.overall_trend.slice(1)}` 
+        : "Neutral",
       period: "Overall market sentiment",
-      icon: marketTrendsData && marketTrendsData.overall_trend ? 
-        getTrendIcon(marketTrendsData.overall_trend) : 
-        <TrendingFlatIcon sx={{ color: colors.secondaryText }} />,
+      icon: marketTrendsData && marketTrendsData.overall_trend 
+        ? getTrendIcon(marketTrendsData.overall_trend) 
+        : <TrendingFlatIcon sx={{ color: colors.secondaryText }} />,
       chart: true,
       chartType: 'trend'
     }
@@ -646,42 +674,91 @@ const AdminDashboard = () => {
                       <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
                         <CircularProgress size={28} sx={{ color: colors.primary }} />
                       </Box>
-                    ) : (
+                    ) : users && users.length > 0 ? (
                       <>
-                        {/* User registrations */}
-                        {users.slice(0, 5).map((user, index) => (
-                          <Box key={index} sx={{ 
-                            mb: 2, 
-                            p: 1.5, 
-                            borderRadius: '6px',
-                            backgroundColor: index % 2 === 0 ? `${colors.hoverBg}80` : 'transparent',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 2
-                          }}>
-                            <Avatar sx={{ bgcolor: colors.primary, width: 38, height: 38 }}>
-                              {user.username.charAt(0).toUpperCase()}
-                            </Avatar>
-                            <Box sx={{ flex: 1 }}>
-                              <Typography variant="body2" sx={{ fontWeight: 500, color: colors.primaryText }}>
-                                {user.username} joined the platform
-                              </Typography>
-                              <Typography variant="caption" sx={{ color: colors.secondaryText }}>
-                                {new Date(user.created_at).toLocaleString()}
-                              </Typography>
+                        {/* Sort users by creation date, newest first */}
+                        {[...users]
+                          .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+                          .slice(0, 5)
+                          .map((user, index) => (
+                            <Box key={user.user_id || index} sx={{ 
+                              mb: 2, 
+                              p: 1.5, 
+                              borderRadius: '6px',
+                              backgroundColor: index % 2 === 0 ? `${colors.hoverBg}80` : 'transparent',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 2,
+                              transition: 'all 0.2s ease',
+                              cursor: 'pointer',
+                              '&:hover': {
+                                backgroundColor: colors.hoverBg,
+                                transform: 'translateX(5px)'
+                              }
+                            }}
+                            onClick={() => navigate(`/UserManagement?userId=${user.user_id}`)}
+                            >
+                              <Avatar 
+                                sx={{ 
+                                  bgcolor: index % 3 === 0 ? colors.primary : index % 3 === 1 ? colors.secondary : colors.accentBlue, 
+                                  width: 38, 
+                                  height: 38,
+                                  boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                                }}
+                              >
+                                {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
+                              </Avatar>
+                              <Box sx={{ flex: 1 }}>
+                                <Typography variant="body2" sx={{ fontWeight: 500, color: colors.primaryText }}>
+                                  {user.username || 'User'} joined the platform
+                                </Typography>
+                                <Typography variant="caption" sx={{ color: colors.secondaryText }}>
+                                  {user.created_at ? new Date(user.created_at).toLocaleString() : 'Unknown date'}
+                                </Typography>
+                              </Box>
+                              <Chip 
+                                label={user.role || 'user'} 
+                                size="small"
+                                sx={{ 
+                                  backgroundColor: user.role === 'admin' ? `${colors.secondary}33` : `${colors.primary}33`,
+                                  color: user.role === 'admin' ? colors.secondary : colors.primary,
+                                  fontWeight: 500
+                                }}
+                              />
                             </Box>
-                            <Chip 
-                              label={user.role} 
+                          ))}
+                          
+                          {/* "View All" button */}
+                          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                            <Button 
+                              variant="outlined" 
                               size="small"
-                              sx={{ 
-                                backgroundColor: user.role === 'admin' ? `${colors.secondary}33` : `${colors.primary}33`,
-                                color: user.role === 'admin' ? colors.secondary : colors.primary,
-                                fontWeight: 500
+                              onClick={() => navigate('/UserManagement')}
+                              sx={{
+                                borderColor: colors.borderColor,
+                                color: colors.secondaryText,
+                                '&:hover': {
+                                  borderColor: colors.primary,
+                                  color: colors.primary,
+                                  backgroundColor: `${colors.primary}15`
+                                }
                               }}
-                            />
+                            >
+                              View All Users
+                            </Button>
                           </Box>
-                        ))}
                       </>
+                    ) : (
+                      <Box sx={{ 
+                        display: 'flex', 
+                        justifyContent: 'center', 
+                        alignItems: 'center', 
+                        height: '100%', 
+                        color: colors.secondaryText,
+                        minHeight: '100px'
+                      }}>
+                        No user activity data available
+                      </Box>
                     )}
                   </Box>
                 </Box>
