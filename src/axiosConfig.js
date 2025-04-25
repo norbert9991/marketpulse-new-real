@@ -207,6 +207,8 @@ export const API = {
     login: (data) => axiosInstance.post('/api/auth/login', data),
     register: (data) => axiosInstance.post('/api/auth/register', data),
     me: () => axiosInstance.get('/api/auth/me'),
+    forgotPassword: (data) => axiosInstance.post('/api/auth/forgot-password', data),
+    resetPassword: (data) => axiosInstance.post('/api/auth/reset-password', data),
   },
   
   // Settings endpoints

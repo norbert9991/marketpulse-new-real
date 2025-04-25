@@ -153,7 +153,7 @@ const AnimatedButton = styled(Button)({
   }
 });
 
-const LoginDialog = ({ open, onClose, isLogin, toggleForm }) => {
+const LoginDialog = ({ open, onClose, isLogin, toggleForm, onForgotPassword }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -356,6 +356,7 @@ const LoginDialog = ({ open, onClose, isLogin, toggleForm }) => {
               <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
                 <Button 
                   variant="text" 
+                  onClick={onForgotPassword}
                   sx={{ 
                     textTransform: 'none',
                     color: colors.accentBlue,

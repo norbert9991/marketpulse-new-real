@@ -1066,10 +1066,10 @@ const Trade = () => {
                           width: 'auto',
                           minWidth: '80px',
                           height: '28px',
-                          backgroundColor: colors.accentBlue,
-                          color: '#fff',
-                          fontSize: '0.75rem',
-                          fontWeight: 'bold',
+                        backgroundColor: colors.accentBlue,
+                        color: '#fff',
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -1077,7 +1077,7 @@ const Trade = () => {
                           px: 2
                         }}>
                           {simulationPeriod}
-                        </Box>
+                      </Box>
                     </Box>
                     
                     <Box sx={{ flex: 1 }}>
