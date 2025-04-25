@@ -1063,19 +1063,21 @@ const Trade = () => {
                         Simulation Results
                 </Typography>
                       <Box sx={{
-                          width: '80px',
+                          width: 'auto',
+                          minWidth: '80px',
                           height: '28px',
-                        backgroundColor: colors.accentBlue,
-                        color: '#fff',
-                        fontSize: '0.75rem',
-                        fontWeight: 'bold',
+                          backgroundColor: colors.accentBlue,
+                          color: '#fff',
+                          fontSize: '0.75rem',
+                          fontWeight: 'bold',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                        borderRadius: '4px'
-                      }}>
-                        1 Year
-                      </Box>
+                          borderRadius: '4px',
+                          px: 2
+                        }}>
+                          {simulationPeriod}
+                        </Box>
                     </Box>
                     
                     <Box sx={{ flex: 1 }}>
