@@ -1063,6 +1063,8 @@ const Trade = () => {
                         Simulation Results
                 </Typography>
                       <Box sx={{
+                        width: '200px',
+                        height: '180px',
                         backgroundColor: colors.accentBlue,
                         color: '#fff',
                         fontSize: '0.75rem',
@@ -1253,7 +1255,7 @@ const Trade = () => {
                         <Box sx={{ 
                           display: 'flex',
                           height: '280px',
-                          width: '400px',
+                          width: '480px',
                           alignItems: 'flex-end',
                           justifyContent: 'space-between',
                           px: 2,
