@@ -26,13 +26,17 @@ import {
   DialogContent,
   DialogTitle,
   IconButton as MuiIconButton,
-  Tooltip
+  Tooltip,
+  TextField,
+  Alert
 } from '@mui/material';
 import { styled } from '@mui/system';
 import LoginDialog from '../Log/Login';
 import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import API from '../../services/API';
 
 // Forex Trading Color Palette
 const colors = {
@@ -188,19 +192,34 @@ const Home = () => {
     { symbol: 'NZD/USD', name: 'New Zealand Dollar / US Dollar', spread: '0.0003', buy: '0.6123', sell: '0.6120' }
   ]);
   const [expandedPair, setExpandedPair] = useState(null);
+  const [dialogState, setDialogState] = useState('login'); // 'login', 'register', or 'forgot'
+  
+  // Add forgot password state variables
+  const [email, setEmail] = useState('');
+  const [resetSent, setResetSent] = useState(false);
+  const [resetError, setResetError] = useState('');
 
   const handleOpenLogin = () => {
+    setDialogState('login');
     setOpenLogin(true);
-    setIsLogin(true);
   };
 
   const handleOpenRegister = () => {
+    setDialogState('register');
     setOpenLogin(true);
-    setIsLogin(false);
+  };
+  
+  const handleOpenForgotPassword = () => {
+    setDialogState('forgot');
+    setResetSent(false);
+    setResetError('');
+    setOpenLogin(true);
   };
 
   const handleClose = () => {
     setOpenLogin(false);
+    setResetSent(false);
+    setResetError('');
   };
 
   const handleMenuOpen = (event) => {
@@ -218,6 +237,30 @@ const Home = () => {
 
   const handleToggleChart = (pair) => {
     setExpandedPair(expandedPair === pair.symbol ? null : pair.symbol);
+  };
+
+  // Add forgot password handler
+  const handleForgotPassword = async (event) => {
+    event.preventDefault();
+    setResetSent(false);
+    setResetError('');
+    
+    if (!email) {
+      setResetError('Please enter your email address');
+      return;
+    }
+    
+    try {
+      // Call the API to send password reset email
+      const response = await API.auth.requestPasswordReset({ email });
+      setResetSent(true);
+    } catch (error) {
+      console.error('Password reset error:', error);
+      setResetError(
+        error.response?.data?.message || 
+        'An error occurred. Please try again later.'
+      );
+    }
   };
 
   return (
@@ -911,6 +954,404 @@ const Home = () => {
         isLogin={isLogin} 
         toggleForm={() => setIsLogin(!isLogin)}
       />
+
+      {/* Modify the login/register dialog to include forgot password option */}
+      <Dialog 
+        open={openLogin} 
+        onClose={handleClose}
+        PaperProps={{
+          sx: { 
+            bgcolor: colors.cardBg, 
+            color: colors.primaryText,
+            borderRadius: '12px',
+            boxShadow: `0 8px 32px rgba(0, 0, 0, 0.4)`,
+            maxWidth: '450px',
+            width: '100%'
+          }
+        }}
+      >
+        {dialogState === 'login' && (
+          <>
+            <DialogTitle sx={{ 
+              textAlign: 'center', 
+              borderBottom: `1px solid ${colors.borderColor}`,
+              pb: 2,
+              pt: 3
+            }}>
+              <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+                Login to MarketPulse
+              </Typography>
+            </DialogTitle>
+            <DialogContent sx={{ p: 3, mt: 2 }}>
+              <form onSubmit={handleLogin}>
+                <TextField 
+                  label="Username" 
+                  variant="outlined" 
+                  fullWidth 
+                  margin="normal"
+                  required
+                  name="username"
+                  InputLabelProps={{
+                    sx: { color: colors.secondaryText }
+                  }}
+                  InputProps={{
+                    sx: { 
+                      color: colors.primaryText,
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.borderColor
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.accentBlue
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.accentBlue
+                      }
+                    }
+                  }}
+                  sx={{ mb: 2 }}
+                />
+                <TextField 
+                  label="Password" 
+                  type="password" 
+                  variant="outlined" 
+                  fullWidth 
+                  margin="normal"
+                  required
+                  name="password"
+                  InputLabelProps={{
+                    sx: { color: colors.secondaryText }
+                  }}
+                  InputProps={{
+                    sx: { 
+                      color: colors.primaryText,
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.borderColor
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.accentBlue
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.accentBlue
+                      }
+                    }
+                  }}
+                  sx={{ mb: 2 }}
+                />
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                  <Button 
+                    variant="text" 
+                    sx={{ 
+                      color: colors.accentBlue,
+                      textTransform: 'none',
+                      p: 0
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleOpenForgotPassword();
+                    }}
+                  >
+                    Forgot Password?
+                  </Button>
+                </Box>
+                {loginError && (
+                  <Alert severity="error" sx={{ mb: 2 }}>
+                    {loginError}
+                  </Alert>
+                )}
+                <Button 
+                  type="submit"
+                  fullWidth 
+                  variant="contained" 
+                  sx={{ 
+                    mt: 1, 
+                    mb: 2, 
+                    py: 1.5,
+                    backgroundColor: colors.accentBlue,
+                    '&:hover': {
+                      backgroundColor: colors.gradientStart,
+                      boxShadow: `0 4px 12px rgba(33, 150, 243, 0.3)`
+                    }
+                  }}
+                >
+                  Login
+                </Button>
+                <Box sx={{ textAlign: 'center', mt: 2 }}>
+                  <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                    Don't have an account?{' '}
+                    <Button 
+                      variant="text" 
+                      sx={{ 
+                        color: colors.accentBlue,
+                        textTransform: 'none',
+                        p: 0,
+                        minWidth: 'auto'
+                      }}
+                      onClick={() => setDialogState('register')}
+                    >
+                      Register
+                    </Button>
+                  </Typography>
+                </Box>
+              </form>
+            </DialogContent>
+          </>
+        )}
+        
+        {dialogState === 'register' && (
+          <>
+            <DialogTitle sx={{ 
+              textAlign: 'center', 
+              borderBottom: `1px solid ${colors.borderColor}`,
+              pb: 2,
+              pt: 3
+            }}>
+              <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+                Create Account
+              </Typography>
+            </DialogTitle>
+            <DialogContent sx={{ p: 3, mt: 2 }}>
+              <form onSubmit={handleRegister}>
+                <TextField 
+                  label="Username" 
+                  variant="outlined" 
+                  fullWidth 
+                  margin="normal"
+                  required
+                  name="username"
+                  InputLabelProps={{
+                    sx: { color: colors.secondaryText }
+                  }}
+                  InputProps={{
+                    sx: { 
+                      color: colors.primaryText,
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.borderColor
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.accentBlue
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.accentBlue
+                      }
+                    }
+                  }}
+                  sx={{ mb: 2 }}
+                />
+                <TextField 
+                  label="Email" 
+                  type="email" 
+                  variant="outlined" 
+                  fullWidth 
+                  margin="normal"
+                  required
+                  name="email"
+                  InputLabelProps={{
+                    sx: { color: colors.secondaryText }
+                  }}
+                  InputProps={{
+                    sx: { 
+                      color: colors.primaryText,
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.borderColor
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.accentBlue
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.accentBlue
+                      }
+                    }
+                  }}
+                  sx={{ mb: 2 }}
+                />
+                <TextField 
+                  label="Password" 
+                  type="password" 
+                  variant="outlined" 
+                  fullWidth 
+                  margin="normal"
+                  required
+                  name="password"
+                  InputLabelProps={{
+                    sx: { color: colors.secondaryText }
+                  }}
+                  InputProps={{
+                    sx: { 
+                      color: colors.primaryText,
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.borderColor
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.accentBlue
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.accentBlue
+                      }
+                    }
+                  }}
+                  sx={{ mb: 2 }}
+                />
+                {registerError && (
+                  <Alert severity="error" sx={{ mb: 2 }}>
+                    {registerError}
+                  </Alert>
+                )}
+                <Button 
+                  type="submit"
+                  fullWidth 
+                  variant="contained" 
+                  sx={{ 
+                    mt: 1, 
+                    mb: 2, 
+                    py: 1.5,
+                    backgroundColor: colors.buyGreen,
+                    '&:hover': {
+                      backgroundColor: colors.profitGreen,
+                      boxShadow: `0 4px 12px rgba(0, 230, 118, 0.3)`
+                    }
+                  }}
+                >
+                  Register
+                </Button>
+                <Box sx={{ textAlign: 'center', mt: 2 }}>
+                  <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                    Already have an account?{' '}
+                    <Button 
+                      variant="text" 
+                      sx={{ 
+                        color: colors.accentBlue,
+                        textTransform: 'none',
+                        p: 0,
+                        minWidth: 'auto'
+                      }}
+                      onClick={() => setDialogState('login')}
+                    >
+                      Login
+                    </Button>
+                  </Typography>
+                </Box>
+              </form>
+            </DialogContent>
+          </>
+        )}
+        
+        {dialogState === 'forgot' && (
+          <>
+            <DialogTitle sx={{ 
+              textAlign: 'center', 
+              borderBottom: `1px solid ${colors.borderColor}`,
+              pb: 2,
+              pt: 3
+            }}>
+              <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+                Reset Password
+              </Typography>
+            </DialogTitle>
+            <DialogContent sx={{ p: 3, mt: 2 }}>
+              {!resetSent ? (
+                <form onSubmit={handleForgotPassword}>
+                  <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 3 }}>
+                    Enter your email address and we'll send you a link to reset your password.
+                  </Typography>
+                  <TextField 
+                    label="Email Address" 
+                    variant="outlined" 
+                    fullWidth 
+                    margin="normal"
+                    required
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    InputLabelProps={{
+                      sx: { color: colors.secondaryText }
+                    }}
+                    InputProps={{
+                      sx: { 
+                        color: colors.primaryText,
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderColor: colors.borderColor
+                        },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: colors.accentBlue
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: colors.accentBlue
+                        }
+                      }
+                    }}
+                    sx={{ mb: 2 }}
+                  />
+                  
+                  {resetError && (
+                    <Alert severity="error" sx={{ mb: 2 }}>
+                      {resetError}
+                    </Alert>
+                  )}
+                  
+                  <Button 
+                    type="submit"
+                    fullWidth 
+                    variant="contained" 
+                    sx={{ 
+                      mt: 3, 
+                      mb: 2, 
+                      py: 1.5,
+                      backgroundColor: colors.accentBlue,
+                      '&:hover': {
+                        backgroundColor: colors.gradientStart,
+                        boxShadow: `0 4px 12px rgba(33, 150, 243, 0.3)`
+                      }
+                    }}
+                  >
+                    Send Reset Link
+                  </Button>
+                  
+                  <Box sx={{ textAlign: 'center', mt: 2 }}>
+                    <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                      Remember your password?{' '}
+                      <Button 
+                        variant="text" 
+                        sx={{ 
+                          color: colors.accentBlue,
+                          textTransform: 'none',
+                          p: 0,
+                          minWidth: 'auto'
+                        }}
+                        onClick={() => setDialogState('login')}
+                      >
+                        Login
+                      </Button>
+                    </Typography>
+                  </Box>
+                </form>
+              ) : (
+                <Box sx={{ textAlign: 'center', py: 3 }}>
+                  <CheckCircleOutlineIcon sx={{ fontSize: 60, color: colors.buyGreen, mb: 2 }} />
+                  <Typography variant="h6" sx={{ color: colors.primaryText, mb: 2 }}>
+                    Reset Link Sent
+                  </Typography>
+                  <Typography variant="body1" sx={{ color: colors.secondaryText, mb: 3 }}>
+                    We've sent password reset instructions to your email address.
+                  </Typography>
+                  <Button 
+                    variant="contained" 
+                    sx={{ 
+                      mt: 2, 
+                      backgroundColor: colors.accentBlue,
+                      '&:hover': {
+                        backgroundColor: colors.gradientStart,
+                      }
+                    }}
+                    onClick={() => setDialogState('login')}
+                  >
+                    Back to Login
+                  </Button>
+                </Box>
+              )}
+            </DialogContent>
+          </>
+        )}
+      </Dialog>
     </>
   );
 };
