@@ -298,7 +298,7 @@ const ReportPage = () => {
     <PageContainer>
       <Sidebar />
       <MainContent>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-evenly', alignItems: 'center', mb: 3 }}>
           <Typography variant="h4" sx={{ color: colors.primaryText, fontWeight: 600 }}>Analytics & Reports</Typography>
           
           <Box sx={{ display: 'flex', gap: 2 }}>
@@ -368,7 +368,7 @@ const ReportPage = () => {
           <Grid item xs={12} sm={6} md={4}>
             <StatCard>
               <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, height: 200, width: 350 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-evenly', alignItems: 'flex-start', mb: 2 }}>
                   <Typography variant="h6" sx={{ color: colors.secondaryText, fontSize: '0.9rem' }}>
                     Total Users
                   </Typography>
@@ -413,7 +413,7 @@ const ReportPage = () => {
           <Grid item xs={12} sm={6} md={4}>
             <StatCard>
               <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, height: 200, width: 350 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-evenly', alignItems: 'flex-start', mb: 2 }}>
                   <Typography variant="h6" sx={{ color: colors.secondaryText, fontSize: '0.9rem' }}>
                     Active Users
                   </Typography>
@@ -447,7 +447,7 @@ const ReportPage = () => {
           <Grid item xs={12} sm={6} md={4}>
             <StatCard>
               <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, height: 200, width: 350 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-evenly', alignItems: 'flex-start', mb: 2 }}>
                   <Typography variant="h6" sx={{ color: colors.secondaryText, fontSize: '0.9rem' }}>
                     Market Sentiment
                   </Typography>
@@ -477,7 +477,7 @@ const ReportPage = () => {
                   )}
                 </Typography>
                 
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-evenly', mt: 2 }}>
                   <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <Typography variant="body2" sx={{ color: colors.buyGreen, fontWeight: 600 }}>
                       {marketTrendsData.bullish_percentage}%
@@ -519,7 +519,7 @@ const ReportPage = () => {
         <Grid container spacing={3}>
           {/* Main Chart */}
           <Grid item xs={12}>
-            <StyledCard sx={{ height: 600, width: 200 }}>
+            <StyledCard>
               <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText, fontWeight: 600 }}>
                 {reportType === 0 ? 'User Growth Trend' : 
                  reportType === 1 ? 'Popular Currency Pairs' : 
@@ -527,7 +527,7 @@ const ReportPage = () => {
               </Typography>
               
               {loading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 600, width: 550 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 600, width: 50 }}>
                   <CircularProgress size={40} sx={{ color: colors.primary }} />
                 </Box>
               ) : (
@@ -593,7 +593,7 @@ const ReportPage = () => {
                           color: colors.primaryText
                         }} 
                       />
-                      <Bar  
+                      <Bar 
                         dataKey="value" 
                         name="Percentage"
                         radius={[4, 4, 0, 0]}
