@@ -6,7 +6,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Dashboard as DashboardIcon,
   People as PeopleIcon,
-  SwapHoriz as TransactionsIcon,
+  Help as HelpIcon,
   Assessment as ReportsIcon,
   Settings as SettingsIcon,
   Logout as LogoutIcon,
@@ -82,7 +82,7 @@ const Sidebar = () => {
   const menuItems = [
     { name: 'Dashboard', path: '/admin-dashboard', icon: <DashboardIcon />, badge: null },
     { name: 'Users', path: '/UserManagement', icon: <PeopleIcon />, badge: null },
-    { name: 'Transactions', path: '/TransactionPage', icon: <TransactionsIcon />, badge: pendingRequests },
+    { name: 'Help Center', path: '/TransactionPage', icon: <HelpIcon />, badge: null },
     { name: 'Reports', path: '/ReportPage', icon: <ReportsIcon />, badge: null },
     { name: 'Settings', path: '/adminsettings', icon: <SettingsIcon />, badge: null }
   ];
