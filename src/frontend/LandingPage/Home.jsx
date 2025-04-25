@@ -27,7 +27,9 @@ import {
   DialogTitle,
   IconButton as MuiIconButton,
   Tooltip,
-  Alert
+  Alert,
+  TextField,
+  CircularProgress
 } from '@mui/material';
 import { styled } from '@mui/system';
 import LoginDialog from '../Log/Login';
@@ -170,6 +172,62 @@ const FloatingCard = styled(Box)({
     '0%': { transform: 'translateY(0px)' },
     '50%': { transform: 'translateY(-15px)' },
     '100%': { transform: 'translateY(0px)' }
+  }
+});
+
+// Add styled components for the missing elements
+const StyledTextField = styled(TextField)({
+  '& .MuiOutlinedInput-root': {
+    '& fieldset': {
+      borderColor: colors.borderColor,
+    },
+    '&:hover fieldset': {
+      borderColor: colors.accentBlue,
+    },
+    '&.Mui-focused fieldset': {
+      borderColor: colors.accentBlue,
+    },
+  },
+  '& .MuiInputLabel-root': {
+    color: colors.secondaryText,
+  },
+  '& .MuiInputLabel-root.Mui-focused': {
+    color: colors.accentBlue,
+  },
+  '& .MuiInputBase-input': {
+    color: colors.primaryText,
+  }
+});
+
+const AnimatedButton = styled(Button)({
+  position: 'relative',
+  overflow: 'hidden',
+  transition: 'all 0.3s ease',
+  '&::after': {
+    content: '""',
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    width: '5px',
+    height: '5px',
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    opacity: 0,
+    borderRadius: '100%',
+    transform: 'scale(1, 1) translate(-50%, -50%)',
+    transformOrigin: '50% 50%',
+  },
+  '&:hover::after': {
+    animation: 'ripple 1s ease-out',
+  },
+  '@keyframes ripple': {
+    '0%': {
+      transform: 'scale(0, 0) translate(-50%, -50%)',
+      opacity: 0.5,
+    },
+    '100%': {
+      transform: 'scale(20, 20) translate(-50%, -50%)',
+      opacity: 0,
+    },
   }
 });
 
