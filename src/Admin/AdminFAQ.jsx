@@ -27,6 +27,8 @@ import {
   BarChart as AnalyticsIcon,
   Send as SendIcon
 } from '@mui/icons-material';
+import { API } from '../axiosConfig';
+import axios from 'axios';
 
 // Define theme colors to match the user components
 const colors = {
@@ -147,8 +149,180 @@ const AdminFAQ = () => {
   const messagesEndRef = useRef(null);
   const messagesAreaRef = useRef(null);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const [faqData, setFaqData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   
-  // Sample FAQ categories
+  // Fetch FAQ data from API
+  useEffect(() => {
+    const fetchFAQData = async () => {
+      setLoading(true);
+      try {
+        // Here we would call an actual API endpoint
+        // For example: const response = await API.admin.getFAQs();
+        
+        // Since we don't have a specific FAQ API endpoint yet, 
+        // we'll use existing API endpoints to populate our data
+        const [usersResponse, trendsResponse, symbolsResponse] = await Promise.all([
+          API.admin.getUsers(),
+          API.admin.getMarketTrends(),
+          API.admin.getFavoriteSymbols()
+        ]);
+        
+        // Construct the FAQ data using real data from the API
+        const fetchedData = {
+          user: [
+            { 
+              id: 'user-1', 
+              question: 'How do I suspend or activate a user account?', 
+              answer: 'In the User Management page, find the user in the table and click the "Suspend" or "Activate" button in the Actions column. This will immediately change their account status.'
+            },
+            { 
+              id: 'user-2', 
+              question: 'How many users are currently registered?', 
+              answer: `There are currently ${usersResponse.data.users ? usersResponse.data.users.length : 'N/A'} users registered in the system.`
+            },
+            { 
+              id: 'user-3', 
+              question: 'How do I filter users by role?', 
+              answer: 'In the User Management page, use the "Filter by Role" buttons to show All users, only regular Users, or only Admins.'
+            }
+          ],
+          system: [
+            { 
+              id: 'system-1', 
+              question: 'How do I access system health metrics?', 
+              answer: 'On the Admin Dashboard, the System Health & Status cards show the current state of server, API, database, and security components. Click on "System Settings" in the quick actions for more detailed options.'
+            },
+            { 
+              id: 'system-2', 
+              question: 'What is the current market trend?', 
+              answer: trendsResponse.data?.data ? 
+                `The current overall market trend is ${trendsResponse.data.data.overall_trend}. The market currently shows ${trendsResponse.data.data.bullish_percentage}% bullish, ${trendsResponse.data.data.bearish_percentage}% bearish, and ${trendsResponse.data.data.neutral_percentage}% neutral sentiment across ${trendsResponse.data.data.total_symbols} currency pairs.` : 
+                'Market trend data is currently unavailable. Please check the Admin Dashboard for updates.'
+            }
+          ],
+          security: [
+            { 
+              id: 'security-1', 
+              question: 'How do I review login activity?', 
+              answer: 'In the User Management page, the "Last Login" column shows when each user last accessed the platform. The color indicator shows their activity status - green for recently active, yellow for moderately active, and gray for inactive users.'
+            },
+            { 
+              id: 'security-2', 
+              question: 'What happens when I suspend a user account?', 
+              answer: 'When you suspend a user account, they will be immediately logged out and unable to log back in. Their status indicator will turn red, and all trading functions will be disabled for their account until reactivated.'
+            }
+          ],
+          analytics: [
+            { 
+              id: 'analytics-1', 
+              question: 'Where can I see user growth statistics?', 
+              answer: 'The Admin Dashboard displays user growth statistics in the Users card. It shows a line chart of user registrations over time. For more detailed analytics, check the User Management page metrics.'
+            },
+            { 
+              id: 'analytics-2', 
+              question: 'What are the most popular currency pairs?', 
+              answer: symbolsResponse.data?.data && symbolsResponse.data.data.length > 0 ? 
+                `The most popular currency pairs are: ${symbolsResponse.data.data.slice(0, 3).map(item => item.symbol).join(', ')}. You can view the complete list on the Admin Dashboard in the Favorite Symbols card.` : 
+                'Currency pair popularity data is currently unavailable. Please check the Admin Dashboard for updates.'
+            }
+          ]
+        };
+        
+        setFaqData(fetchedData);
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching FAQ data:', err);
+        setError('Failed to load FAQ data. Please try refreshing the page.');
+        setLoading(false);
+        
+        // Fallback to predefined data if API fails
+        setFaqData({
+          user: [
+            { 
+              id: 'user-1', 
+              question: 'How do I suspend or activate a user account?', 
+              answer: 'In the User Management page, find the user in the table and click the "Suspend" or "Activate" button in the Actions column. This will immediately change their account status.'
+            },
+            { 
+              id: 'user-2', 
+              question: 'Where can I see new user registrations?', 
+              answer: 'The User Management dashboard displays a "New Users (7d)" metric at the top that shows how many users registered in the past week. For more details, use the search and filter options in the user table.'
+            },
+            { 
+              id: 'user-3', 
+              question: 'How do I filter users by role?', 
+              answer: 'In the User Management page, use the "Filter by Role" buttons to show All users, only regular Users, or only Admins.'
+            }
+          ],
+          system: [
+            { 
+              id: 'system-1', 
+              question: 'How do I access system health metrics?', 
+              answer: 'On the Admin Dashboard, the System Health & Status cards show the current state of server, API, database, and security components. Click on "System Settings" in the quick actions for more detailed options.'
+            },
+            { 
+              id: 'system-2', 
+              question: 'Where can I find market trends data?', 
+              answer: 'Market trends data is available in the Admin Dashboard under the Market Trends card. It shows bullish, neutral, and bearish percentages, as well as the overall market sentiment.'
+            }
+          ],
+          security: [
+            { 
+              id: 'security-1', 
+              question: 'How do I review login activity?', 
+              answer: 'In the User Management page, the "Last Login" column shows when each user last accessed the platform. The color indicator shows their activity status - green for recently active, yellow for moderately active, and gray for inactive users.'
+            },
+            { 
+              id: 'security-2', 
+              question: 'What happens when I suspend a user account?', 
+              answer: 'When you suspend a user account, they will be immediately logged out and unable to log back in. Their status indicator will turn red, and all trading functions will be disabled for their account until reactivated.'
+            }
+          ],
+          analytics: [
+            { 
+              id: 'analytics-1', 
+              question: 'Where can I see user growth statistics?', 
+              answer: 'The Admin Dashboard displays user growth statistics in the Users card. It shows a line chart of user registrations over time. For more detailed analytics, check the User Management page metrics.'
+            },
+            { 
+              id: 'analytics-2', 
+              question: 'How can I view the most popular currency pairs?', 
+              answer: 'The Admin Dashboard includes a Favorite Symbols card that shows which currency pairs are most popular among users, displayed as a bar chart for easy visualization.'
+            }
+          ]
+        });
+      }
+    };
+    
+    fetchFAQData();
+  }, []);
+  
+  // More intelligent scroll handling
+  useEffect(() => {
+    if (shouldAutoScroll && messagesEndRef.current) {
+      // Use a small timeout to ensure DOM updates are complete
+      const scrollTimeout = setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }, 100);
+      
+      return () => clearTimeout(scrollTimeout);
+    }
+  }, [messages, shouldAutoScroll]);
+
+  // Detect if user has manually scrolled up
+  const handleScroll = () => {
+    if (messagesAreaRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = messagesAreaRef.current;
+      // If user scrolled up (not at bottom), disable auto-scroll
+      // But if they scrolled back to bottom, re-enable it
+      const isAtBottom = scrollHeight - scrollTop - clientHeight < 50; // 50px threshold
+      setShouldAutoScroll(isAtBottom);
+    }
+  };
+
+  // Define FAQ categories
   const faqCategories = [
     { 
       id: 'user', 
@@ -176,152 +350,157 @@ const AdminFAQ = () => {
     }
   ];
   
-  // Sample FAQ items based on existing platform features
-  const faqItems = {
-    user: [
-      { 
-        id: 'user-1', 
-        question: 'How do I suspend or activate a user account?', 
-        answer: 'In the User Management page, find the user in the table and click the "Suspend" or "Activate" button in the Actions column. This will immediately change their account status.'
-      },
-      { 
-        id: 'user-2', 
-        question: 'Where can I see new user registrations?', 
-        answer: 'The User Management dashboard displays a "New Users (7d)" metric at the top that shows how many users registered in the past week. For more details, use the search and filter options in the user table.'
-      },
-      { 
-        id: 'user-3', 
-        question: 'How do I filter users by role?', 
-        answer: 'In the User Management page, use the "Filter by Role" buttons to show All users, only regular Users, or only Admins.'
-      }
-    ],
-    system: [
-      { 
-        id: 'system-1', 
-        question: 'How do I access system health metrics?', 
-        answer: 'On the Admin Dashboard, the System Health & Status cards show the current state of server, API, database, and security components. Click on "System Settings" in the quick actions for more detailed options.'
-      },
-      { 
-        id: 'system-2', 
-        question: 'Where can I find market trends data?', 
-        answer: 'Market trends data is available in the Admin Dashboard under the Market Trends card. It shows bullish, neutral, and bearish percentages, as well as the overall market sentiment.'
-      }
-    ],
-    security: [
-      { 
-        id: 'security-1', 
-        question: 'How do I review login activity?', 
-        answer: 'In the User Management page, the "Last Login" column shows when each user last accessed the platform. The color indicator shows their activity status - green for recently active, yellow for moderately active, and gray for inactive users.'
-      },
-      { 
-        id: 'security-2', 
-        question: 'What happens when I suspend a user account?', 
-        answer: 'When you suspend a user account, they will be immediately logged out and unable to log back in. Their status indicator will turn red, and all trading functions will be disabled for their account until reactivated.'
-      }
-    ],
-    analytics: [
-      { 
-        id: 'analytics-1', 
-        question: 'Where can I see user growth statistics?', 
-        answer: 'The Admin Dashboard displays user growth statistics in the Users card. It shows a line chart of user registrations over time. For more detailed analytics, check the User Management page metrics.'
-      },
-      { 
-        id: 'analytics-2', 
-        question: 'How can I view the most popular currency pairs?', 
-        answer: 'The Admin Dashboard includes a Favorite Symbols card that shows which currency pairs are most popular among users, displayed as a bar chart for easy visualization.'
-      }
-    ]
-  };
-  
   // Filter FAQs based on search query
   const filteredFAQs = {};
-  if (searchQuery) {
-    Object.keys(faqItems).forEach(category => {
-      filteredFAQs[category] = faqItems[category].filter(
+  if (faqData && searchQuery) {
+    Object.keys(faqData).forEach(category => {
+      filteredFAQs[category] = faqData[category].filter(
         item => item.question.toLowerCase().includes(searchQuery.toLowerCase()) || 
                item.answer.toLowerCase().includes(searchQuery.toLowerCase())
       );
     });
-  } else {
-    Object.keys(faqItems).forEach(category => {
-      filteredFAQs[category] = faqItems[category];
+  } else if (faqData) {
+    Object.keys(faqData).forEach(category => {
+      filteredFAQs[category] = faqData[category];
     });
   }
 
-  // More intelligent scroll handling
-  useEffect(() => {
-    if (shouldAutoScroll && messagesEndRef.current) {
-      // Use a small timeout to ensure DOM updates are complete
-      const scrollTimeout = setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-      }, 100);
-      
-      return () => clearTimeout(scrollTimeout);
-    }
-  }, [messages, shouldAutoScroll]);
+  // Send message to help desk API
+  const sendMessageToAPI = async (message) => {
+    try {
+      // This would connect to a real API endpoint
+      // For now, we'll simulate an API response with a more advanced algorithm
 
-  // Detect if user has manually scrolled up
-  const handleScroll = () => {
-    if (messagesAreaRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = messagesAreaRef.current;
-      // If user scrolled up (not at bottom), disable auto-scroll
-      // But if they scrolled back to bottom, re-enable it
-      const isAtBottom = scrollHeight - scrollTop - clientHeight < 50; // 50px threshold
-      setShouldAutoScroll(isAtBottom);
+      // For simplicity here, we're mimicking an API response locally
+      // In a real implementation, you would use something like:
+      // const response = await axios.post('/api/admin/help-center/chat', { message });
+      // return response.data;
+
+      // Find matching FAQs using more advanced matching
+      let bestMatch = null;
+      let bestScore = 0;
+      let suggestions = [];
+
+      if (!faqData) return null;
+      
+      // Simple NLP-like processing
+      const userWords = message.toLowerCase().split(/\s+/);
+      const questionWords = ['how', 'what', 'where', 'when', 'why', 'who', 'can', 'do'];
+      const isQuestion = userWords.some(word => questionWords.includes(word));
+      
+      // Search through all categories and questions
+      Object.keys(faqData).forEach(category => {
+        faqData[category].forEach(item => {
+          // Calculate similarity score (simple word matching)
+          let score = 0;
+          const questionWords = item.question.toLowerCase().split(/\s+/);
+          
+          // Count matching words
+          userWords.forEach(word => {
+            if (word.length > 3 && questionWords.includes(word)) {
+              score += 1;
+            }
+          });
+          
+          // Boost score for exact phrases
+          if (item.question.toLowerCase().includes(message.toLowerCase())) {
+            score += 3;
+          }
+          
+          // Collect potential matches
+          if (score > 0) {
+            suggestions.push({
+              question: item.question,
+              answer: item.answer,
+              score
+            });
+          }
+          
+          // Track best match
+          if (score > bestScore) {
+            bestScore = score;
+            bestMatch = item;
+          }
+        });
+      });
+      
+      // Sort suggestions by score
+      suggestions.sort((a, b) => b.score - a.score);
+      
+      // Determine response based on match quality
+      if (bestScore >= 2) {
+        return {
+          text: bestMatch.answer,
+          confidence: 'high'
+        };
+      } else if (suggestions.length > 0) {
+        // Format suggestions for display
+        const suggestionsText = `I'm not sure I understand completely. Did you mean one of these?\n\n${suggestions.slice(0, 3).map(s => `• ${s.question}`).join('\n')}`;
+        return {
+          text: suggestionsText,
+          confidence: 'medium',
+          suggestions: suggestions.slice(0, 3)
+        };
+      } else if (isQuestion) {
+        return {
+          text: "I don't have specific information about that in my knowledge base. Would you like me to connect you with a live admin or try rephrasing your question?",
+          confidence: 'low'
+        };
+      } else {
+        return {
+          text: "I don't have enough information to help with that. Try asking a question about user management, system settings, security, or analytics.",
+          confidence: 'low'
+        };
+      }
+    } catch (error) {
+      console.error('Error sending message to API:', error);
+      return {
+        text: "I'm sorry, but I'm having trouble processing your request right now. Please try again later.",
+        confidence: 'error'
+      };
     }
   };
-
-  // Simulate AI response
-  const generateResponse = (question) => {
+  
+  // Generate response via API
+  const generateResponse = async (question) => {
     setIsTyping(true);
     
-    // Find matching FAQs
-    let foundAnswer = null;
-    let matchingQuestions = [];
-    
-    Object.keys(faqItems).forEach(category => {
-      faqItems[category].forEach(item => {
-        // Exact match
-        if (item.question.toLowerCase() === question.toLowerCase()) {
-          foundAnswer = item.answer;
-        }
-        // Partial match for suggestions
-        else if (item.question.toLowerCase().includes(question.toLowerCase()) ||
-                question.toLowerCase().includes(item.question.toLowerCase().split(' ').filter(word => word.length > 3).join(' '))) {
-          matchingQuestions.push(item.question);
-        }
-      });
-    });
-    
-    // Simulate thinking time
-    setTimeout(() => {
-      if (foundAnswer) {
-        // Direct answer
+    try {
+      // Get response from API
+      const apiResponse = await sendMessageToAPI(question);
+      
+      if (!apiResponse) {
         setMessages(prev => [
           ...prev, 
-          { id: Date.now(), text: foundAnswer, isUser: false }
+          { 
+            id: Date.now(), 
+            text: "Sorry, I'm having trouble connecting to the help center. Please try again later.", 
+            isUser: false 
+          }
         ]);
-        // Re-enable auto-scroll for the response
-        setShouldAutoScroll(true);
-      } else if (matchingQuestions.length > 0) {
-        // Suggestions
-        const suggestionsText = `I'm not sure I understand completely. Are you asking about one of these?\n\n${matchingQuestions.map(q => `• ${q}`).join('\n')}`;
-        setMessages(prev => [
-          ...prev, 
-          { id: Date.now(), text: suggestionsText, isUser: false }
-        ]);
-        setShouldAutoScroll(true);
       } else {
-        // No match
-        const noMatchText = "I don't have specific information about that. Please try to rephrase your question or browse the FAQ categories below.";
+        // Add the response to chat
         setMessages(prev => [
           ...prev, 
-          { id: Date.now(), text: noMatchText, isUser: false }
+          { id: Date.now(), text: apiResponse.text, isUser: false }
         ]);
-        setShouldAutoScroll(true);
       }
+      
+      // Re-enable auto-scroll for the response
+      setShouldAutoScroll(true);
+    } catch (error) {
+      console.error('Error generating response:', error);
+      setMessages(prev => [
+        ...prev, 
+        { 
+          id: Date.now(), 
+          text: "I apologize, but I encountered an error while processing your request.", 
+          isUser: false 
+        }
+      ]);
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
   };
 
   const handleSubmit = (e) => {
@@ -363,6 +542,23 @@ const AdminFAQ = () => {
     }, 800);
   };
 
+  // Loading state
+  if (loading) {
+    return (
+      <PageContainer>
+        <Sidebar />
+        <MainContent>
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
+            <CircularProgress size={60} sx={{ color: colors.primary }} />
+            <Typography variant="h6" sx={{ ml: 2, color: colors.primaryText }}>
+              Loading Help Center...
+            </Typography>
+          </Box>
+        </MainContent>
+      </PageContainer>
+    );
+  }
+
   return (
     <PageContainer>
       <Sidebar />
@@ -372,6 +568,19 @@ const AdminFAQ = () => {
             <QuestionIcon sx={{ color: colors.secondary }} /> Admin Help Center
           </Typography>
         </Box>
+        
+        {error && (
+          <Box sx={{ 
+            p: 2, 
+            mb: 3, 
+            backgroundColor: `${colors.sellRed}22`,
+            border: `1px solid ${colors.sellRed}`,
+            borderRadius: '8px',
+            color: colors.primaryText
+          }}>
+            <Typography>{error}</Typography>
+          </Box>
+        )}
         
         <Grid container spacing={3}>
           {/* Chat section */}
@@ -475,9 +684,9 @@ const AdminFAQ = () => {
                 }}
               />
               
-              {faqCategories.map((category) => {
+              {faqData && faqCategories.map((category) => {
                 // Skip empty categories after filtering
-                if (filteredFAQs[category.id] && filteredFAQs[category.id].length === 0) return null;
+                if (!filteredFAQs[category.id] || filteredFAQs[category.id].length === 0) return null;
                 
                 return (
                   <FAQSection key={category.id}>
@@ -517,7 +726,7 @@ const AdminFAQ = () => {
                 );
               })}
               
-              {Object.values(filteredFAQs).every(items => items.length === 0) && (
+              {(!faqData || Object.values(filteredFAQs).every(items => !items || items.length === 0)) && (
                 <Box sx={{ 
                   display: 'flex', 
                   flexDirection: 'column', 
