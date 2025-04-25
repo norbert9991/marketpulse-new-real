@@ -109,6 +109,7 @@ const AdminSettings = () => {
   const navigate = useNavigate();
   const [currentAdmin, setCurrentAdmin] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [adminsLoading, setAdminsLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState('');
@@ -117,6 +118,7 @@ const AdminSettings = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showAddAdminDialog, setShowAddAdminDialog] = useState(false);
+  const [adminCreationSuccess, setAdminCreationSuccess] = useState(false);
   const [newAdmin, setNewAdmin] = useState({
     username: '',
     email: '',
@@ -134,12 +136,6 @@ const AdminSettings = () => {
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
-  });
-
-  // Add a function to handle security settings toggles
-  const [securitySettings, setSecuritySettings] = useState({
-    twoFactorEnabled: false,
-    loginNotificationsEnabled: false
   });
 
   useEffect(() => {
@@ -175,17 +171,21 @@ const AdminSettings = () => {
 
   const fetchAdmins = async () => {
     try {
+      setAdminsLoading(true);
       const token = localStorage.getItem('token');
       if (!token) {
         navigate('/login');
         return;
       }
 
-      const response = await API.admin.getAdmins();
+      const response = await API.admin.getUsers();
       
-      setAdmins(response.data.admins);
+      const adminUsers = response.data.users ? response.data.users.filter(user => user.role === 'admin') : [];
+      setAdmins(adminUsers);
     } catch (err) {
       setError('Failed to load admins: ' + err.message);
+    } finally {
+      setAdminsLoading(false);
     }
   };
 
@@ -218,31 +218,20 @@ const AdminSettings = () => {
         return;
       }
 
-      // Validate form data
-      if (!formData.username.trim() || !formData.email.trim()) {
-        throw new Error('Username and email are required');
-      }
-
-      // Email validation
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(formData.email)) {
-        throw new Error('Please enter a valid email address');
-      }
-
       // Validate passwords if changing
       if (formData.newPassword) {
         if (formData.newPassword !== formData.confirmPassword) {
-          throw new Error('New passwords do not match');
+          setError('New passwords do not match');
+          setSaving(false);
+          return;
         }
         if (!formData.currentPassword) {
-          throw new Error('Current password is required to change password');
-        }
-        if (formData.newPassword.length < 8) {
-          throw new Error('Password must be at least 8 characters long');
+          setError('Current password is required to change password');
+          setSaving(false);
+          return;
         }
       }
 
-      // Update profile
       const response = await API.admin.updateProfile({
         username: formData.username,
         email: formData.email,
@@ -264,13 +253,6 @@ const AdminSettings = () => {
         username: formData.username,
         email: formData.email
       });
-      
-      // Update admin in the list if present
-      setAdmins(prevAdmins => prevAdmins.map(admin => 
-        admin.user_id === currentAdmin.user_id 
-          ? { ...admin, username: formData.username, email: formData.email }
-          : admin
-      ));
     } catch (err) {
       setError('Failed to update profile: ' + (err.response?.data?.message || err.message));
     } finally {
@@ -282,11 +264,16 @@ const AdminSettings = () => {
     e.preventDefault();
     setNewAdminLoading(true);
     setNewAdminError('');
+    setAdminCreationSuccess(false);
 
     try {
       // Validate form
-      if (!newAdmin.username.trim() || !newAdmin.email.trim() || !newAdmin.password.trim()) {
+      if (!newAdmin.username || !newAdmin.email || !newAdmin.password) {
         throw new Error('All fields are required');
+      }
+
+      if (newAdmin.password !== newAdmin.confirmPassword) {
+        throw new Error('Passwords do not match');
       }
 
       // Email validation
@@ -295,36 +282,20 @@ const AdminSettings = () => {
         throw new Error('Please enter a valid email address');
       }
 
-      // Password validation
+      // Password strength validation
       if (newAdmin.password.length < 8) {
         throw new Error('Password must be at least 8 characters long');
       }
 
-      if (newAdmin.password !== newAdmin.confirmPassword) {
-        throw new Error('Passwords do not match');
-      }
-
-      // Check if email already exists in admin list
-      const emailExists = admins.some(admin => admin.email.toLowerCase() === newAdmin.email.toLowerCase());
-      if (emailExists) {
-        throw new Error('An admin with this email already exists');
-      }
-
-      // Check if username already exists in admin list
-      const usernameExists = admins.some(admin => admin.username.toLowerCase() === newAdmin.username.toLowerCase());
-      if (usernameExists) {
-        throw new Error('An admin with this username already exists');
-      }
-
-      // Add new admin
       const response = await API.admin.addAdmin({
         username: newAdmin.username,
         email: newAdmin.email,
-        password: newAdmin.password
+        password: newAdmin.password,
+        role: 'admin'
       });
 
+      setAdminCreationSuccess(true);
       setSuccess('Admin added successfully');
-      setShowAddAdminDialog(false);
       
       // Reset form
       setNewAdmin({
@@ -336,6 +307,11 @@ const AdminSettings = () => {
       
       // Refresh admin list
       fetchAdmins();
+      
+      // Close dialog after a short delay to show success message
+      setTimeout(() => {
+        setShowAddAdminDialog(false);
+      }, 1500);
     } catch (err) {
       setNewAdminError('Failed to add admin: ' + (err.response?.data?.message || err.message));
     } finally {
@@ -345,52 +321,26 @@ const AdminSettings = () => {
 
   const handleDeleteAdmin = async (adminId) => {
     try {
-      // Don't allow deleting yourself
-      if (adminId === currentAdmin.user_id) {
-        setError('You cannot delete your own admin account');
-        return;
-      }
-
-      if (window.confirm('Are you sure you want to delete this admin? This action cannot be undone.')) {
-        setLoading(true);
-        
-        const response = await API.admin.deleteAdmin(adminId);
+      if (window.confirm('Are you sure you want to delete this admin?')) {
+        let response;
+        try {
+          response = await API.admin.deleteAdmin(adminId);
+        } catch (deleteErr) {
+          response = await API.admin.updateUserStatus(adminId, 'deleted');
+        }
         
         setSuccess('Admin deleted successfully');
         
-        // Update admin list without refetching
-        setAdmins(prevAdmins => prevAdmins.filter(admin => admin.user_id !== adminId));
-        setLoading(false);
+        // Refresh admin list
+        fetchAdmins();
       }
     } catch (err) {
       setError('Failed to delete admin: ' + (err.response?.data?.message || err.message));
-      setLoading(false);
     }
   };
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
-  };
-
-  // Add a function to handle security settings toggles
-  const handleSecuritySettingChange = (setting) => {
-    setSecuritySettings(prev => ({
-      ...prev,
-      [setting]: !prev[setting]
-    }));
-    
-    // In a real app, you would save this to the backend
-    setSuccess(`Security setting updated: ${setting}`);
-    
-    // This would be the actual implementation if the backend API existed
-    // try {
-    //   const response = await API.admin.updateSecuritySettings({
-    //     [setting]: !securitySettings[setting]
-    //   });
-    //   setSuccess(`Security setting updated: ${setting}`);
-    // } catch (err) {
-    //   setError('Failed to update security setting: ' + (err.response?.data?.message || err.message));
-    // }
   };
 
   if (loading) {
@@ -772,8 +722,7 @@ const AdminSettings = () => {
                       <FormControlLabel
                         control={
                           <Switch 
-                            checked={securitySettings.twoFactorEnabled} 
-                            onChange={() => handleSecuritySettingChange('twoFactorEnabled')}
+                            checked={true} 
                             sx={{
                               '& .MuiSwitch-switchBase.Mui-checked': {
                                 color: colors.primary,
@@ -802,8 +751,7 @@ const AdminSettings = () => {
                       <FormControlLabel
                         control={
                           <Switch 
-                            checked={securitySettings.loginNotificationsEnabled}
-                            onChange={() => handleSecuritySettingChange('loginNotificationsEnabled')}
+                            checked={false} 
                             sx={{
                               '& .MuiSwitch-switchBase.Mui-checked': {
                                 color: colors.primary,
@@ -867,6 +815,18 @@ const AdminSettings = () => {
               </Button>
             </Box>
             
+            {success && (
+              <Alert severity="success" sx={{ mb: 3, backgroundColor: `${colors.buyGreen}22`, color: colors.buyGreen }}>
+                {success}
+              </Alert>
+            )}
+            
+            {error && (
+              <Alert severity="error" sx={{ mb: 3, backgroundColor: `${colors.sellRed}22`, color: colors.sellRed }}>
+                {error}
+              </Alert>
+            )}
+            
             <TableContainer>
               <Table>
                 <TableHead>
@@ -879,9 +839,15 @@ const AdminSettings = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {admins.length > 0 ? (
+                  {adminsLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={5} align="center" sx={{ py: 4, color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>
+                        <CircularProgress size={32} sx={{ color: colors.primary }} />
+                      </TableCell>
+                    </TableRow>
+                  ) : admins.length > 0 ? (
                     admins.map((admin) => (
-                      <TableRow key={admin.user_id} sx={{ '&:hover': { backgroundColor: colors.hoverBg } }}>
+                      <TableRow key={admin.user_id || admin.id} sx={{ '&:hover': { backgroundColor: colors.hoverBg } }}>
                         <TableCell sx={{ borderBottom: `1px solid ${colors.borderColor}` }}>
                           <Box sx={{ display: 'flex', alignItems: 'center' }}>
                             <Avatar 
@@ -890,6 +856,18 @@ const AdminSettings = () => {
                               {admin.username ? admin.username.charAt(0).toUpperCase() : 'A'}
                             </Avatar>
                             <Typography sx={{ color: colors.primaryText }}>{admin.username}</Typography>
+                            {(admin.user_id || admin.id) === currentAdmin?.user_id && (
+                              <Chip 
+                                label="You" 
+                                size="small" 
+                                sx={{ 
+                                  ml: 1,
+                                  backgroundColor: `${colors.primary}22`,
+                                  color: colors.primary,
+                                  fontSize: '0.65rem'
+                                }} 
+                              />
+                            )}
                           </Box>
                         </TableCell>
                         <TableCell sx={{ color: colors.primaryText, borderBottom: `1px solid ${colors.borderColor}` }}>
@@ -897,7 +875,7 @@ const AdminSettings = () => {
                         </TableCell>
                         <TableCell sx={{ borderBottom: `1px solid ${colors.borderColor}` }}>
                           <Chip 
-                            label={admin.account_status || 'active'} 
+                            label={admin.status || admin.account_status || 'active'} 
                             size="small" 
                             sx={{ 
                               backgroundColor: `${colors.buyGreen}22`,
@@ -914,14 +892,16 @@ const AdminSettings = () => {
                               <EditIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
-                          <Tooltip title="Delete">
-                            <IconButton 
-                              sx={{ color: colors.sellRed }}
-                              onClick={() => currentAdmin?.user_id !== admin.user_id && handleDeleteAdmin(admin.user_id)}
-                              disabled={currentAdmin?.user_id === admin.user_id}
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
+                          <Tooltip title={(admin.user_id || admin.id) === currentAdmin?.user_id ? "Cannot delete your own account" : "Delete"}>
+                            <span>
+                              <IconButton 
+                                sx={{ color: colors.sellRed }}
+                                onClick={() => (admin.user_id || admin.id) !== currentAdmin?.user_id && handleDeleteAdmin(admin.user_id || admin.id)}
+                                disabled={(admin.user_id || admin.id) === currentAdmin?.user_id}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </span>
                           </Tooltip>
                         </TableCell>
                       </TableRow>
@@ -929,11 +909,7 @@ const AdminSettings = () => {
                   ) : (
                     <TableRow>
                       <TableCell colSpan={5} align="center" sx={{ py: 4, color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>
-                        {loading ? (
-                          <CircularProgress size={32} sx={{ color: colors.primary }} />
-                        ) : (
-                          'No admin users found'
-                        )}
+                        No admin users found
                       </TableCell>
                     </TableRow>
                   )}
@@ -946,7 +922,7 @@ const AdminSettings = () => {
         {/* Add Admin Dialog */}
         <Dialog 
           open={showAddAdminDialog} 
-          onClose={() => setShowAddAdminDialog(false)}
+          onClose={() => !newAdminLoading && setShowAddAdminDialog(false)}
           PaperProps={{
             sx: {
               backgroundColor: colors.cardBg,
@@ -964,7 +940,14 @@ const AdminSettings = () => {
                 {newAdminError}
               </Alert>
             )}
-            <form onSubmit={handleAddAdmin}>
+            
+            {adminCreationSuccess && (
+              <Alert severity="success" sx={{ mb: 2, backgroundColor: `${colors.buyGreen}22`, color: colors.buyGreen, border: `1px solid ${colors.buyGreen}` }}>
+                Admin created successfully!
+              </Alert>
+            )}
+            
+            <form onSubmit={handleAddAdmin} id="add-admin-form">
               <TextField
                 fullWidth
                 label="Username"
@@ -973,6 +956,7 @@ const AdminSettings = () => {
                 onChange={handleNewAdminInputChange}
                 margin="normal"
                 required
+                disabled={newAdminLoading || adminCreationSuccess}
                 InputProps={{
                   startAdornment: <PersonIcon sx={{ mr: 1, color: colors.secondaryText }} />,
                   sx: {
@@ -1002,6 +986,7 @@ const AdminSettings = () => {
                 onChange={handleNewAdminInputChange}
                 margin="normal"
                 required
+                disabled={newAdminLoading || adminCreationSuccess}
                 InputProps={{
                   startAdornment: <EmailIcon sx={{ mr: 1, color: colors.secondaryText }} />,
                   sx: {
@@ -1026,13 +1011,25 @@ const AdminSettings = () => {
                 fullWidth
                 label="Password"
                 name="password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 value={newAdmin.password}
                 onChange={handleNewAdminInputChange}
                 margin="normal"
                 required
+                disabled={newAdminLoading || adminCreationSuccess}
                 InputProps={{
                   startAdornment: <LockIcon sx={{ mr: 1, color: colors.secondaryText }} />,
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShowPassword(!showPassword)}
+                        edge="end"
+                        sx={{ color: colors.secondaryText }}
+                      >
+                        {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
                   sx: {
                     color: colors.primaryText,
                     '& .MuiOutlinedInput-notchedOutline': {
@@ -1047,6 +1044,10 @@ const AdminSettings = () => {
                   }
                 }}
                 InputLabelProps={{
+                  sx: { color: colors.secondaryText }
+                }}
+                helperText="Password must be at least 8 characters long"
+                FormHelperTextProps={{
                   sx: { color: colors.secondaryText }
                 }}
               />
@@ -1055,13 +1056,25 @@ const AdminSettings = () => {
                 fullWidth
                 label="Confirm Password"
                 name="confirmPassword"
-                type="password"
+                type={showConfirmPassword ? "text" : "password"}
                 value={newAdmin.confirmPassword}
                 onChange={handleNewAdminInputChange}
                 margin="normal"
                 required
+                disabled={newAdminLoading || adminCreationSuccess}
                 InputProps={{
                   startAdornment: <LockIcon sx={{ mr: 1, color: colors.secondaryText }} />,
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        edge="end"
+                        sx={{ color: colors.secondaryText }}
+                      >
+                        {showConfirmPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
                   sx: {
                     color: colors.primaryText,
                     '& .MuiOutlinedInput-notchedOutline': {
@@ -1077,6 +1090,11 @@ const AdminSettings = () => {
                 }}
                 InputLabelProps={{
                   sx: { color: colors.secondaryText }
+                }}
+                error={newAdmin.password !== newAdmin.confirmPassword && newAdmin.confirmPassword !== ''}
+                helperText={newAdmin.password !== newAdmin.confirmPassword && newAdmin.confirmPassword !== '' ? "Passwords don't match" : ""}
+                FormHelperTextProps={{
+                  sx: { color: colors.sellRed }
                 }}
               />
             </form>
@@ -1090,12 +1108,15 @@ const AdminSettings = () => {
                   backgroundColor: colors.hoverBg
                 }
               }}
+              disabled={newAdminLoading}
             >
               Cancel
             </Button>
             <Button 
               onClick={handleAddAdmin}
-              disabled={newAdminLoading}
+              disabled={newAdminLoading || adminCreationSuccess}
+              type="submit"
+              form="add-admin-form"
               startIcon={newAdminLoading ? <CircularProgress size={20} color="inherit" /> : <AddIcon />}
               sx={{ 
                 color: colors.primary,
@@ -1104,7 +1125,7 @@ const AdminSettings = () => {
                 }
               }}
             >
-              Add Admin
+              {newAdminLoading ? 'Creating...' : 'Add Admin'}
             </Button>
           </DialogActions>
         </Dialog>
