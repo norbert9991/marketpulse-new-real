@@ -163,12 +163,12 @@ const ReportPage = () => {
       const symbolsData = symbolsResponse.data?.data || [];
       
       // Transform symbols data into the format needed for pie charts
+      const colorPalette = [colors.primary, colors.secondary, colors.buyGreen, colors.accentBlue, colors.warningOrange];
       const formattedMarketData = symbolsData.slice(0, 5).map((item, index) => {
-        const colors = [colors.primary, colors.secondary, colors.buyGreen, colors.accentBlue, colors.warningOrange];
         return {
           name: item.symbol || `Symbol ${index + 1}`,
           value: item.count || Math.floor(Math.random() * 30) + 10,
-          color: colors[index % colors.length]
+          color: colorPalette[index % colorPalette.length]
         };
       });
       
