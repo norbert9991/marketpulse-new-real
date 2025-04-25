@@ -1,7 +1,16 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Box, Typography, Button, Paper, TextField, Select, MenuItem, FormControl, InputLabel, Tabs, Tab, Grid, Divider, IconButton, Chip, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Switch, Tooltip } from '@mui/material';
+import { createChart, CrosshairMode, LineStyle } from 'lightweight-charts';
 import Sidebar from './Sidebar';
+import { API } from '../axiosConfig';
+import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
+import CloseIcon from '@mui/icons-material/Close';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import BarChartIcon from '@mui/icons-material/BarChart';
+import ShowChartIcon from '@mui/icons-material/ShowChart';
+import CandlestickChartIcon from '@mui/icons-material/CandlestickChart';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 
 // Forex Trading Color Palette
@@ -28,8 +37,11 @@ const Trade = () => {
   // Chart references
   const chartContainerRef = useRef(null);
   const chartRef = useRef(null);
+  const candleSeriesRef = useRef(null);
+  const lineSeriesRef = useRef(null);
   
   // Trading state - remove short-term trading specific state
+  const [selectedPair, setSelectedPair] = useState('EUR/USD');
   const [availableBalance, setAvailableBalance] = useState(10000);
   const [simulationAmount, setSimulationAmount] = useState(10000);
   const [tradingType, setTradingType] = useState('long-term'); // Set default to long-term
@@ -754,7 +766,7 @@ const Trade = () => {
         )}
         
         {step === 4 && simulationResults && (
-          <Box sx={{ maxWidth: '1600px', mx: 'auto', mt: 4 }}>
+          <Box sx={{ maxWidth: '1600px', mx: 'auto', mt: 5 }}>
             <Paper 
               sx={{ 
                 p: 4, 
@@ -777,32 +789,31 @@ const Trade = () => {
                 </Typography>
                 
                 <Box>
-                  <Button 
-                    variant="contained" 
+              <Button 
+                variant="contained" 
                     onClick={resetSimulation}
-                    sx={{
-                      backgroundColor: colors.accentBlue,
-                      '&:hover': {
-                        backgroundColor: colors.accentBlue,
+                sx={{
+                  backgroundColor: colors.accentBlue,
+                  '&:hover': {
+                    backgroundColor: colors.accentBlue,
                         opacity: 0.9,
-                      }
-                    }}
-                  >
+                  }
+                }}
+              >
                     NEW SIMULATION
-                  </Button>
+              </Button>
                 </Box>
-              </Box>
+          </Box>
 
-              {/* Main Grid layout with consistent spacing and sizing */}
-              <Grid container spacing={3}>
-                {/* First row - 3 main panels with equal width */}
-                <Grid item xs={12} md={4}>
-                  <Paper 
-                    sx={{ 
-                      p: 3, 
+              {/* First row - 3 main panels */}
+              <Grid container spacing={4}>
+                <Grid item xs={12} lg={4}>
+          <Paper 
+            sx={{ 
+              p: 4, 
                       backgroundColor: colors.panelBg,
-                      border: `1px solid ${colors.borderColor}`,
-                      borderRadius: '12px',
+              border: `1px solid ${colors.borderColor}`,
+              borderRadius: '12px',
                       height: '100%'
                     }}
                   >
@@ -812,19 +823,19 @@ const Trade = () => {
                     
                     <Box sx={{ position: 'relative', mb: 3 }}>
                       {/* Balance amount at top right */}
-                      <Typography 
+            <Typography 
                         variant="body1" 
-                        sx={{ 
+              sx={{ 
                           position: 'absolute',
                           top: 5,
                           right: 5,
-                          color: colors.primaryText,
+                color: colors.primaryText,
                           fontWeight: 'bold'
-                        }}
-                      >
+              }}
+            >
                         ${simulationResults.endingBalance.toLocaleString()}
-                      </Typography>
-                      
+            </Typography>
+            
                       {/* Main chart */}
                       <Box sx={{ height: '180px', position: 'relative', mt: 2 }}>
                         <svg width="100%" height="100%" viewBox="0 0 300 180" preserveAspectRatio="none">
@@ -836,597 +847,782 @@ const Trade = () => {
                             strokeWidth="3"
                           />
                           
-                          {/* Fill gradient below the curve */}
-                          <defs>
-                            <linearGradient id="gradientFill" x1="0%" y1="0%" x2="0%" y2="100%">
-                              <stop offset="0%" stopColor={colors.accentBlue} stopOpacity="0.3" />
-                              <stop offset="100%" stopColor={colors.accentBlue} stopOpacity="0.0" />
-                            </linearGradient>
-                          </defs>
+                          {/* Gradient fill under the curve */}
+                          <linearGradient id="balanceGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stopColor={colors.accentBlue} stopOpacity="0.3" />
+                            <stop offset="100%" stopColor={colors.accentBlue} stopOpacity="0.05" />
+                          </linearGradient>
                           <path 
                             d="M0,150 C30,140 60,130 90,120 S150,100 180,80 S240,40 300,30 V180 H0 Z"
-                            fill="url(#gradientFill)"
+                            fill="url(#balanceGradient)"
                           />
-                          
-                          {/* Starting point */}
-                          <circle cx="0" cy="150" r="4" fill={colors.accentBlue} />
-                          
-                          {/* Ending point */}
-                          <circle cx="300" cy="30" r="4" fill={colors.accentBlue} />
                         </svg>
+                        
+                        {/* Starting balance label */}
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            position: 'absolute', 
+                            bottom: 5, 
+                            left: 5, 
+                            color: colors.secondaryText,
+                          }}
+                        >
+                          ${simulationResults.startingBalance.toLocaleString()}
+              </Typography>
                       </Box>
-                    </Box>
-                    
-                    <Box>
-                      <Grid container spacing={2}>
-                        <Grid item xs={6}>
-                          <Typography variant="caption" sx={{ color: colors.secondaryText, display: 'block' }}>
-                            Starting Balance
-                          </Typography>
-                          <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
-                            ${simulationResults.startingBalance.toLocaleString()}
-                          </Typography>
-                        </Grid>
-                        
-                        <Grid item xs={6}>
-                          <Typography variant="caption" sx={{ color: colors.secondaryText, display: 'block' }}>
-                            Ending Balance
-                          </Typography>
-                          <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
-                            ${simulationResults.endingBalance.toLocaleString()}
-                          </Typography>
-                        </Grid>
-                        
-                        <Grid item xs={6}>
-                          <Typography variant="caption" sx={{ color: colors.secondaryText, display: 'block' }}>
-                            Total Profit
-                          </Typography>
-                          <Typography variant="body2" sx={{ color: colors.profitGreen, fontWeight: 'bold' }}>
-                            ${simulationResults.totalProfit.toLocaleString()} ({simulationResults.profitPercentage}%)
-                          </Typography>
-                        </Grid>
-                        
-                        <Grid item xs={6}>
-                          <Typography variant="caption" sx={{ color: colors.secondaryText, display: 'block' }}>
-                            Total Trades
-                          </Typography>
-                          <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
-                            {simulationResults.totalTrades.toLocaleString()}
-                          </Typography>
-                        </Grid>
-                        
-                        <Grid item xs={12}>
-                          <Typography variant="caption" sx={{ color: colors.secondaryText, display: 'block' }}>
-                            Win Rate
-                          </Typography>
-                          <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
-                            {simulationResults.winRate}%
-                          </Typography>
-                        </Grid>
-                      </Grid>
+            </Box>
+            
+                    <Box sx={{ mt: 2 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, borderBottom: `1px dashed ${colors.borderColor}`, pb: 1 }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          Starting Balance
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                          ${simulationResults.startingBalance.toLocaleString()}
+              </Typography>
+            </Box>
+            
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, borderBottom: `1px dashed ${colors.borderColor}`, pb: 1 }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          Ending Balance
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                          ${simulationResults.endingBalance.toLocaleString()}
+              </Typography>
+            </Box>
+            
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, borderBottom: `1px dashed ${colors.borderColor}`, pb: 1 }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          Total Profit
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: colors.profitGreen, fontWeight: 'bold' }}>
+                          ${simulationResults.totalProfit.toLocaleString()} ({simulationResults.profitPercentage}%)
+                        </Typography>
+                      </Box>
+                      
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, borderBottom: `1px dashed ${colors.borderColor}`, pb: 1 }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          Total Trades
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                          {simulationResults.totalTrades.toLocaleString()}
+                        </Typography>
+                      </Box>
+                      
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          Win Rate
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                          {simulationResults.winRate}%
+                        </Typography>
+                      </Box>
                     </Box>
                   </Paper>
                 </Grid>
                 
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} lg={4}>
                   <Paper 
-                    sx={{ 
-                      p: 3, 
-                      backgroundColor: colors.panelBg,
+                sx={{ 
+                      p: 4, 
+                  backgroundColor: colors.panelBg, 
                       border: `1px solid ${colors.borderColor}`,
                       borderRadius: '12px',
                       height: '100%'
                     }}
                   >
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                      <Typography variant="h6" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
-                        Monthly P/L
-                      </Typography>
-                      
-                      <Button 
-                        variant="text" 
-                        size="small"
-                        sx={{ 
-                          color: colors.accentBlue,
-                          fontSize: '0.75rem',
-                          py: 0
-                        }}
-                      >
-                        View Details
-                      </Button>
-                    </Box>
-                    
-                    <Box sx={{ height: '220px', mt: 2, position: 'relative' }}>
-                      <svg width="100%" height="170" viewBox="0 0 400 170" preserveAspectRatio="none">
-                        {/* Months Jan-Dec */}
-                        {simulationResults.monthlyData.map((month, i) => {
-                          const profit = parseFloat(month.profit);
-                          const maxProfit = Math.max(...simulationResults.monthlyData.map(m => parseFloat(m.profit)));
-                          const height = (profit / maxProfit) * 140;
-                          const barWidth = 25;
-                          const spacing = 8;
-                          const x = i * (barWidth + spacing) + 5;
-                          
-                          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                          
-                          return (
-                            <g key={i}>
-                              <rect
-                                x={x}
-                                y={150 - height}
-                                width={barWidth}
-                                height={height}
-                                rx={3}
-                                fill={colors.buyGreen}
-                                opacity={0.85}
-                              />
-                              
-                              <text
-                                x={x + barWidth / 2}
-                                y={160}
-                                textAnchor="middle"
-                                fontSize="10"
-                                fill={colors.secondaryText}
-                              >
-                                {months[month.date.getMonth()]}
-                              </text>
-                              
-                              <text
-                                x={x + barWidth / 2}
-                                y={150 - height - 5}
-                                textAnchor="middle"
-                                fontSize="10"
-                                fill={colors.buyGreen}
-                                fontWeight="bold"
-                              >
-                                ${profit}
-                              </text>
-                            </g>
-                          );
-                        })}
-                      </svg>
-                      
-                      <Box sx={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        mt: 2,
-                        pt: 1,
-                        borderTop: `1px solid ${colors.borderColor}`
-                      }}>
-                        <Box>
-                          <Typography variant="caption" sx={{ color: colors.secondaryText, display: 'block' }}>
-                            Avg. Monthly P/L
-                          </Typography>
-                          <Typography 
-                            variant="body2" 
-                            sx={{ 
-                              color: colors.buyGreen, 
-                              fontWeight: 'bold' 
-                            }}
-                          >
-                            +${parseFloat(simulationResults.monthlyData[0].profit).toFixed(2)}
-                          </Typography>
-                        </Box>
-                        
-                        <Box sx={{ textAlign: 'right' }}>
-                          <Typography variant="caption" sx={{ color: colors.secondaryText, display: 'block' }}>
-                            Monthly Trades
-                          </Typography>
-                          <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
-                            {Math.round(simulationResults.totalTrades / 12)}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    </Box>
-                  </Paper>
-                </Grid>
-                
-                <Grid item xs={12} md={4}>
-                  <Paper 
-                    sx={{ 
-                      p: 3, 
-                      backgroundColor: colors.panelBg,
-                      border: `1px solid ${colors.borderColor}`,
-                      borderRadius: '12px',
-                      height: '100%',
-                      display: 'flex',
-                      flexDirection: 'column'
-                    }}
-                  >
-                    <Box sx={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'space-between', 
-                      mb: 2 
-                    }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Typography variant="h6" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
-                          Simulation Results
-                        </Typography>
-                        <Chip 
-                          label="1 Year" 
-                          size="small" 
-                          sx={{ ml: 1, backgroundColor: colors.accentBlue, color: colors.primaryText }}
-                        />
-                      </Box>
-                    </Box>
-                    
-                    <Box sx={{ 
-                      flex: 1, 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      justifyContent: 'space-between'
-                    }}>
-                      <Grid container spacing={2}>
-                        <Grid item xs={6}>
-                          <Typography variant="caption" sx={{ color: colors.secondaryText, display: 'block' }}>
-                            Starting Balance
-                          </Typography>
-                          <Typography variant="body1" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
-                            ${simulationResults.startingBalance.toLocaleString()}
-                          </Typography>
-                        </Grid>
-                        
-                        <Grid item xs={6}>
-                          <Typography variant="caption" sx={{ color: colors.secondaryText, display: 'block' }}>
-                            Ending Balance
-                          </Typography>
-                          <Typography variant="body1" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
-                            ${simulationResults.endingBalance.toLocaleString()}
-                          </Typography>
-                        </Grid>
-                        
-                        <Grid item xs={6}>
-                          <Typography variant="caption" sx={{ color: colors.secondaryText, display: 'block' }}>
-                            # Trades
-                          </Typography>
-                          <Typography variant="body1" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
-                            {simulationResults.totalTrades.toLocaleString()}
-                          </Typography>
-                        </Grid>
-                        
-                        <Grid item xs={6}>
-                          <Typography variant="caption" sx={{ color: colors.secondaryText, display: 'block' }}>
-                            Avg Monthly P/L
-                          </Typography>
-                          <Typography variant="body1" sx={{ color: colors.buyGreen, fontWeight: 'bold' }}>
-                            ${parseFloat(simulationResults.monthlyData[0].profit).toFixed(2)} ({(parseFloat(simulationResults.monthlyData[0].profit) / simulationResults.startingBalance * 100).toFixed(2)}%)
-                          </Typography>
-                        </Grid>
-                      </Grid>
-                      
-                      <Box sx={{ mt: 3 }}>
-                        <Typography variant="caption" sx={{ color: colors.secondaryText, display: 'block', mb: 1 }}>
-                          Total Profit
-                        </Typography>
-                        <Typography variant="h4" sx={{ 
-                          color: colors.buyGreen, 
-                          fontWeight: 'bold',
-                          display: 'flex',
-                          alignItems: 'center'
-                        }}>
-                          ${simulationResults.totalProfit.toLocaleString()} 
-                          <Typography 
-                            component="span" 
-                            variant="body1" 
-                            sx={{ ml: 1, color: colors.buyGreen, fontWeight: 'bold' }}
-                          >
-                            ({simulationResults.profitPercentage}%)
-                          </Typography>
-                        </Typography>
-                        
-                        <Button 
-                          variant="text" 
-                          fullWidth 
-                          sx={{ 
-                            color: colors.accentBlue, 
-                            mt: 2,
-                            '&:hover': {
-                              backgroundColor: 'rgba(33, 150, 243, 0.1)'
-                            }
-                          }}
-                        >
-                          More Stats
-                        </Button>
-                      </Box>
-                    </Box>
-                  </Paper>
-                </Grid>
-                
-                {/* Second row - Symbols and Symbols P/L */}
-                <Grid item xs={12} md={6}>
-                  <Paper sx={{ 
-                    p: 3, 
-                    backgroundColor: colors.panelBg,
-                    border: `1px solid ${colors.borderColor}`,
-                    borderRadius: '12px',
-                    height: '100%'
-                  }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                      <Typography variant="h6" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
-                        Symbols
-                      </Typography>
-                      <Button 
-                        variant="text" 
-                        size="small"
-                        sx={{ 
-                          color: colors.accentBlue,
-                          fontSize: '0.75rem',
-                          py: 0.5
-                        }}
-                      >
-                        All Symbols
-                      </Button>
-                    </Box>
-                    
-                    {/* Donut chart display */}
-                    <Box sx={{ display: 'flex', height: 250 }}>
-                      {/* Donut chart */}
-                      <Box sx={{ 
-                        width: 240, 
-                        height: 240, 
-                        position: 'relative',
-                        margin: '0 auto'
-                      }}>
-                        <svg width="240" height="240" viewBox="0 0 240 240">
-                          <g transform="translate(120, 120)">
-                            {simulationResults.symbols.map((symbol, i) => {
-                              const startAngle = i > 0 
-                                ? simulationResults.symbols.slice(0, i).reduce((sum, s) => sum + s.weight, 0) / 100 * Math.PI * 2 
-                                : 0;
-                              const endAngle = startAngle + (symbol.weight / 100) * Math.PI * 2;
-                              
-                              const x1 = Math.sin(startAngle) * 100;
-                              const y1 = -Math.cos(startAngle) * 100;
-                              const x2 = Math.sin(endAngle) * 100;
-                              const y2 = -Math.cos(endAngle) * 100;
-                              
-                              const largeArcFlag = endAngle - startAngle > Math.PI ? 1 : 0;
-                              
-                              const pathData = [
-                                `M ${x1} ${y1}`,
-                                `A 100 100 0 ${largeArcFlag} 1 ${x2} ${y2}`,
-                                `L 0 0`,
-                                `Z`
-                              ].join(' ');
-                              
-                              const chartColors = [
-                                '#00E676', // Green
-                                '#2196F3', // Blue
-                                '#FF9800', // Orange
-                                '#E91E63', // Pink
-                                '#9C27B0', // Purple
-                                '#FFEB3B', // Yellow
-                                '#00BCD4'  // Cyan
-                              ];
-                              
-                              return (
-                                <path 
-                                  key={symbol.symbol}
-                                  d={pathData}
-                                  fill={chartColors[i % chartColors.length]}
-                                  stroke={colors.cardBg}
-                                  strokeWidth="1"
-                                />
-                              );
-                            })}
-                            <circle cx="0" cy="0" r="60" fill={colors.panelBg} />
-                          </g>
-                        </svg>
-                      </Box>
-                      
-                      {/* Legend */}
-                      <Box sx={{ mt: 2, ml: 2, maxHeight: 240, overflow: 'auto' }}>
-                        {simulationResults.symbols.map((symbol, i) => {
-                          const chartColors = [
-                            '#00E676', // Green
-                            '#2196F3', // Blue
-                            '#FF9800', // Orange
-                            '#E91E63', // Pink
-                            '#9C27B0', // Purple
-                            '#FFEB3B', // Yellow
-                            '#00BCD4'  // Cyan
-                          ];
-                          
-                          return (
-                            <Box key={symbol.symbol} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                              <Box 
-                                sx={{ 
-                                  width: 12, 
-                                  height: 12, 
-                                  borderRadius: '2px', 
-                                  backgroundColor: chartColors[i % chartColors.length],
-                                  mr: 1
-                                }} 
-                              />
-                              <Typography variant="body2" sx={{ mr: 1, color: colors.primaryText }}>
-                                {symbol.symbol}
-                              </Typography>
-                              <Typography variant="caption" sx={{ mr: 1, color: colors.secondaryText }}>
-                                ({symbol.trades} trades)
-                              </Typography>
-                              <Typography variant="body2" sx={{ color: colors.secondaryText, ml: 'auto', fontWeight: 'bold' }}>
-                                {symbol.weight.toFixed(1)}%
-                              </Typography>
-                            </Box>
-                          );
-                        })}
-                      </Box>
-                    </Box>
-                  </Paper>
-                </Grid>
-                
-                <Grid item xs={12} md={6}>
-                  <Paper sx={{ 
-                    p: 3, 
-                    backgroundColor: colors.panelBg,
-                    border: `1px solid ${colors.borderColor}`,
-                    borderRadius: '12px',
-                    height: '100%'
-                  }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                      <Typography variant="h6" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
-                        Symbols P/L
-                      </Typography>
-                      <Button 
-                        variant="text" 
-                        size="small"
-                        sx={{ 
-                          color: colors.accentBlue,
-                          fontSize: '0.75rem',
-                          py: 0.5
-                        }}
-                      >
-                        All Symbols
-                      </Button>
-                    </Box>
-                    
-                    {/* Bar chart styled similar to Monthly P/L */}
-                    <Box sx={{ height: 250, position: 'relative' }}>
-                      <svg width="100%" height="210" viewBox="0 0 600 210" preserveAspectRatio="none">
-                        {/* Background grid lines */}
-                        <line x1="0" y1="180" x2="600" y2="180" stroke={colors.borderColor} strokeWidth="1" strokeDasharray="4,4" />
-                        <line x1="0" y1="140" x2="600" y2="140" stroke={colors.borderColor} strokeWidth="1" strokeDasharray="4,4" />
-                        <line x1="0" y1="100" x2="600" y2="100" stroke={colors.borderColor} strokeWidth="1" strokeDasharray="4,4" />
-                        <line x1="0" y1="60" x2="600" y2="60" stroke={colors.borderColor} strokeWidth="1" strokeDasharray="4,4" />
-                        
-                        <g>
-                          {simulationResults.symbols.map((symbol, i) => {
-                            const maxProfit = Math.max(...simulationResults.symbols.map(s => s.pl));
-                            const barHeight = (symbol.pl / maxProfit) * 160; // Scale to match grid
-                            const barWidth = Math.min(55, 560 / simulationResults.symbols.length); // Adjust width based on number of items
-                            const availableWidth = 560;
-                            const totalItems = simulationResults.symbols.length;
-                            const itemWidth = availableWidth / totalItems;
-                            const x = i * itemWidth + (itemWidth - barWidth) / 2;
-                            
-                            return (
-                              <g key={symbol.symbol}>
-                                {/* Bar */}
-                                <rect
-                                  x={x}
-                                  y={180 - barHeight}
-                                  width={barWidth}
-                                  height={barHeight}
-                                  rx={4}
-                                  fill={colors.buyGreen}
-                                  opacity={0.85}
-                                />
-                                
-                                {/* Value */}
-                                <text
-                                  x={x + barWidth / 2}
-                                  y={180 - barHeight - 10}
-                                  textAnchor="middle"
-                                  fontSize="12"
-                                  fill={colors.buyGreen}
-                                  fontWeight="bold"
-                                >
-                                  +${symbol.pl.toFixed(0)}
-                                </text>
-                                
-                                {/* Symbol */}
-                                <text
-                                  x={x + barWidth / 2}
-                                  y={200}
-                                  textAnchor="middle"
-                                  fontSize="10"
-                                  fill={colors.secondaryText}
-                                >
-                                  {symbol.symbol.replace('USD', '')}
-                                </text>
-                              </g>
-                            );
-                          })}
-                        </g>
-                      </svg>
-                      
-                      {/* Display Average P/L and Total Trades at bottom like in Monthly P/L */}
-                      <Box sx={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        mt: 1,
-                        pt: 1,
-                        borderTop: `1px solid ${colors.borderColor}`
-                      }}>
-                        <Box>
-                          <Typography variant="caption" sx={{ color: colors.secondaryText, display: 'block' }}>
-                            Avg. Symbol P/L
-                          </Typography>
-                          <Typography 
-                            variant="body2" 
-                            sx={{ 
-                              color: colors.buyGreen, 
-                              fontWeight: 'bold' 
-                            }}
-                          >
-                            +${(simulationResults.symbols.reduce((sum, s) => sum + s.pl, 0) / simulationResults.symbols.length).toFixed(2)}
-                          </Typography>
-                        </Box>
-                        
-                        <Box sx={{ textAlign: 'right' }}>
-                          <Typography variant="caption" sx={{ color: colors.secondaryText, display: 'block' }}>
-                            Total Trades
-                          </Typography>
-                          <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
-                            {simulationResults.symbols.reduce((sum, s) => sum + s.trades, 0)}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    </Box>
-                  </Paper>
-                </Grid>
-                
-                {/* Third row - Insights or key findings */}
-                <Grid item xs={12}>
-                  <Paper sx={{ 
-                    p: 3, 
-                    backgroundColor: colors.panelBg,
-                    border: `1px solid ${colors.borderColor}`,
-                    borderRadius: '12px'
-                  }}>
-                    <Typography variant="h6" sx={{ color: colors.primaryText, mb: 2, fontWeight: 'bold' }}>
-                      Key Insights
+                    <Typography variant="h6" sx={{ color: colors.primaryText, mb: 3, fontWeight: 'bold' }}>
+                      Monthly P/L
                     </Typography>
                     
-                    <Grid container spacing={2}>
-                      {simulationResults.insights.map((insight, i) => (
-                        <Grid item xs={12} md={4} key={i}>
-                          <Box sx={{ 
-                            p: 2,
-                            borderRadius: '8px',
-                            backgroundColor: colors.cardBg,
-                            height: '100%',
-                            display: 'flex',
-                            alignItems: 'center'
-                          }}>
-                            <Box sx={{
-                              width: 24,
-                              height: 24,
-                              borderRadius: '50%',
-                              backgroundColor: colors.accentBlue,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              mr: 2,
-                              flexShrink: 0
-                            }}>
-                              <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
-                                {i+1}
-                              </Typography>
-                            </Box>
-                            <Typography variant="body2" sx={{ color: colors.primaryText }}>
-                              {insight}
-                            </Typography>
-                          </Box>
-                        </Grid>
+                    <Box sx={{ height: '180px', position: 'relative', mb: 3, width: '100%', overflow: 'hidden' }}>
+                      {/* Static SVG chart with built-in month labels for perfect alignment */}
+                      <svg width="100%" height="180" viewBox="0 0 420 180" preserveAspectRatio="none">
+                        {/* Jan */}
+                        <g>
+                          <rect x="15" y="150" width="20" height="20" rx="2" fill={colors.buyGreen} />
+                          <text x="25" y="145" fill={colors.secondaryText} fontSize="10" textAnchor="middle">$10</text>
+                          <text x="25" y="178" fill={colors.secondaryText} fontSize="10" textAnchor="middle">Jan</text>
+                        </g>
+                        
+                        {/* Feb */}
+                        <g>
+                          <rect x="50" y="130" width="20" height="40" rx="2" fill={colors.buyGreen} />
+                          <text x="60" y="125" fill={colors.secondaryText} fontSize="10" textAnchor="middle">$30</text>
+                          <text x="60" y="178" fill={colors.secondaryText} fontSize="10" textAnchor="middle">Feb</text>
+                        </g>
+                        
+                        {/* Mar */}
+                        <g>
+                          <rect x="85" y="110" width="20" height="60" rx="2" fill={colors.buyGreen} />
+                          <text x="95" y="105" fill={colors.secondaryText} fontSize="10" textAnchor="middle">$50</text>
+                          <text x="95" y="178" fill={colors.secondaryText} fontSize="10" textAnchor="middle">Mar</text>
+                        </g>
+                        
+                        {/* Apr */}
+                        <g>
+                          <rect x="120" y="90" width="20" height="80" rx="2" fill={colors.buyGreen} />
+                          <text x="130" y="85" fill={colors.secondaryText} fontSize="10" textAnchor="middle">$70</text>
+                          <text x="130" y="178" fill={colors.secondaryText} fontSize="10" textAnchor="middle">Apr</text>
+                        </g>
+                        
+                        {/* May */}
+                        <g>
+                          <rect x="155" y="70" width="20" height="100" rx="2" fill={colors.buyGreen} />
+                          <text x="165" y="65" fill={colors.secondaryText} fontSize="10" textAnchor="middle">$90</text>
+                          <text x="165" y="178" fill={colors.secondaryText} fontSize="10" textAnchor="middle">May</text>
+                        </g>
+                        
+                        {/* Jun */}
+                        <g>
+                          <rect x="190" y="50" width="20" height="120" rx="2" fill={colors.buyGreen} />
+                          <text x="200" y="45" fill={colors.secondaryText} fontSize="10" textAnchor="middle">$110</text>
+                          <text x="200" y="178" fill={colors.secondaryText} fontSize="10" textAnchor="middle">Jun</text>
+                        </g>
+                        
+                        {/* Jul */}
+                        <g>
+                          <rect x="225" y="60" width="20" height="110" rx="2" fill={colors.buyGreen} />
+                          <text x="235" y="55" fill={colors.secondaryText} fontSize="10" textAnchor="middle">$100</text>
+                          <text x="235" y="178" fill={colors.secondaryText} fontSize="10" textAnchor="middle">Jul</text>
+                        </g>
+                        
+                        {/* Aug */}
+                        <g>
+                          <rect x="260" y="70" width="20" height="100" rx="2" fill={colors.buyGreen} />
+                          <text x="270" y="65" fill={colors.secondaryText} fontSize="10" textAnchor="middle">$90</text>
+                          <text x="270" y="178" fill={colors.secondaryText} fontSize="10" textAnchor="middle">Aug</text>
+                        </g>
+                        
+                        {/* Sep */}
+                        <g>
+                          <rect x="295" y="80" width="20" height="90" rx="2" fill={colors.buyGreen} />
+                          <text x="305" y="75" fill={colors.secondaryText} fontSize="10" textAnchor="middle">$80</text>
+                          <text x="305" y="178" fill={colors.secondaryText} fontSize="10" textAnchor="middle">Sep</text>
+                        </g>
+                        
+                        {/* Oct */}
+                        <g>
+                          <rect x="330" y="90" width="20" height="80" rx="2" fill={colors.buyGreen} />
+                          <text x="340" y="85" fill={colors.secondaryText} fontSize="10" textAnchor="middle">$70</text>
+                          <text x="340" y="178" fill={colors.secondaryText} fontSize="10" textAnchor="middle">Oct</text>
+                        </g>
+                        
+                        {/* Nov */}
+                        <g>
+                          <rect x="365" y="110" width="20" height="60" rx="2" fill={colors.buyGreen} />
+                          <text x="375" y="105" fill={colors.secondaryText} fontSize="10" textAnchor="middle">$50</text>
+                          <text x="375" y="178" fill={colors.secondaryText} fontSize="10" textAnchor="middle">Nov</text>
+                        </g>
+                        
+                        {/* Dec */}
+                        <g>
+                          <rect x="400" y="100" width="20" height="70" rx="2" fill={colors.buyGreen} />
+                          <text x="410" y="95" fill={colors.secondaryText} fontSize="10" textAnchor="middle">$60</text>
+                          <text x="410" y="178" fill={colors.secondaryText} fontSize="10" textAnchor="middle">Dec</text>
+                        </g>
+                      </svg>
+                    </Box>
+                    
+                    <Box sx={{ 
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      mt: 2,
+                      borderTop: `1px dashed ${colors.borderColor}`,
+                      pt: 2
+                    }}>
+                      <Box>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 1 }}>Avg. Monthly P/L</Typography>
+                        <Typography variant="h6" sx={{ color: colors.profitGreen, fontWeight: 'bold' }}>
+                          +${((simulationResults.totalProfit) / 12).toFixed(2)}
+                        </Typography>
+                      </Box>
+                      
+                      <Box sx={{ textAlign: 'right' }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 1 }}>Monthly Trades</Typography>
+                        <Typography variant="h6" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                          {Math.round(simulationResults.totalTrades / 12)}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Paper>
+                </Grid>
+                
+                <Grid item xs={12} lg={4}>
+                  <Paper 
+                    sx={{ 
+                      p: 4, 
+                      backgroundColor: colors.panelBg,
+                      border: `1px solid ${colors.borderColor}`,
+                      borderRadius: '12px'
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                      <Typography variant="h6" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                        Simulation Results
+                </Typography>
+                      <Box sx={{
+                        backgroundColor: colors.accentBlue,
+                        color: '#fff',
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold',
+                        px: 1.5,
+                        py: 0.5,
+                        borderRadius: '4px'
+                      }}>
+                        1 Year
+                      </Box>
+                    </Box>
+                    
+                    <Box sx={{ flex: 1 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, borderBottom: `1px dashed ${colors.borderColor}`, pb: 1 }}>
+                <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          Starting Balance
+                </Typography>
+                        <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                          ${simulationResults.startingBalance.toLocaleString()}
+                        </Typography>
+                      </Box>
+                      
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, borderBottom: `1px dashed ${colors.borderColor}`, pb: 1 }}>
+                <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          Ending Balance
+                </Typography>
+                        <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                          ${simulationResults.endingBalance.toLocaleString()}
+                        </Typography>
+                      </Box>
+                      
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, borderBottom: `1px dashed ${colors.borderColor}`, pb: 1 }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          # Trades
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                          {simulationResults.totalTrades.toLocaleString()}
+                        </Typography>
+                      </Box>
+                      
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, borderBottom: `1px dashed ${colors.borderColor}`, pb: 1 }}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          Avg Monthly P/L
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: colors.profitGreen, fontWeight: 'bold' }}>
+                          ${((simulationResults.totalProfit) / 12).toFixed(2)} ({(simulationResults.profitPercentage / 12).toFixed(2)}%)
+                        </Typography>
+                      </Box>
+                    </Box>
+                    
+                    <Box sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center', 
+                      borderTop: `1px dashed ${colors.borderColor}`,
+                      pt: 2,
+                      mt: 'auto'
+                    }}>
+                      <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                        Total Profit
+                      </Typography>
+                      <Typography variant="h5" sx={{ color: colors.profitGreen, fontWeight: 'bold' }}>
+                        ${simulationResults.totalProfit.toLocaleString()} ({simulationResults.profitPercentage}%)
+                      </Typography>
+                    </Box>
+                    
+                    <Box sx={{ textAlign: 'right', mt: 2 }}>
+                      <Button
+                        variant="text"
+                        size="small"
+                        sx={{ 
+                          color: colors.accentBlue,
+                          textTransform: 'none',
+                          '&:hover': {
+                            backgroundColor: 'transparent',
+                            textDecoration: 'underline'
+                          }
+                        }}
+                      >
+                        More Stats
+                      </Button>
+                    </Box>
+                  </Paper>
+                </Grid>
+                
+                {/* Second row - 2 panels for symbols */}
+                <Grid container spacing={4} sx={{ flexWrap: 'nowrap', overflowX: 'auto' }}>
+                  <Grid item sx={{ width: '680px', flexShrink: 0, mr: 2 }}>
+                    <Paper 
+                      sx={{ 
+                        p: 4, 
+                        backgroundColor: colors.panelBg,
+                        border: `1px solid ${colors.borderColor}`,
+                        borderRadius: '12px'
+                      }}
+                    >
+                      <Typography variant="h6" sx={{ color: colors.primaryText, mb: 3, fontWeight: 'bold' }}>
+                        Symbols
+                      </Typography>
+                      
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        {/* Donut chart */}
+                        <Box sx={{ width: 220, height: 220, position: 'relative' }}>
+                          <svg width="220" height="220" viewBox="0 0 220 220">
+                            <defs>
+                              <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                                <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
+                                <feOffset dx="0" dy="1" result="offsetblur" />
+                                <feComponentTransfer>
+                                  <feFuncA type="linear" slope="0.2" />
+                                </feComponentTransfer>
+                                <feMerge>
+                                  <feMergeNode />
+                                  <feMergeNode in="SourceGraphic" />
+                                </feMerge>
+                              </filter>
+                            </defs>
+                            
+                            {/* Ring segments */}
+                            <circle cx="110" cy="110" r="60" fill="none" stroke="#00E676" strokeWidth="22" strokeDasharray="150 230" transform="rotate(-90 110 110)" filter="url(#shadow)" />
+                            <circle cx="110" cy="110" r="60" fill="none" stroke="#2196F3" strokeWidth="22" strokeDasharray="100 280" transform="rotate(60 110 110)" filter="url(#shadow)" />
+                            <circle cx="110" cy="110" r="60" fill="none" stroke="#FFA726" strokeWidth="22" strokeDasharray="30 350" transform="rotate(160 110 110)" filter="url(#shadow)" />
+                            <circle cx="110" cy="110" r="60" fill="none" stroke="#FF3D57" strokeWidth="22" strokeDasharray="23 357" transform="rotate(190 110 110)" filter="url(#shadow)" />
+                            <circle cx="110" cy="110" r="60" fill="none" stroke="#9C27B0" strokeWidth="22" strokeDasharray="20 360" transform="rotate(213 110 110)" filter="url(#shadow)" />
+                            <circle cx="110" cy="110" r="60" fill="none" stroke="#CDDC39" strokeWidth="22" strokeDasharray="15 365" transform="rotate(233 110 110)" filter="url(#shadow)" />
+                            
+                            {/* Center hole */}
+                            <circle cx="110" cy="110" r="40" fill={colors.panelBg} />
+                          </svg>
+                        </Box>
+                        
+                        {/* Symbol list */}
+                        <Box sx={{ flex: 1, pl: 3 }}>
+                          {['EURUSD', 'EURJPY', 'GBPUSD', 'EURNZD', 'EURCAD', 'EURCHF'].map((symbol, i) => {
+                            const weights = [44.8, 32.0, 4.8, 3.3, 7.9, 5.5];
+                            const colors = ['#00E676', '#2196F3', '#FFA726', '#FF3D57', '#9C27B0', '#CDDC39'];
+                            
+                            return (
+                              <Box key={i} sx={{ 
+                                display: 'flex', 
+                                justifyContent: 'space-between', 
+                                alignItems: 'center', 
+                                mb: 1 
+                              }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                  <Box sx={{ 
+                                    width: 8, 
+                                    height: 8, 
+                                    borderRadius: '50%', 
+                                    backgroundColor: colors[i],
+                                    mr: 1 
+                                  }} />
+                                  <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                                    {symbol}
+                                  </Typography>
+                                </Box>
+                                <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                                  {weights[i]}%
+                                </Typography>
+                              </Box>
+                            );
+                          })}
+                        </Box>
+                      </Box>
+                    </Paper>
+                  </Grid>
+                  
+                  <Grid item xs={12} lg={6}>
+                    <Paper 
+                      sx={{ 
+                        p: 4, 
+                        backgroundColor: colors.panelBg,
+                        border: `1px solid ${colors.borderColor}`,
+                        borderRadius: '12px'
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                        <Typography variant="h6" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                          Symbols P/L
+                        </Typography>
+                        <Button
+                          variant="text"
+                          size="small"
+                          sx={{ 
+                            color: colors.accentBlue,
+                            textTransform: 'none',
+                            fontSize: '0.75rem',
+                            p: 0
+                          }}
+                        >
+                          All Symbols
+                        </Button>
+                      </Box>
+                      
+                      <Box sx={{ height: 220, display: 'flex', alignItems: 'flex-end', position: 'relative' }}>
+                        {/* X-axis labels - rotated currency names */}
+                        <Box sx={{ 
+                          position: 'absolute',
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          display: 'flex',
+                          justifyContent: 'space-around',
+                          transform: 'translateY(20px)'
+                        }}>
+                          {['EURUSD', 'EURJPY', 'GBPUSD', 'EURNZD', 'EURCAD', 'EURCHF', 'AUDUSD'].map((symbol, i) => (
+                <Typography 
+                            key={i} 
+                            variant="caption" 
+                  sx={{ 
+                              color: colors.secondaryText,
+                              fontSize: '10px',
+                              transform: 'rotate(-45deg)',
+                              transformOrigin: 'top left',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            {symbol}
+                </Typography>
+                          ))}
+                        </Box>
+                        
+                        {/* Bar chart */}
+                        <Box sx={{ 
+                          display: 'flex',
+                          height: 150,
+                          alignItems: 'flex-end',
+                          width: '100%',
+                          justifyContent: 'space-around',
+                          mb: 4
+                        }}>
+                          {[5380, 3840, 580, 390, 947, 670, 290].map((value, i) => {
+                            const maxValue = 5380;
+                            const height = (value / maxValue) * 130;
+                            
+                            return (
+                              <Box key={i} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                <Typography 
+                                  variant="caption" 
+                                  sx={{ 
+                                    color: colors.profitGreen,
+                                    fontSize: '10px',
+                                    mb: 0.5
+                                  }}
+                                >
+                                  +${value}
+                                </Typography>
+                                <Box sx={{ 
+                                  height: `${height}px`,
+                                  width: 16,
+                                  backgroundColor: colors.profitGreen,
+                                  borderRadius: '2px'
+                                }} />
+                              </Box>
+                            );
+                          })}
+                        </Box>
+                      </Box>
+                    </Paper>
+                  </Grid>
+                </Grid>
+                
+                {/* Insights row */}
+                <Grid item xs={12}>
+                  <Paper 
+                    sx={{ 
+                      p: 4, 
+                      backgroundColor: colors.panelBg,
+                      border: `1px solid ${colors.borderColor}`,
+                      borderRadius: '12px'
+                    }}
+                  >
+                    <Typography variant="h6" sx={{ color: colors.primaryText, mb: 3, fontWeight: 'bold' }}>
+                      Insights
+                    </Typography>
+                    
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      {simulationResults.insights.map((insight, index) => (
+                        <Typography key={index} variant="body2" sx={{ 
+                          color: colors.primaryText,
+                          pl: 2,
+                          borderLeft: `3px solid ${colors.accentBlue}`
+                        }}>
+                          {insight}
+                        </Typography>
                       ))}
-                    </Grid>
+                      
+                      <Typography variant="body2" sx={{ 
+                        color: colors.primaryText,
+                        pl: 2,
+                        borderLeft: `3px solid ${colors.profitGreen}`,
+                        mt: 1
+                      }}>
+                        Legacy with a copy ratio of 6 achieved the most profit of 69.24% Net P/L for the simulation amount and {simulationPeriod} selected.
+                      </Typography>
+                    </Box>
                   </Paper>
                 </Grid>
               </Grid>
             </Paper>
           </Box>
+        )}
+        {step === 3 && tradingType === 'long-term' && (
+          <Box sx={{ maxWidth: '1400px', mx: 'auto', mt: 5 }}>
+            <Paper 
+              sx={{ 
+                p: 4, 
+                backgroundColor: colors.cardBg,
+                border: `1px solid ${colors.borderColor}`,
+                borderRadius: '16px',
+                boxShadow: `0 12px 24px ${colors.shadowColor}`,
+                mb: 4
+              }}
+            >
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+            <Typography 
+                  variant="h4" 
+                  sx={{ 
+                    color: colors.primaryText,
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Long-Term Strategy Allocation
+            </Typography>
+                
+                <Box>
+                <Button 
+                  variant="outlined" 
+                    onClick={() => setStep(2)}
+                  sx={{ 
+                      borderColor: colors.borderColor,
+                      color: colors.secondaryText,
+                      mr: 2,
+                    '&:hover': {
+                        borderColor: colors.accentBlue,
+                        backgroundColor: 'transparent',
+                    }
+                  }}
+                >
+                    Back
+                </Button>
+                  
+                  <Button 
+                    variant="contained"
+                    onClick={startSimulation}
+                    disabled={strategies.filter(s => s.allocatedFunds > 0 && s.copyRatio > 0).length === 0}
+                    sx={{
+                      backgroundColor: colors.accentBlue,
+                      '&:hover': {
+                        backgroundColor: colors.accentBlue,
+                        opacity: 0.9,
+                      },
+                      '&.Mui-disabled': {
+                        backgroundColor: colors.borderColor,
+                        color: colors.secondaryText
+                      }
+                    }}
+                  >
+                    Run Simulation
+                  </Button>
+                </Box>
+              </Box>
+              
+              <Box sx={{ mb: 4 }}>
+                <Typography variant="h6" sx={{ color: colors.primaryText, mb: 2 }}>
+                  Your Simulation Balance: ${availableBalance.toLocaleString()}
+            </Typography>
+                <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                  Allocate your funds to different trading strategies and set a copy ratio for each one.
+                  The copy ratio determines how closely you follow each strategy's trades.
+                </Typography>
+              </Box>
+              
+              <Box sx={{ mb: 4 }}>
+                <FormControl fullWidth variant="outlined" sx={{ mb: 3 }}>
+                  <InputLabel id="simulation-period-label" sx={{ color: colors.secondaryText }}>Simulation Period</InputLabel>
+                  <Select
+                    labelId="simulation-period-label"
+                    value={simulationPeriod}
+                    onChange={(e) => setSimulationPeriod(e.target.value)}
+                    label="Simulation Period"
+                  sx={{ 
+                      color: colors.primaryText,
+                    backgroundColor: colors.panelBg, 
+                      '.MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.borderColor
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.accentBlue
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.accentBlue
+                      }
+                    }}
+                  >
+                    <MenuItem value="1 Month">1 Month</MenuItem>
+                    <MenuItem value="3 Months">3 Months</MenuItem>
+                    <MenuItem value="6 Months">6 Months</MenuItem>
+                    <MenuItem value="1 Year">1 Year</MenuItem>
+                    <MenuItem value="2 Years">2 Years</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
+              
+              <TableContainer component={Paper} sx={{ backgroundColor: colors.panelBg, mb: 4 }}>
+                <Table sx={{ minWidth: 650 }}>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>Strategy</TableCell>
+                      <TableCell align="right" sx={{ color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>Total Net P/L</TableCell>
+                      <TableCell align="right" sx={{ color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>1Y Net P/L</TableCell>
+                      <TableCell align="right" sx={{ color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>Allocated Funds ($)</TableCell>
+                      <TableCell align="right" sx={{ color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>Copy Ratio (1-10)</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {strategies.map((strategy, index) => (
+                      <TableRow key={strategy.id} sx={{ '&:hover': { backgroundColor: colors.hoverBg } }}>
+                        <TableCell sx={{ color: colors.primaryText, borderBottom: `1px solid ${colors.borderColor}` }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          {strategy.name}
+                            <Tooltip
+                              title={
+                                <Box sx={{ p: 1 }}>
+                                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>{strategy.name}</Typography>
+                                  <Typography variant="body2" sx={{ mb: 1 }}>{strategy.description}</Typography>
+                                  <Grid container spacing={1} sx={{ mt: 1 }}>
+                                    <Grid item xs={6}>
+                                      <Typography variant="caption" sx={{ color: colors.secondaryText }}>Risk Level:</Typography>
+                                      <Typography variant="body2">{strategy.riskLevel.charAt(0).toUpperCase() + strategy.riskLevel.slice(1)}</Typography>
+                                    </Grid>
+                                    <Grid item xs={6}>
+                                      <Typography variant="caption" sx={{ color: colors.secondaryText }}>Avg. Duration:</Typography>
+                                      <Typography variant="body2">{strategy.avgDuration}</Typography>
+                                    </Grid>
+                                    <Grid item xs={6}>
+                                      <Typography variant="caption" sx={{ color: colors.secondaryText }}>Max Drawdown:</Typography>
+                                      <Typography variant="body2">{strategy.maxDrawdown}%</Typography>
+                                    </Grid>
+                                    <Grid item xs={6}>
+                                      <Typography variant="caption" sx={{ color: colors.secondaryText }}>Sharpe Ratio:</Typography>
+                                      <Typography variant="body2">{strategy.sharpeRatio}</Typography>
+                                    </Grid>
+                                  </Grid>
+                                </Box>
+                              }
+                              arrow
+                              placement="right"
+                            >
+                              <IconButton size="small" sx={{ ml: 1, color: colors.secondaryText }}>
+                                <HelpOutlineIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+                        </TableCell>
+                        <TableCell align="right" sx={{ 
+                          color: strategy.totalNetPL >= 0 ? colors.profitGreen : colors.lossRed,
+                          fontWeight: 'bold',
+                          borderBottom: `1px solid ${colors.borderColor}` 
+                        }}>
+                          {strategy.totalNetPL >= 0 ? '+' : ''}{strategy.totalNetPL}%
+                        </TableCell>
+                        <TableCell align="right" sx={{ 
+                          color: strategy.oneYearNetPL >= 0 ? colors.profitGreen : colors.lossRed,
+                          fontWeight: 'bold',
+                          borderBottom: `1px solid ${colors.borderColor}` 
+                        }}>
+                          {strategy.oneYearNetPL >= 0 ? '+' : ''}{strategy.oneYearNetPL}%
+                        </TableCell>
+                        <TableCell align="right" sx={{ borderBottom: `1px solid ${colors.borderColor}` }}>
+                          <Box sx={{ width: '100%', px: 1 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                              <Typography variant="caption" sx={{ color: colors.secondaryText }}>$0</Typography>
+                              <Typography variant="caption" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                                ${strategy.allocatedFunds.toLocaleString()}
+                  </Typography>
+                              <Typography variant="caption" sx={{ color: colors.secondaryText }}>${availableBalance.toLocaleString()}</Typography>
+                            </Box>
+                            <Box sx={{ position: 'relative' }}>
+                              {/* Track background */}
+                              <Box sx={{ 
+                                position: 'absolute', 
+                                height: '4px', 
+                                width: '100%', 
+                                backgroundColor: colors.borderColor,
+                                borderRadius: '2px',
+                                top: '50%',
+                                transform: 'translateY(-50%)'
+                              }} />
+                              
+                              {/* Filled portion */}
+                              <Box sx={{ 
+                                position: 'absolute', 
+                                height: '4px', 
+                                width: `${(strategy.allocatedFunds / availableBalance) * 100}%`, 
+                                background: `linear-gradient(90deg, ${colors.accentBlue}, ${colors.buyGreen})`,
+                                borderRadius: '2px',
+                                top: '50%',
+                                transform: 'translateY(-50%)'
+                              }} />
+                              
+                              <input
+                                type="range"
+                                min="0"
+                                max={availableBalance}
+                                step="100"
+                                value={strategy.allocatedFunds}
+                                onChange={(e) => handleAllocationChange(index, e.target.value)}
+                                className="allocation-slider"
+                                style={{ 
+                                  width: '100%',
+                                  height: '24px',
+                                  appearance: 'none',
+                                  background: 'transparent',
+                                  cursor: 'pointer',
+                                  position: 'relative',
+                                  zIndex: 2
+                                }}
+                              />
+                            </Box>
+                          </Box>
+                        </TableCell>
+                        <TableCell align="right" sx={{ borderBottom: `1px solid ${colors.borderColor}` }}>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                              color: colors.primaryText,
+                              fontWeight: 'bold'
+                    }}
+                  >
+                            {/* Calculate copy ratio based on allocation percentage */}
+                            {strategy.allocatedFunds > 0 ? 
+                              Math.max(1, Math.round((strategy.allocatedFunds / availableBalance) * 10)) 
+                              : 0}
+                  </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                p: 3, 
+                backgroundColor: colors.panelBg, 
+                borderRadius: '12px',
+                border: `1px solid ${colors.borderColor}`
+              }}>
+                <Typography variant="h6" sx={{ color: colors.primaryText }}>
+                  Total Allocated: ${totalAllocatedFunds.toLocaleString()}
+                </Typography>
+                <Typography variant="h6" sx={{ color: colors.primaryText }}>
+                  Remaining: ${(availableBalance - totalAllocatedFunds).toLocaleString()}
+                </Typography>
+            </Box>
+          </Paper>
+        </Box>
         )}
       </Box>
     </Box>
