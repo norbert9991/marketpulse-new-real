@@ -466,9 +466,6 @@ const Trade = () => {
     setStep(3);
   };
 
-  // Add this helper function inside the Trade component, before the return statement:
-  const getSliderPercent = (value, min, max) => ((value - min) / (max - min)) * 100;
-
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: colors.darkBg }}>
       <Sidebar />
@@ -526,32 +523,25 @@ const Trade = () => {
               
                 <Box sx={{ width: '100%', maxWidth: '600px', px: 4, position: 'relative', mt: 2 }}>
                   {/* Track background */}
-                  <Box sx={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: 0,
-                    right: 0,
-                    height: '6px',
-                    transform: 'translateY(-50%)',
+                  <Box sx={{ 
+                    position: 'absolute', 
+                    height: '4px', 
+                    width: '100%', 
                     backgroundColor: colors.borderColor,
-                    borderRadius: '3px',
-                    mx: 4
-                  }} />
-
-                  {/* Progress fill - ends at thumb center */}
-                  <Box sx={{
-                    position: 'absolute',
+                    borderRadius: '2px',
                     top: '50%',
-                    left: 0,
-                    height: '6px',
-                    width: `calc(${getSliderPercent(simulationAmount, 1000, 100000)}% - 11px)`, // 11px is half the thumb width
-                    transform: 'translateY(-50%)',
-                    background: `linear-gradient(90deg, ${colors.accentBlue}, ${colors.buyGreen})`,
-                    borderRadius: '3px',
-                    transition: 'width 0.3s ease',
-                    zIndex: 1
+                    transform: 'translateY(-50%)'
                   }} />
-
+                  {/* Filled portion */}
+                  <Box sx={{ 
+                    position: 'absolute', 
+                    height: '4px', 
+                    width: `${((simulationAmount - 1000) / (100000 - 1000)) * 100}%`, 
+                    background: `linear-gradient(90deg, ${colors.accentBlue}, ${colors.buyGreen})`,
+                    borderRadius: '2px',
+                    top: '50%',
+                    transform: 'translateY(-50%)'
+                  }} />
                   <input
                     type="range"
                     min="1000"
@@ -559,7 +549,7 @@ const Trade = () => {
                     step="1000"
                     value={simulationAmount}
                     onChange={(e) => setSimulationAmount(parseFloat(e.target.value))}
-                    style={{
+                    style={{ 
                       width: '100%',
                       height: '24px',
                       appearance: 'none',
@@ -568,6 +558,7 @@ const Trade = () => {
                       position: 'relative',
                       zIndex: 2
                     }}
+                    className="allocation-slider"
                   />
                   <style jsx>{`
                     input[type=range] {
@@ -586,8 +577,6 @@ const Trade = () => {
                       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
                       cursor: pointer;
                       margin-top: -8px;
-                      position: relative;
-                      z-index: 3;
                     }
                     input[type=range]::-moz-range-thumb {
                       height: 22px;
@@ -597,8 +586,6 @@ const Trade = () => {
                       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
                       cursor: pointer;
                       border: none;
-                      position: relative;
-                      z-index: 3;
                     }
                     input[type=range]::-ms-thumb {
                       height: 22px;
@@ -607,26 +594,24 @@ const Trade = () => {
                       background: ${colors.accentBlue};
                       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
                       cursor: pointer;
-                      position: relative;
-                      z-index: 3;
                     }
                     input[type=range]::-webkit-slider-runnable-track {
-                      height: 6px;
+                      height: 4px;
                       cursor: pointer;
                       background: transparent;
-                      border-radius: 3px;
+                      border-radius: 2px;
                     }
                     input[type=range]::-moz-range-track {
-                      height: 6px;
+                      height: 4px;
                       cursor: pointer;
                       background: transparent;
-                      border-radius: 3px;
+                      border-radius: 2px;
                     }
                     input[type=range]::-ms-track {
-                      height: 6px;
+                      height: 4px;
                       cursor: pointer;
                       background: transparent;
-                      border-radius: 3px;
+                      border-radius: 2px;
                     }
                   `}</style>
                 </Box>
