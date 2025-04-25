@@ -15,7 +15,8 @@ import {
   Tabs,
   Tab,
   Divider,
-  Alert
+  Alert,
+  Chip
 } from '@mui/material';
 import { styled } from '@mui/system';
 import { 
@@ -130,8 +131,6 @@ const ReportPage = () => {
   const [stats, setStats] = useState({
     totalUsers: 0,
     activeUsers: 0,
-    totalTransactions: 0,
-    tradingVolume: 0,
     growthRate: 0
   });
 
@@ -158,9 +157,7 @@ const ReportPage = () => {
       // Transform the growth data
       const formattedChartData = growthData.map(item => ({
         name: item.date || item.period || item.month || 'N/A',
-        users: item.count || item.users || 0,
-        transactions: item.transactions || Math.floor(item.count * 1.5) || 0,
-        volume: item.volume || Math.floor(item.count * 100) || 0
+        users: item.count || item.users || 0
       }));
       
       setChartData(formattedChartData);
@@ -197,17 +194,18 @@ const ReportPage = () => {
         const isPositive = Math.random() > 0.4;
         const changePercentage = (Math.random() * 2 + 0.1).toFixed(2);
         const volatility = (Math.random() * 5).toFixed(2);
+        const popularity = item.count || Math.floor(Math.random() * 800) + 200;
         
         return {
           name: item.symbol || `Pair ${index + 1}`,
           change: isPositive ? parseFloat(changePercentage) : -parseFloat(changePercentage),
-          volume: item.count ? item.count * 1000 : Math.floor(Math.random() * 8000) + 2000,
+          popularity: popularity,
           volatility: parseFloat(volatility)
         };
       });
       
-      // Sort by volume for better visualization
-      forexPerformance.sort((a, b) => b.volume - a.volume);
+      // Sort by popularity for better visualization
+      forexPerformance.sort((a, b) => b.popularity - a.popularity);
       setForexPerformanceData(forexPerformance);
       
       // Calculate summary stats from the real data
@@ -237,14 +235,9 @@ const ReportPage = () => {
         return false;
       }).length;
       
-      const totalTransactions = formattedChartData.reduce((sum, item) => sum + item.transactions, 0);
-      const totalVolume = formattedChartData.reduce((sum, item) => sum + item.volume, 0);
-      
       setStats({
         totalUsers: currentUserCount,
         activeUsers: activeUserCount || Math.floor(currentUserCount * 0.7),
-        totalTransactions,
-        tradingVolume: totalVolume,
         growthRate: growthRate.toFixed(1)
       });
       
@@ -294,7 +287,12 @@ const ReportPage = () => {
         display: 'flex', 
         flexDirection: 'column', 
         alignItems: 'center',
-        p: 2
+        p: 2,
+        border: `1px solid ${color}33`,
+        borderRadius: '10px',
+        backgroundColor: `${color}0A`,
+        height: '100%',
+        justifyContent: 'center'
       }}>
         <Box sx={{ 
           color,
@@ -387,54 +385,62 @@ const ReportPage = () => {
         {/* Market Sentiment Overview */}
         {!loading && sentimentData && (
           <StyledCard sx={{ mb: 4, overflow: 'hidden' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
               <Typography variant="h6" sx={{ color: colors.primaryText, fontWeight: 600, display: 'flex', alignItems: 'center' }}>
                 <InsightsIcon sx={{ mr: 1 }} /> Market Sentiment Overview
               </Typography>
-              <Typography variant="body2" sx={{ color: colors.secondaryText }}>
-                Based on {sentimentData.total_symbols} currency pairs
-              </Typography>
+              <Chip 
+                label={`Based on ${sentimentData.total_symbols} currency pairs`} 
+                size="small"
+                sx={{ 
+                  backgroundColor: `${colors.primary}22`,
+                  color: colors.primaryText,
+                  fontWeight: 500
+                }}
+              />
             </Box>
             
-            <Grid container spacing={2}>
+            <Grid container spacing={3}>
               <Grid item xs={12} md={4}>
                 {renderSentimentIndicator(sentimentData.overall_trend)}
               </Grid>
               
               <Grid item xs={12} md={8}>
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart
-                    data={[
-                      { name: 'Bullish', value: sentimentData.bullish_percentage, color: colors.buyGreen },
-                      { name: 'Neutral', value: sentimentData.neutral_percentage, color: colors.warningOrange },
-                      { name: 'Bearish', value: sentimentData.bearish_percentage, color: colors.sellRed }
-                    ]}
-                    margin={{ top: 10, right: 30, left: 0, bottom: 20 }}
-                    layout="vertical"
-                    barSize={30}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke={colors.borderColor} />
-                    <XAxis type="number" domain={[0, 100]} tickFormatter={(value) => `${value}%`} stroke={colors.secondaryText} />
-                    <YAxis dataKey="name" type="category" stroke={colors.secondaryText} />
-                    <RechartsTooltip 
-                      formatter={(value) => [`${value}%`, 'Percentage']}
-                      contentStyle={{ 
-                        backgroundColor: colors.cardBg,
-                        borderColor: colors.borderColor,
-                        color: colors.primaryText
-                      }} 
-                    />
-                    <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                      {[
+                <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <BarChart
+                      data={[
                         { name: 'Bullish', value: sentimentData.bullish_percentage, color: colors.buyGreen },
                         { name: 'Neutral', value: sentimentData.neutral_percentage, color: colors.warningOrange },
                         { name: 'Bearish', value: sentimentData.bearish_percentage, color: colors.sellRed }
-                      ].map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                      ]}
+                      margin={{ top: 10, right: 30, left: 0, bottom: 20 }}
+                      layout="vertical"
+                      barSize={30}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke={colors.borderColor} />
+                      <XAxis type="number" domain={[0, 100]} tickFormatter={(value) => `${value}%`} stroke={colors.secondaryText} />
+                      <YAxis dataKey="name" type="category" stroke={colors.secondaryText} />
+                      <RechartsTooltip 
+                        formatter={(value) => [`${value}%`, 'Percentage']}
+                        contentStyle={{ 
+                          backgroundColor: colors.cardBg,
+                          borderColor: colors.borderColor,
+                          color: colors.primaryText
+                        }} 
+                      />
+                      <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                        {[
+                          { name: 'Bullish', value: sentimentData.bullish_percentage, color: colors.buyGreen },
+                          { name: 'Neutral', value: sentimentData.neutral_percentage, color: colors.warningOrange },
+                          { name: 'Bearish', value: sentimentData.bearish_percentage, color: colors.sellRed }
+                        ].map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </Box>
               </Grid>
             </Grid>
           </StyledCard>
@@ -442,7 +448,7 @@ const ReportPage = () => {
         
         {/* Summary Stats Cards */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6}>
             <StatCard>
               <CardContent>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
@@ -487,7 +493,7 @@ const ReportPage = () => {
             </StatCard>
           </Grid>
           
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6}>
             <StatCard>
               <CardContent>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
@@ -520,90 +526,17 @@ const ReportPage = () => {
               </CardContent>
             </StatCard>
           </Grid>
-          
-          <Grid item xs={12} sm={6} md={3}>
-            <StatCard>
-              <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                  <Typography variant="h6" sx={{ color: colors.secondaryText, fontSize: '0.9rem' }}>
-                    Transactions
-                  </Typography>
-                  <Box 
-                    sx={{ 
-                      p: 1, 
-                      borderRadius: '8px', 
-                      backgroundColor: `${colors.secondary}20`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    <ShowChartIcon sx={{ color: colors.secondary, fontSize: '1.2rem' }} />
-                  </Box>
-                </Box>
-                
-                <Typography variant="h4" sx={{ color: colors.primaryText, fontWeight: 600, mb: 1 }}>
-                  {loading ? <CircularProgress size={24} sx={{ color: colors.secondary }} /> : stats.totalTransactions.toLocaleString()}
-                </Typography>
-                
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Typography variant="body2" sx={{ color: colors.secondaryText }}>
-                    Lifetime transactions
-                  </Typography>
-                </Box>
-              </CardContent>
-            </StatCard>
-          </Grid>
-          
-          <Grid item xs={12} sm={6} md={3}>
-            <StatCard>
-              <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                  <Typography variant="h6" sx={{ color: colors.secondaryText, fontSize: '0.9rem' }}>
-                    Trading Volume
-                  </Typography>
-                  <Box 
-                    sx={{ 
-                      p: 1, 
-                      borderRadius: '8px', 
-                      backgroundColor: `${colors.accentBlue}20`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    <CurrencyExchangeIcon sx={{ color: colors.accentBlue, fontSize: '1.2rem' }} />
-                  </Box>
-                </Box>
-                
-                <Typography variant="h4" sx={{ color: colors.primaryText, fontWeight: 600, mb: 1 }}>
-                  {loading ? (
-                    <CircularProgress size={24} sx={{ color: colors.accentBlue }} />
-                  ) : (
-                    `$${stats.tradingVolume.toLocaleString()}`
-                  )}
-                </Typography>
-                
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Typography variant="body2" sx={{ color: colors.secondaryText }}>
-                    Total volume
-                  </Typography>
-                </Box>
-              </CardContent>
-            </StatCard>
-          </Grid>
         </Grid>
         
         {/* Report Type Tabs */}
         <StyledTabs value={reportType} onChange={handleReportTypeChange}>
           <StyledTab label="User Growth" icon={<PeopleAltIcon sx={{ fontSize: '1.2rem', mr: 0.5 }} />} iconPosition="start" />
-          <StyledTab label="Transaction Volume" icon={<ShowChartIcon sx={{ fontSize: '1.2rem', mr: 0.5 }} />} iconPosition="start" />
           <StyledTab label="Market Distribution" icon={<LanguageIcon sx={{ fontSize: '1.2rem', mr: 0.5 }} />} iconPosition="start" />
           <StyledTab label="Forex Performance" icon={<CurrencyExchangeIcon sx={{ fontSize: '1.2rem', mr: 0.5 }} />} iconPosition="start" />
         </StyledTabs>
         
         {/* Report Content */}
-        {reportType === 3 ? (
+        {reportType === 2 ? (
           // Forex Performance Tab
           <Grid container spacing={3}>
             <Grid item xs={12}>
@@ -620,7 +553,7 @@ const ReportPage = () => {
                   <React.Fragment>
                     <Box sx={{ mb: 4 }}>
                       <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 2 }}>
-                        Performance of popular forex pairs based on trading volume and price change
+                        Performance of popular forex pairs based on popularity and price change
                       </Typography>
                       
                       <ResponsiveContainer width="100%" height={400}>
@@ -646,7 +579,7 @@ const ReportPage = () => {
                           <RechartsTooltip
                             formatter={(value, name) => {
                               if (name === 'change') return [`${value > 0 ? '+' : ''}${value}%`, 'Change'];
-                              if (name === 'volume') return [`${value.toLocaleString()}`, 'Volume'];
+                              if (name === 'popularity') return [`${value.toLocaleString()}`, 'Popularity'];
                               return [value, name];
                             }}
                             contentStyle={{
@@ -671,7 +604,7 @@ const ReportPage = () => {
                     <Divider sx={{ mb: 3, borderColor: colors.borderColor }} />
                     
                     <Typography variant="subtitle1" sx={{ mb: 2, color: colors.primaryText }}>
-                      Volume Comparison
+                      Popularity Comparison
                     </Typography>
                     
                     <ResponsiveContainer width="100%" height={200}>
@@ -686,7 +619,7 @@ const ReportPage = () => {
                           tickFormatter={(value) => value >= 1000 ? `${(value/1000).toFixed(0)}k` : value}
                         />
                         <RechartsTooltip
-                          formatter={(value) => [`${value.toLocaleString()}`, 'Volume']}
+                          formatter={(value) => [`${value.toLocaleString()}`, 'Popularity']}
                           contentStyle={{
                             backgroundColor: colors.cardBg,
                             borderColor: colors.borderColor,
@@ -694,8 +627,8 @@ const ReportPage = () => {
                           }}
                         />
                         <Bar 
-                          dataKey="volume" 
-                          name="Trading Volume"
+                          dataKey="popularity" 
+                          name="User Interest"
                           fill={colors.accentBlue}
                           radius={[4, 4, 0, 0]}
                         />
@@ -707,15 +640,13 @@ const ReportPage = () => {
             </Grid>
           </Grid>
         ) : (
-          // Original Three Tabs
+          // Original Two Tabs
           <Grid container spacing={3}>
             {/* Main Chart */}
             <Grid item xs={12} md={8}>
               <StyledCard>
                 <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText, fontWeight: 600 }}>
-                  {reportType === 0 ? 'User Growth Trend' : 
-                  reportType === 1 ? 'Transaction Volume Trend' : 
-                  'Market Activity Trend'}
+                  {reportType === 0 ? 'User Growth Trend' : 'Market Activity Trend'}
                 </Typography>
                 
                 {loading ? (
@@ -750,24 +681,6 @@ const ReportPage = () => {
                           fill="url(#colorUsers)" 
                         />
                       </AreaChart>
-                    ) : reportType === 1 ? (
-                      <BarChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke={colors.borderColor} />
-                        <XAxis dataKey="name" stroke={colors.secondaryText} />
-                        <YAxis stroke={colors.secondaryText} />
-                        <RechartsTooltip 
-                          contentStyle={{ 
-                            backgroundColor: colors.cardBg,
-                            borderColor: colors.borderColor,
-                            color: colors.primaryText
-                          }} 
-                        />
-                        <Bar 
-                          dataKey="transactions" 
-                          fill={colors.secondary} 
-                          radius={[4, 4, 0, 0]}
-                        />
-                      </BarChart>
                     ) : (
                       <LineChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke={colors.borderColor} />
@@ -782,7 +695,7 @@ const ReportPage = () => {
                         />
                         <Line 
                           type="monotone" 
-                          dataKey="volume" 
+                          dataKey="users" 
                           stroke={colors.accentBlue} 
                           strokeWidth={2}
                           dot={{ r: 4, fill: colors.accentBlue }}
@@ -797,47 +710,47 @@ const ReportPage = () => {
             
             {/* Secondary Chart/Table */}
             <Grid item xs={12} md={4}>
-              <StyledCard sx={{ height: '100%' }}>
+              <StyledCard sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText, fontWeight: 600 }}>
-                  {reportType === 0 ? 'User Device Distribution' : 
-                  reportType === 1 ? 'Transaction Types' : 
-                  'Most Active Markets'}
+                  {reportType === 0 ? 'User Device Distribution' : 'Most Active Markets'}
                 </Typography>
                 
                 {loading ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexGrow: 1 }}>
                     <CircularProgress size={40} sx={{ color: colors.primary }} />
                   </Box>
                 ) : (
-                  <ResponsiveContainer width="100%" height={350}>
-                    <PieChart>
-                      <Pie
-                        data={marketData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      >
-                        {marketData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Legend />
-                      <RechartsTooltip 
-                        contentStyle={{ 
-                          backgroundColor: colors.cardBg,
-                          borderColor: colors.borderColor,
-                          color: colors.primaryText
-                        }} 
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <PieChart>
+                        <Pie
+                          data={marketData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        >
+                          {marketData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Legend verticalAlign="bottom" height={36} />
+                        <RechartsTooltip 
+                          contentStyle={{ 
+                            backgroundColor: colors.cardBg,
+                            borderColor: colors.borderColor,
+                            color: colors.primaryText
+                          }} 
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </Box>
                 )}
                 
-                <Box sx={{ mt: 2, textAlign: 'center' }}>
+                <Box sx={{ mt: 'auto', pt: 2, textAlign: 'center' }}>
                   <Button
                     variant="outlined"
                     startIcon={<DownloadIcon />}
@@ -850,7 +763,7 @@ const ReportPage = () => {
                       }
                     }}
                   >
-                    Export {reportType === 0 ? 'User' : reportType === 1 ? 'Transaction' : 'Market'} Report
+                    Export {reportType === 0 ? 'User' : 'Market'} Report
                   </Button>
                 </Box>
               </StyledCard>
