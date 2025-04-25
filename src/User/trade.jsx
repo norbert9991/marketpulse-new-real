@@ -1150,14 +1150,15 @@ const Trade = () => {
                 
                 {/* Second row - 2 panels for symbols */}
                 <Grid container spacing={4} sx={{ mt: 2 }}>
-                  <Grid item xs={12} md={6}>
+                  <Grid item xs={12} lg={6}>
                     <Paper 
                       sx={{ 
                         p: 4, 
                         backgroundColor: colors.panelBg,
                         border: `1px solid ${colors.borderColor}`,
                         borderRadius: '12px',
-                        height: '100%'
+                        height: '100%',
+                        minHeight: '400px'
                       }}
                     >
                       <Typography variant="h6" sx={{ color: colors.primaryText, mb: 3, fontWeight: 'bold' }}>
@@ -1166,8 +1167,8 @@ const Trade = () => {
                       
                       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         {/* Donut chart */}
-                        <Box sx={{ width: 200, height: 200, position: 'relative' }}>
-                          <svg width="200" height="200" viewBox="0 0 200 200">
+                        <Box sx={{ width: 240, height: 240, position: 'relative' }}>
+                          <svg width="240" height="240" viewBox="0 0 240 240">
                             <defs>
                               <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
                                 <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
@@ -1183,20 +1184,20 @@ const Trade = () => {
                             </defs>
                             
                             {/* Ring segments */}
-                            <circle cx="100" cy="100" r="60" fill="none" stroke="#00E676" strokeWidth="22" strokeDasharray="150 230" transform="rotate(-90 100 100)" filter="url(#shadow)" />
-                            <circle cx="100" cy="100" r="60" fill="none" stroke="#2196F3" strokeWidth="22" strokeDasharray="100 280" transform="rotate(60 100 100)" filter="url(#shadow)" />
-                            <circle cx="100" cy="100" r="60" fill="none" stroke="#FFA726" strokeWidth="22" strokeDasharray="30 350" transform="rotate(160 100 100)" filter="url(#shadow)" />
-                            <circle cx="100" cy="100" r="60" fill="none" stroke="#FF3D57" strokeWidth="22" strokeDasharray="23 357" transform="rotate(190 100 100)" filter="url(#shadow)" />
-                            <circle cx="100" cy="100" r="60" fill="none" stroke="#9C27B0" strokeWidth="22" strokeDasharray="20 360" transform="rotate(213 100 100)" filter="url(#shadow)" />
-                            <circle cx="100" cy="100" r="60" fill="none" stroke="#CDDC39" strokeWidth="22" strokeDasharray="15 365" transform="rotate(233 100 100)" filter="url(#shadow)" />
+                            <circle cx="120" cy="120" r="80" fill="none" stroke="#00E676" strokeWidth="28" strokeDasharray="200 300" transform="rotate(-90 120 120)" filter="url(#shadow)" />
+                            <circle cx="120" cy="120" r="80" fill="none" stroke="#2196F3" strokeWidth="28" strokeDasharray="133 367" transform="rotate(60 120 120)" filter="url(#shadow)" />
+                            <circle cx="120" cy="120" r="80" fill="none" stroke="#FFA726" strokeWidth="28" strokeDasharray="40 460" transform="rotate(160 120 120)" filter="url(#shadow)" />
+                            <circle cx="120" cy="120" r="80" fill="none" stroke="#FF3D57" strokeWidth="28" strokeDasharray="30 470" transform="rotate(190 120 120)" filter="url(#shadow)" />
+                            <circle cx="120" cy="120" r="80" fill="none" stroke="#9C27B0" strokeWidth="28" strokeDasharray="27 473" transform="rotate(213 120 120)" filter="url(#shadow)" />
+                            <circle cx="120" cy="120" r="80" fill="none" stroke="#CDDC39" strokeWidth="28" strokeDasharray="20 480" transform="rotate(233 120 120)" filter="url(#shadow)" />
                             
                             {/* Center hole */}
-                            <circle cx="100" cy="100" r="40" fill={colors.panelBg} />
+                            <circle cx="120" cy="120" r="55" fill={colors.panelBg} />
                           </svg>
                         </Box>
                         
                         {/* Symbol list */}
-                        <Box sx={{ flex: 1, pl: 3 }}>
+                        <Box sx={{ flex: 1, pl: 4 }}>
                           {['EURUSD', 'EURJPY', 'GBPUSD', 'EURNZD', 'EURCAD', 'EURCHF'].map((symbol, i) => {
                             const weights = [44.8, 32.0, 4.8, 3.3, 7.9, 5.5];
                             const colors = ['#00E676', '#2196F3', '#FFA726', '#FF3D57', '#9C27B0', '#CDDC39'];
@@ -1206,16 +1207,16 @@ const Trade = () => {
                                 display: 'flex', 
                                 justifyContent: 'space-between', 
                                 alignItems: 'center', 
-                                mb: 1.5,
+                                mb: 2,
                                 py: 0.5
                               }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                   <Box sx={{ 
-                                    width: 8, 
-                                    height: 8, 
+                                    width: 10, 
+                                    height: 10, 
                                     borderRadius: '50%', 
                                     backgroundColor: colors[i],
-                                    mr: 1.5
+                                    mr: 2
                                   }} />
                                   <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
                                     {symbol}
@@ -1232,31 +1233,31 @@ const Trade = () => {
                     </Paper>
                   </Grid>
                   
-                  <Grid item xs={12} md={6}>
+                  <Grid item xs={12} lg={6}>
                     <Paper 
                       sx={{ 
                         p: 4, 
                         backgroundColor: colors.panelBg,
                         border: `1px solid ${colors.borderColor}`,
                         borderRadius: '12px',
-                        height: '100%'
+                        height: '100%',
+                        minHeight: '400px'
                       }}
                     >
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                        <Typography variant="h6" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
-                          Symbols P/L
-                        </Typography>
-                      </Box>
+                      <Typography variant="h6" sx={{ color: colors.primaryText, mb: 3, fontWeight: 'bold' }}>
+                        Symbols P/L
+                      </Typography>
                       
-                      <Box sx={{ height: 200, position: 'relative' }}>
-                        {/* Bar chart with proper spacing and alignment */}
+                      <Box sx={{ height: 280, position: 'relative', mt: 2 }}>
+                        {/* Bar chart matching Monthly P/L style */}
                         <Box sx={{ 
                           display: 'flex',
                           height: '100%',
                           alignItems: 'flex-end',
                           justifyContent: 'space-between',
                           px: 2,
-                          position: 'relative'
+                          position: 'relative',
+                          pb: 4 // Space for labels
                         }}>
                           {[
                             { symbol: 'EURUSD', value: 5380 },
@@ -1268,7 +1269,7 @@ const Trade = () => {
                             { symbol: 'AUDUSD', value: 290 }
                           ].map((item, i) => {
                             const maxValue = 5380;
-                            const height = (item.value / maxValue) * 150;
+                            const height = (item.value / maxValue) * 200;
                             
                             return (
                               <Box 
@@ -1277,15 +1278,17 @@ const Trade = () => {
                                   display: 'flex', 
                                   flexDirection: 'column', 
                                   alignItems: 'center',
+                                  position: 'relative',
                                   width: '40px'
                                 }}
                               >
                                 <Typography 
                                   variant="caption" 
                                   sx={{ 
-                                    color: colors.profitGreen,
-                                    mb: 0.5,
-                                    fontSize: '10px'
+                                    color: colors.secondaryText,
+                                    position: 'absolute',
+                                    top: -20,
+                                    fontSize: '11px'
                                   }}
                                 >
                                   +${item.value}
@@ -1293,9 +1296,9 @@ const Trade = () => {
                                 <Box 
                                   sx={{ 
                                     height: `${height}px`,
-                                    width: '24px',
-                                    backgroundColor: colors.profitGreen,
-                                    borderRadius: '3px',
+                                    width: '28px',
+                                    backgroundColor: colors.buyGreen,
+                                    borderRadius: '4px',
                                     transition: 'height 0.3s ease'
                                   }} 
                                 />
@@ -1303,13 +1306,9 @@ const Trade = () => {
                                   variant="caption" 
                                   sx={{ 
                                     color: colors.secondaryText,
-                                    mt: 1,
-                                    fontSize: '10px',
-                                    transform: 'rotate(-45deg)',
-                                    transformOrigin: 'top left',
                                     position: 'absolute',
-                                    bottom: '-24px',
-                                    left: '50%'
+                                    bottom: -25,
+                                    fontSize: '11px'
                                   }}
                                 >
                                   {item.symbol}
@@ -1323,14 +1322,16 @@ const Trade = () => {
                   </Grid>
                 </Grid>
                 
-                {/* Insights row */}
+                {/* Insights row - Make it wider */}
                 <Grid item xs={12}>
                   <Paper 
                     sx={{ 
                       p: 4, 
                       backgroundColor: colors.panelBg,
                       border: `1px solid ${colors.borderColor}`,
-                      borderRadius: '12px'
+                      borderRadius: '12px',
+                      mt: 4,
+                      width: '100%'
                     }}
                   >
                     <Typography variant="h6" sx={{ color: colors.primaryText, mb: 3, fontWeight: 'bold' }}>
