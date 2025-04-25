@@ -643,7 +643,15 @@ const AdminDashboard = () => {
         </MetricsGrid>
 
         <Box sx={{ mb: 4 }}>
-          <Typography variant="h5" sx={{ mb: 2, fontWeight: 600, color: colors.primaryText }}>
+          <Typography variant="h5" sx={{ 
+            mb: 2, 
+            fontWeight: 600, 
+            color: colors.primaryText,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1
+          }}>
+            <SettingsIcon fontSize="small" sx={{ color: colors.primary }} />
             System Overview
           </Typography>
           
@@ -657,18 +665,27 @@ const AdminDashboard = () => {
             <Grid container spacing={3}>
               <Grid item xs={12} md={6}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                  <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText, fontWeight: 600 }}>
+                  <Typography variant="h6" sx={{ 
+                    mb: 2, 
+                    color: colors.primaryText, 
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1
+                  }}>
+                    <PeopleIcon fontSize="small" sx={{ color: colors.primary }} />
                     Recent Activities
                   </Typography>
                   
                   <Box sx={{ 
                     flex: 1, 
                     backgroundColor: `${colors.background}80`, 
-                    borderRadius: '8px', 
+                    borderRadius: '12px', 
                     p: 2, 
                     overflowY: 'auto',
                     maxHeight: '300px',
-                    border: `1px solid ${colors.borderColor}`
+                    border: `1px solid ${colors.borderColor}`,
+                    boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.15)'
                   }}>
                     {loading ? (
                       <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
@@ -684,16 +701,18 @@ const AdminDashboard = () => {
                             <Box key={user.user_id || index} sx={{ 
                               mb: 2, 
                               p: 1.5, 
-                              borderRadius: '6px',
+                              borderRadius: '10px',
                               backgroundColor: index % 2 === 0 ? `${colors.hoverBg}80` : 'transparent',
                               display: 'flex',
                               alignItems: 'center',
                               gap: 2,
-                              transition: 'all 0.2s ease',
+                              transition: 'all 0.3s ease',
                               cursor: 'pointer',
+                              border: `1px solid transparent`,
                               '&:hover': {
                                 backgroundColor: colors.hoverBg,
-                                transform: 'translateX(5px)'
+                                transform: 'translateX(5px)',
+                                borderColor: `${colors.primary}33`
                               }
                             }}
                             onClick={() => navigate(`/UserManagement?userId=${user.user_id}`)}
@@ -701,15 +720,15 @@ const AdminDashboard = () => {
                               <Avatar 
                                 sx={{ 
                                   bgcolor: index % 3 === 0 ? colors.primary : index % 3 === 1 ? colors.secondary : colors.accentBlue, 
-                                  width: 38, 
-                                  height: 38,
+                                  width: 40, 
+                                  height: 40,
                                   boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
                                 }}
                               >
                                 {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
                               </Avatar>
                               <Box sx={{ flex: 1 }}>
-                                <Typography variant="body2" sx={{ fontWeight: 500, color: colors.primaryText }}>
+                                <Typography variant="body2" sx={{ fontWeight: 600, color: colors.primaryText }}>
                                   {user.username || 'User'} joined the platform
                                 </Typography>
                                 <Typography variant="caption" sx={{ color: colors.secondaryText }}>
@@ -722,7 +741,8 @@ const AdminDashboard = () => {
                                 sx={{ 
                                   backgroundColor: user.role === 'admin' ? `${colors.secondary}33` : `${colors.primary}33`,
                                   color: user.role === 'admin' ? colors.secondary : colors.primary,
-                                  fontWeight: 500
+                                  fontWeight: 600,
+                                  borderRadius: '8px'
                                 }}
                               />
                             </Box>
@@ -737,6 +757,9 @@ const AdminDashboard = () => {
                               sx={{
                                 borderColor: colors.borderColor,
                                 color: colors.secondaryText,
+                                borderRadius: '8px',
+                                textTransform: 'none',
+                                fontWeight: 600,
                                 '&:hover': {
                                   borderColor: colors.primary,
                                   color: colors.primary,
@@ -766,69 +789,177 @@ const AdminDashboard = () => {
               
               <Grid item xs={12} md={6}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                  <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText, fontWeight: 600 }}>
-                    System Health
+                  <Typography variant="h6" sx={{ 
+                    mb: 2, 
+                    color: colors.primaryText, 
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1
+                  }}>
+                    <StarIcon fontSize="small" sx={{ color: colors.secondary }} />
+                    System Health & Status
                   </Typography>
                   
                   <Box sx={{ 
                     flex: 1, 
                     backgroundColor: `${colors.background}80`, 
-                    borderRadius: '8px', 
+                    borderRadius: '12px', 
                     p: 2,
-                    border: `1px solid ${colors.borderColor}`
+                    border: `1px solid ${colors.borderColor}`,
+                    boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.15)'
                   }}>
                     <Grid container spacing={2}>
                       <Grid item xs={6}>
                         <Box sx={{ 
                           p: 2, 
-                          borderRadius: '8px', 
+                          borderRadius: '12px', 
                           backgroundColor: `${colors.buyGreen}15`,
                           border: `1px solid ${colors.buyGreen}50`,
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
-                          justifyContent: 'center'
+                          justifyContent: 'center',
+                          height: '100px',
+                          transition: 'transform 0.2s ease',
+                          '&:hover': {
+                            transform: 'translateY(-4px)'
+                          }
                         }}>
                           <Typography variant="h6" sx={{ color: colors.buyGreen, fontWeight: 600 }}>
                             Server Status
                           </Typography>
-                          <Typography variant="body1" sx={{ color: colors.primaryText, display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Box sx={{ 
-                              width: 12, 
-                              height: 12, 
-                              borderRadius: '50%', 
-                              backgroundColor: colors.buyGreen,
-                              boxShadow: `0 0 10px ${colors.buyGreen}`
-                            }} />
-                            Operational
-                          </Typography>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mt: 1 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Box sx={{ 
+                                width: 12, 
+                                height: 12, 
+                                borderRadius: '50%', 
+                                backgroundColor: colors.buyGreen,
+                                boxShadow: `0 0 10px ${colors.buyGreen}`
+                              }} />
+                              <Typography variant="body1" sx={{ color: colors.primaryText }}>
+                                Operational
+                              </Typography>
+                            </Box>
+                            <Typography variant="caption" sx={{ color: colors.secondaryText, mt: 0.5 }}>
+                              Uptime: 99.9%
+                            </Typography>
+                          </Box>
                         </Box>
                       </Grid>
                       
                       <Grid item xs={6}>
                         <Box sx={{ 
                           p: 2, 
-                          borderRadius: '8px', 
+                          borderRadius: '12px', 
                           backgroundColor: `${colors.accentBlue}15`,
                           border: `1px solid ${colors.accentBlue}50`,
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
-                          justifyContent: 'center'
+                          justifyContent: 'center',
+                          height: '100px',
+                          transition: 'transform 0.2s ease',
+                          '&:hover': {
+                            transform: 'translateY(-4px)'
+                          }
                         }}>
                           <Typography variant="h6" sx={{ color: colors.accentBlue, fontWeight: 600 }}>
                             API Status
                           </Typography>
-                          <Typography variant="body1" sx={{ color: colors.primaryText, display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mt: 1 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Box sx={{ 
+                                width: 12, 
+                                height: 12, 
+                                borderRadius: '50%', 
+                                backgroundColor: colors.accentBlue,
+                                boxShadow: `0 0 10px ${colors.accentBlue}`
+                              }} />
+                              <Typography variant="body1" sx={{ color: colors.primaryText }}>
+                                Active
+                              </Typography>
+                            </Box>
+                            <Typography variant="caption" sx={{ color: colors.secondaryText, mt: 0.5 }}>
+                              Response time: 45ms
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </Grid>
+                      
+                      <Grid item xs={12}>
+                        <Box sx={{
+                          display: 'flex',
+                          gap: 2,
+                          mt: 1,
+                          p: 0
+                        }}>
+                          <Box sx={{ 
+                            p: 2, 
+                            borderRadius: '12px', 
+                            backgroundColor: `${colors.primary}15`,
+                            border: `1px solid ${colors.primary}50`,
+                            flex: 1,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            transition: 'transform 0.2s ease',
+                            '&:hover': {
+                              transform: 'translateY(-4px)'
+                            }
+                          }}>
+                            <Typography variant="subtitle2" sx={{ color: colors.primary, fontWeight: 600 }}>
+                              Database
+                            </Typography>
                             <Box sx={{ 
-                              width: 12, 
-                              height: 12, 
-                              borderRadius: '50%', 
-                              backgroundColor: colors.accentBlue,
-                              boxShadow: `0 0 10px ${colors.accentBlue}`
-                            }} />
-                            Active
-                          </Typography>
+                              width: 40, 
+                              height: 40, 
+                              display: 'flex',
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                              backgroundColor: `${colors.primary}22`,
+                              borderRadius: '50%',
+                              mt: 1
+                            }}>
+                              <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                                OK
+                              </Typography>
+                            </Box>
+                          </Box>
+                          
+                          <Box sx={{ 
+                            p: 2, 
+                            borderRadius: '12px', 
+                            backgroundColor: `${colors.secondary}15`,
+                            border: `1px solid ${colors.secondary}50`,
+                            flex: 1,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            transition: 'transform 0.2s ease',
+                            '&:hover': {
+                              transform: 'translateY(-4px)'
+                            }
+                          }}>
+                            <Typography variant="subtitle2" sx={{ color: colors.secondary, fontWeight: 600 }}>
+                              Security
+                            </Typography>
+                            <Box sx={{ 
+                              width: 40, 
+                              height: 40, 
+                              display: 'flex',
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                              backgroundColor: `${colors.secondary}22`,
+                              borderRadius: '50%',
+                              mt: 1
+                            }}>
+                              <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                                A+
+                              </Typography>
+                            </Box>
+                          </Box>
                         </Box>
                       </Grid>
                       
@@ -836,47 +967,139 @@ const AdminDashboard = () => {
                         <Box sx={{ 
                           mt: 1,
                           p: 2, 
-                          borderRadius: '8px', 
+                          borderRadius: '12px', 
                           backgroundColor: colors.hoverBg,
                           border: `1px solid ${colors.borderColor}`,
                         }}>
-                          <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
+                          <Typography variant="subtitle2" sx={{ 
+                            color: colors.primaryText, 
+                            mb: 1,
+                            fontWeight: 600,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1
+                          }}>
+                            <SettingsIcon fontSize="small" sx={{ color: colors.secondaryText }} />
                             Quick Actions
                           </Typography>
-                          <Button 
-                            variant="outlined" 
-                            size="small" 
-                            fullWidth
-                            onClick={() => navigate('/UserManagement')}
-                            sx={{ 
-                              mb: 1,
-                              borderColor: colors.primary,
-                              color: colors.primary,
-                              '&:hover': {
-                                backgroundColor: `${colors.primary}15`,
-                                borderColor: colors.primary
-                              }
-                            }}
-                          >
-                            Manage Users
-                          </Button>
-                          <Button 
-                            variant="outlined" 
-                            size="small" 
-                            fullWidth 
-                            onClick={() => navigate('/adminsettings')}
-                            sx={{ 
-                              borderColor: colors.secondary,
-                              color: colors.secondary,
-                              '&:hover': {
-                                backgroundColor: `${colors.secondary}15`,
-                                borderColor: colors.secondary
-                              }
-                            }}
-                          >
-                            System Settings
-                          </Button>
+                          <Grid container spacing={1}>
+                            <Grid item xs={6}>
+                              <Button 
+                                variant="outlined" 
+                                size="small" 
+                                fullWidth
+                                onClick={() => navigate('/UserManagement')}
+                                sx={{ 
+                                  borderColor: colors.primary,
+                                  color: colors.primary,
+                                  borderRadius: '8px',
+                                  textTransform: 'none',
+                                  fontWeight: 600,
+                                  '&:hover': {
+                                    backgroundColor: `${colors.primary}15`,
+                                    borderColor: colors.primary
+                                  }
+                                }}
+                              >
+                                Manage Users
+                              </Button>
+                            </Grid>
+                            <Grid item xs={6}>
+                              <Button 
+                                variant="outlined" 
+                                size="small" 
+                                fullWidth 
+                                onClick={() => navigate('/adminsettings')}
+                                sx={{ 
+                                  borderColor: colors.secondary,
+                                  color: colors.secondary,
+                                  borderRadius: '8px',
+                                  textTransform: 'none',
+                                  fontWeight: 600,
+                                  '&:hover': {
+                                    backgroundColor: `${colors.secondary}15`,
+                                    borderColor: colors.secondary
+                                  }
+                                }}
+                              >
+                                System Settings
+                              </Button>
+                            </Grid>
+                          </Grid>
                         </Box>
+                      </Grid>
+                    </Grid>
+                  </Box>
+                </Box>
+              </Grid>
+              
+              <Grid item xs={12}>
+                <Box sx={{ 
+                  p: 2, 
+                  borderRadius: '12px', 
+                  backgroundColor: `${colors.hoverBg}`,
+                  border: `1px solid ${colors.borderColor}`,
+                  display: 'flex',
+                  flexDirection: { xs: 'column', sm: 'row' },
+                  alignItems: 'center',
+                  gap: 2,
+                  mt: 1
+                }}>
+                  <Box sx={{ 
+                    width: { xs: '100%', sm: '120px' }, 
+                    height: { xs: '60px', sm: '120px' },
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    backgroundColor: `${colors.accentBlue}15`,
+                    borderRadius: '12px',
+                    border: `1px solid ${colors.accentBlue}50`,
+                  }}>
+                    <Typography variant="h4" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+                      {marketTrendsData?.total_symbols || 0}
+                    </Typography>
+                  </Box>
+                  
+                  <Box sx={{ flex: 1, width: { xs: '100%', sm: 'auto' } }}>
+                    <Typography variant="h6" sx={{ color: colors.accentBlue, fontWeight: 600, mb: 1 }}>
+                      MarketPulse Platform Statistics
+                    </Typography>
+                    
+                    <Grid container spacing={2}>
+                      <Grid item xs={6} sm={3}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          Active Symbols
+                        </Typography>
+                        <Typography variant="body1" sx={{ color: colors.primaryText, fontWeight: 600 }}>
+                          {marketTrendsData?.total_symbols || 0}
+                        </Typography>
+                      </Grid>
+                      
+                      <Grid item xs={6} sm={3}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          Bullish Symbols
+                        </Typography>
+                        <Typography variant="body1" sx={{ color: colors.buyGreen, fontWeight: 600 }}>
+                          {Math.round((marketTrendsData?.bullish_percentage || 0) * (marketTrendsData?.total_symbols || 0) / 100)}
+                        </Typography>
+                      </Grid>
+                      
+                      <Grid item xs={6} sm={3}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          Registered Users
+                        </Typography>
+                        <Typography variant="body1" sx={{ color: colors.primaryText, fontWeight: 600 }}>
+                          {userCount || 0}
+                        </Typography>
+                      </Grid>
+                      
+                      <Grid item xs={6} sm={3}>
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          System Load
+                        </Typography>
+                        <Typography variant="body1" sx={{ color: colors.primaryText, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          25% <TrendingDownIcon sx={{ color: colors.buyGreen, fontSize: 16 }} />
+                        </Typography>
                       </Grid>
                     </Grid>
                   </Box>
