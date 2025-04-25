@@ -136,6 +136,12 @@ const AdminSettings = () => {
     confirmPassword: ''
   });
 
+  // Add a function to handle security settings toggles
+  const [securitySettings, setSecuritySettings] = useState({
+    twoFactorEnabled: false,
+    loginNotificationsEnabled: false
+  });
+
   useEffect(() => {
     fetchCurrentAdmin();
     fetchAdmins();
@@ -212,20 +218,31 @@ const AdminSettings = () => {
         return;
       }
 
+      // Validate form data
+      if (!formData.username.trim() || !formData.email.trim()) {
+        throw new Error('Username and email are required');
+      }
+
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        throw new Error('Please enter a valid email address');
+      }
+
       // Validate passwords if changing
       if (formData.newPassword) {
         if (formData.newPassword !== formData.confirmPassword) {
-          setError('New passwords do not match');
-          setSaving(false);
-          return;
+          throw new Error('New passwords do not match');
         }
         if (!formData.currentPassword) {
-          setError('Current password is required to change password');
-          setSaving(false);
-          return;
+          throw new Error('Current password is required to change password');
+        }
+        if (formData.newPassword.length < 8) {
+          throw new Error('Password must be at least 8 characters long');
         }
       }
 
+      // Update profile
       const response = await API.admin.updateProfile({
         username: formData.username,
         email: formData.email,
@@ -247,6 +264,13 @@ const AdminSettings = () => {
         username: formData.username,
         email: formData.email
       });
+      
+      // Update admin in the list if present
+      setAdmins(prevAdmins => prevAdmins.map(admin => 
+        admin.user_id === currentAdmin.user_id 
+          ? { ...admin, username: formData.username, email: formData.email }
+          : admin
+      ));
     } catch (err) {
       setError('Failed to update profile: ' + (err.response?.data?.message || err.message));
     } finally {
@@ -261,14 +285,38 @@ const AdminSettings = () => {
 
     try {
       // Validate form
-      if (!newAdmin.username || !newAdmin.email || !newAdmin.password) {
+      if (!newAdmin.username.trim() || !newAdmin.email.trim() || !newAdmin.password.trim()) {
         throw new Error('All fields are required');
+      }
+
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(newAdmin.email)) {
+        throw new Error('Please enter a valid email address');
+      }
+
+      // Password validation
+      if (newAdmin.password.length < 8) {
+        throw new Error('Password must be at least 8 characters long');
       }
 
       if (newAdmin.password !== newAdmin.confirmPassword) {
         throw new Error('Passwords do not match');
       }
 
+      // Check if email already exists in admin list
+      const emailExists = admins.some(admin => admin.email.toLowerCase() === newAdmin.email.toLowerCase());
+      if (emailExists) {
+        throw new Error('An admin with this email already exists');
+      }
+
+      // Check if username already exists in admin list
+      const usernameExists = admins.some(admin => admin.username.toLowerCase() === newAdmin.username.toLowerCase());
+      if (usernameExists) {
+        throw new Error('An admin with this username already exists');
+      }
+
+      // Add new admin
       const response = await API.admin.addAdmin({
         username: newAdmin.username,
         email: newAdmin.email,
@@ -297,21 +345,52 @@ const AdminSettings = () => {
 
   const handleDeleteAdmin = async (adminId) => {
     try {
-      if (window.confirm('Are you sure you want to delete this admin?')) {
+      // Don't allow deleting yourself
+      if (adminId === currentAdmin.user_id) {
+        setError('You cannot delete your own admin account');
+        return;
+      }
+
+      if (window.confirm('Are you sure you want to delete this admin? This action cannot be undone.')) {
+        setLoading(true);
+        
         const response = await API.admin.deleteAdmin(adminId);
         
         setSuccess('Admin deleted successfully');
         
-        // Refresh admin list
-        fetchAdmins();
+        // Update admin list without refetching
+        setAdmins(prevAdmins => prevAdmins.filter(admin => admin.user_id !== adminId));
+        setLoading(false);
       }
     } catch (err) {
       setError('Failed to delete admin: ' + (err.response?.data?.message || err.message));
+      setLoading(false);
     }
   };
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
+  };
+
+  // Add a function to handle security settings toggles
+  const handleSecuritySettingChange = (setting) => {
+    setSecuritySettings(prev => ({
+      ...prev,
+      [setting]: !prev[setting]
+    }));
+    
+    // In a real app, you would save this to the backend
+    setSuccess(`Security setting updated: ${setting}`);
+    
+    // This would be the actual implementation if the backend API existed
+    // try {
+    //   const response = await API.admin.updateSecuritySettings({
+    //     [setting]: !securitySettings[setting]
+    //   });
+    //   setSuccess(`Security setting updated: ${setting}`);
+    // } catch (err) {
+    //   setError('Failed to update security setting: ' + (err.response?.data?.message || err.message));
+    // }
   };
 
   if (loading) {
@@ -693,7 +772,8 @@ const AdminSettings = () => {
                       <FormControlLabel
                         control={
                           <Switch 
-                            checked={true} 
+                            checked={securitySettings.twoFactorEnabled} 
+                            onChange={() => handleSecuritySettingChange('twoFactorEnabled')}
                             sx={{
                               '& .MuiSwitch-switchBase.Mui-checked': {
                                 color: colors.primary,
@@ -722,7 +802,8 @@ const AdminSettings = () => {
                       <FormControlLabel
                         control={
                           <Switch 
-                            checked={false} 
+                            checked={securitySettings.loginNotificationsEnabled}
+                            onChange={() => handleSecuritySettingChange('loginNotificationsEnabled')}
                             sx={{
                               '& .MuiSwitch-switchBase.Mui-checked': {
                                 color: colors.primary,

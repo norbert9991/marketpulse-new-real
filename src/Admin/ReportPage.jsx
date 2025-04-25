@@ -56,6 +56,7 @@ import {
 } from '@mui/icons-material';
 import { API } from '../axiosConfig';
 import Sidebar from './Sidebar';
+import { saveAs } from 'file-saver';
 
 // Define theme colors to match the user components
 const colors = {
@@ -293,6 +294,51 @@ const ReportPage = () => {
     { name: 'Neutral', value: marketTrendsData.neutral_percentage, color: colors.warningOrange },
     { name: 'Bearish', value: marketTrendsData.bearish_percentage, color: colors.sellRed }
   ];
+
+  // Add this new function for exporting reports
+  const exportReportToCSV = (reportType) => {
+    // Determine what data to export based on report type
+    let csvData = [];
+    let fileName = '';
+    
+    if (reportType === 0) {
+      // User growth report
+      fileName = 'user_growth_report.csv';
+      // Add header row
+      csvData.push(['Date', 'User Count']);
+      // Add data rows
+      chartData.forEach(item => {
+        csvData.push([item.name, item.users]);
+      });
+    } else if (reportType === 1) {
+      // Market distribution report
+      fileName = 'market_distribution_report.csv';
+      // Add header row
+      csvData.push(['Symbol', 'Popularity']);
+      // Add data rows
+      marketData.forEach(item => {
+        csvData.push([item.name, item.value]);
+      });
+    } else {
+      // Market sentiment report
+      fileName = 'market_sentiment_report.csv';
+      // Add header row
+      csvData.push(['Sentiment', 'Percentage']);
+      // Add data rows
+      csvData.push(['Bullish', marketTrendsData.bullish_percentage]);
+      csvData.push(['Neutral', marketTrendsData.neutral_percentage]);
+      csvData.push(['Bearish', marketTrendsData.bearish_percentage]);
+      csvData.push(['Overall Trend', marketTrendsData.overall_trend]);
+      csvData.push(['Total Symbols', marketTrendsData.total_symbols]);
+    }
+    
+    // Convert to CSV format
+    const csvContent = csvData.map(row => row.join(',')).join('\n');
+    
+    // Create blob and save file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+    saveAs(blob, fileName);
+  };
 
   return (
     <PageContainer>
@@ -784,6 +830,7 @@ const ReportPage = () => {
                   <Button
                     variant="outlined"
                     startIcon={<DownloadIcon />}
+                    onClick={() => exportReportToCSV(reportType)}
                     sx={{
                       borderColor: colors.primary,
                       color: colors.primary,
