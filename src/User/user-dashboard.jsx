@@ -93,7 +93,6 @@ const UserDashboard = () => {
   console.log('UserDashboard - Component rendering');
   
   const [user, setUser] = useState(null);
-  const [anchorEl, setAnchorEl] = useState(null);
   const [favoriteMarkets, setFavoriteMarkets] = useState([]);
   const [favoritesToggled, setFavoritesToggled] = useState({});
   const [loading, setLoading] = useState(true);
@@ -318,14 +317,6 @@ const UserDashboard = () => {
     window.location.href = window.location.origin + '/#/';
   };
 
-  const handleMenuOpen = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-  };
-
   const handleMarketSelect = (symbol) => {
     setSelectedSymbol(symbol);
   };
@@ -337,11 +328,6 @@ const UserDashboard = () => {
       [symbol]: !prev[symbol]
     }));
   };
-
-  const handleSettings = () => {
-    navigate('/settings');
-    handleMenuClose();
-  }
 
   if (error) {
     return (
@@ -394,37 +380,29 @@ const UserDashboard = () => {
                   <NotificationsIcon />
                 </IconButton>
               </Tooltip>
-              <Button 
-                startIcon={<Avatar sx={{ width: 30, height: 30, backgroundColor: colors.accentBlue }}>{user.username ? user.username.charAt(0).toUpperCase() : 'U'}</Avatar>}
-                onClick={handleMenuOpen}
-                sx={{ 
-                  color: colors.primaryText,
-                  '&:hover': { backgroundColor: colors.hoverBg }
-                }}
-              >
-                {user.username || 'User'}
-              </Button>
-              <Menu
-                anchorEl={anchorEl}
-                open={Boolean(anchorEl)}
-                onClose={handleMenuClose}
-                PaperProps={{
-                  sx: {
-                    backgroundColor: colors.panelBg,
-                    border: `1px solid ${colors.borderColor}`,
-                    borderRadius: '10px',
-                    mt: 1
-                  }
-                }}
-              >
-                <MenuItem onClick={handleMenuClose} sx={{ color: colors.secondaryText }}>
-                  <PersonIcon sx={{ mr: 1 }} /> Profile
-                </MenuItem>
-                <Divider sx={{ backgroundColor: colors.borderColor }} />
-                <MenuItem onClick={handleLogout} sx={{ color: colors.sellRed }}>
-                  Logout
-                </MenuItem>
-              </Menu>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 1,
+                py: 1, 
+                px: 2, 
+                borderRadius: 2,
+                backgroundColor: `${colors.hoverBg}50`
+              }}>
+                <Avatar 
+                  sx={{ 
+                    width: 30, 
+                    height: 30, 
+                    backgroundColor: colors.accentBlue,
+                    boxShadow: `0 0 10px ${colors.accentBlue}60`
+                  }}
+                >
+                  {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
+                </Avatar>
+                <Typography sx={{ color: colors.primaryText }}>
+                  {user.username || 'User'}
+                </Typography>
+              </Box>
             </Box>
           </Toolbar>
         </AppBar>
