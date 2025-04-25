@@ -33,6 +33,89 @@ const colors = {
   shadowColor: 'rgba(0, 0, 0, 0.3)'
 };
 
+const sliderStyles = `
+  input[type=range] {
+    -webkit-appearance: none;
+    margin: 0;
+    background: transparent;
+  }
+  
+  input[type=range]:focus {
+    outline: none;
+  }
+  
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 22px;
+    width: 22px;
+    border-radius: 50%;
+    background: var(--accent-blue, #2196F3);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    margin-top: -8px;
+    border: none;
+    transition: transform 0.2s ease;
+  }
+  
+  input[type=range]::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+  }
+  
+  input[type=range]::-moz-range-thumb {
+    height: 22px;
+    width: 22px;
+    border-radius: 50%;
+    background: var(--accent-blue, #2196F3);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    border: none;
+    transition: transform 0.2s ease;
+  }
+  
+  input[type=range]::-moz-range-thumb:hover {
+    transform: scale(1.1);
+  }
+  
+  input[type=range]::-ms-thumb {
+    height: 22px;
+    width: 22px;
+    border-radius: 50%;
+    background: var(--accent-blue, #2196F3);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    border: none;
+    transition: transform 0.2s ease;
+    margin-top: 0;
+  }
+  
+  input[type=range]::-ms-thumb:hover {
+    transform: scale(1.1);
+  }
+  
+  input[type=range]::-webkit-slider-runnable-track {
+    height: 6px;
+    cursor: pointer;
+    background: transparent;
+    border-radius: 3px;
+  }
+  
+  input[type=range]::-moz-range-track {
+    height: 6px;
+    cursor: pointer;
+    background: transparent;
+    border-radius: 3px;
+  }
+  
+  input[type=range]::-ms-track {
+    height: 6px;
+    cursor: pointer;
+    background: transparent;
+    border-radius: 3px;
+    border-color: transparent;
+    color: transparent;
+  }
+`;
+
 const Trade = () => {
   // Chart references
   const chartContainerRef = useRef(null);
@@ -522,26 +605,33 @@ const Trade = () => {
               </Typography>
               
                 <Box sx={{ width: '100%', maxWidth: '600px', px: 4, position: 'relative', mt: 2 }}>
-                  {/* Track background */}
+                  {/* Progress fill effect - fixed to stay within bounds */}
                   <Box sx={{ 
                     position: 'absolute', 
-                    height: '4px', 
-                    width: '100%', 
+                    top: '50%', 
+                    left: 0, 
+                    right: 0, 
+                    height: '6px', 
+                    transform: 'translateY(-50%)',
                     backgroundColor: colors.borderColor,
-                    borderRadius: '2px',
-                    top: '50%',
-                    transform: 'translateY(-50%)'
+                    borderRadius: '3px',
+                    mx: 4
                   }} />
-                  {/* Filled portion */}
+                  
                   <Box sx={{ 
                     position: 'absolute', 
-                    height: '4px', 
-                    width: `${((simulationAmount - 1000) / (100000 - 1000)) * 100}%`, 
+                    top: '50%', 
+                    left: 0,
+                    width: `${(Math.min(simulationAmount, 100000) - 1000) / (100000 - 1000) * 100}%`, 
+                    height: '6px', 
+                    transform: 'translateY(-50%)',
                     background: `linear-gradient(90deg, ${colors.accentBlue}, ${colors.buyGreen})`,
-                    borderRadius: '2px',
-                    top: '50%',
-                    transform: 'translateY(-50%)'
+                    borderRadius: '3px',
+                    transition: 'width 0.3s ease',
+                    ml: 4,
+                    maxWidth: 'calc(100% - 32px)'
                   }} />
+                  
                   <input
                     type="range"
                     min="1000"
@@ -556,64 +646,11 @@ const Trade = () => {
                       background: 'transparent',
                       cursor: 'pointer',
                       position: 'relative',
-                      zIndex: 2
+                      zIndex: 2,
+                      '--accent-blue': colors.accentBlue
                     }}
-                    className="allocation-slider"
                   />
-                  <style jsx>{`
-                    input[type=range] {
-                      -webkit-appearance: none;
-                      margin: 0;
-                    }
-                    input[type=range]:focus {
-                      outline: none;
-                    }
-                    input[type=range]::-webkit-slider-thumb {
-                      -webkit-appearance: none;
-                      height: 22px;
-                      width: 22px;
-                      border-radius: 50%;
-                      background: ${colors.accentBlue};
-                      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-                      cursor: pointer;
-                      margin-top: -8px;
-                    }
-                    input[type=range]::-moz-range-thumb {
-                      height: 22px;
-                      width: 22px;
-                      border-radius: 50%;
-                      background: ${colors.accentBlue};
-                      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-                      cursor: pointer;
-                      border: none;
-                    }
-                    input[type=range]::-ms-thumb {
-                      height: 22px;
-                      width: 22px;
-                      border-radius: 50%;
-                      background: ${colors.accentBlue};
-                      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-                      cursor: pointer;
-                    }
-                    input[type=range]::-webkit-slider-runnable-track {
-                      height: 4px;
-                      cursor: pointer;
-                      background: transparent;
-                      border-radius: 2px;
-                    }
-                    input[type=range]::-moz-range-track {
-                      height: 4px;
-                      cursor: pointer;
-                      background: transparent;
-                      border-radius: 2px;
-                    }
-                    input[type=range]::-ms-track {
-                      height: 4px;
-                      cursor: pointer;
-                      background: transparent;
-                      border-radius: 2px;
-                    }
-                  `}</style>
+                  <style jsx global>{sliderStyles}</style>
                 </Box>
                 
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', maxWidth: '600px', px: 4, mt: 1 }}>
@@ -1573,7 +1610,8 @@ const Trade = () => {
                                   background: 'transparent',
                                   cursor: 'pointer',
                                   position: 'relative',
-                                  zIndex: 2
+                                  zIndex: 2,
+                                  '--accent-blue': colors.accentBlue
                                 }}
                               />
                             </Box>
