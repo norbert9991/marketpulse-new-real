@@ -147,7 +147,12 @@ const UserManagement = () => {
   };
   
   // Get login status visually
-  const getLoginStatus = (dateString) => {
+  const getLoginStatus = (dateString, accountStatus) => {
+    // If user is suspended, always show red dot
+    if (accountStatus === 'suspended') {
+      return { color: colors.sellRed, text: 'Suspended' };
+    }
+    
     if (!dateString) return { color: colors.secondaryText, text: 'Never logged in' };
     
     const date = new Date(dateString);
@@ -155,7 +160,7 @@ const UserManagement = () => {
     const diffMs = now - date;
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     
-    if (diffDays > 30) return { color: colors.sellRed, text: 'Inactive' };
+    if (diffDays > 30) return { color: colors.secondaryText, text: 'Inactive' };
     if (diffDays > 7) return { color: colors.warningOrange, text: 'Away' };
     return { color: colors.buyGreen, text: 'Active' };
   };
@@ -518,7 +523,7 @@ const UserManagement = () => {
                             width: 8, 
                             height: 8, 
                             borderRadius: '50%', 
-                            backgroundColor: getLoginStatus(user.last_login).color 
+                            backgroundColor: getLoginStatus(user.last_login, user.account_status).color 
                           }} />
                           <Box>
                             <Typography variant="body2">{getTimeAgo(user.last_login)}</Typography>
