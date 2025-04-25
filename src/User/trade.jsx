@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Box, Typography, Button, Paper, TextField, Select, MenuItem, FormControl, InputLabel, Tabs, Tab, Grid, Divider, IconButton, Chip, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Switch, Tooltip, InputAdornment } from '@mui/material';
+import { Box, Typography, Button, Paper, TextField, Select, MenuItem, FormControl, InputLabel, Tabs, Tab, Grid, Divider, IconButton, Chip, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Switch, Tooltip } from '@mui/material';
 import { createChart, CrosshairMode, LineStyle } from 'lightweight-charts';
 import Sidebar from './Sidebar';
 import { API } from '../axiosConfig';
@@ -12,9 +12,6 @@ import BarChartIcon from '@mui/icons-material/BarChart';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
 import CandlestickChartIcon from '@mui/icons-material/CandlestickChart';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import AddIcon from '@mui/icons-material/Add';
-import RemoveIcon from '@mui/icons-material/Remove';
-import { NumericFormat } from 'react-number-format';
 
 // Forex Trading Color Palette
 const colors = {
@@ -35,28 +32,6 @@ const colors = {
   borderColor: '#2A2F45',
   shadowColor: 'rgba(0, 0, 0, 0.3)'
 };
-
-const NumberFormatCustom = React.forwardRef(function NumberFormatCustom(props, ref) {
-  const { onChange, ...other } = props;
-
-  return (
-    <NumericFormat
-      {...other}
-      getInputRef={ref}
-      onValueChange={(values) => {
-        onChange({
-          target: {
-            name: props.name,
-            value: values.value,
-          },
-        });
-      }}
-      thousandSeparator
-      valueIsNumericString
-      prefix=""
-    />
-  );
-});
 
 const Trade = () => {
   // Chart references
@@ -532,101 +507,58 @@ const Trade = () => {
                 Choose how much virtual capital you want to start with
               </Typography>
               
-              <Box sx={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 4 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 4 }}>
                 <Typography 
                   variant="h3" 
                   sx={{ 
                     color: colors.accentBlue,
                     fontWeight: 'bold',
-                    mb: 3,
+                    mb: 2,
                     textShadow: '0 2px 8px rgba(33, 150, 243, 0.3)'
                   }}
                 >
                   ${simulationAmount.toLocaleString()}
                 </Typography>
                 
-                <Box sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  width: '100%', 
-                  maxWidth: '400px', 
-                  mb: 4, 
-                  justifyContent: 'center',
-                  backgroundColor: colors.panelBg,
-                  p: 1,
-                  borderRadius: '8px',
-                  border: `1px solid ${colors.borderColor}`
-                }}>
-                  <IconButton 
-                    onClick={() => setSimulationAmount(prev => Math.max(1000, prev - 1000))}
-                    sx={{
-                      color: colors.secondaryText,
-                      '&:hover': {
-                        color: colors.accentBlue,
-                        backgroundColor: 'rgba(33, 150, 243, 0.1)'
-                      }
-                    }}
-                  >
-                    <RemoveIcon />
-                  </IconButton>
-                  
-                  <TextField
-                    variant="standard"
-                    value={simulationAmount}
-                    onChange={(e) => {
-                      const value = parseInt(e.target.value.replace(/,/g, ''));
-                      if (!isNaN(value)) {
-                        setSimulationAmount(Math.min(100000, Math.max(1000, value)));
-                      }
-                    }}
-                    InputProps={{
-                      disableUnderline: true,
-                      inputComponent: NumberFormatCustom,
-                      startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                      sx: {
-                        fontSize: '1.5rem', 
-                        textAlign: 'center',
-                        color: colors.primaryText,
-                        mx: 2,
-                        width: '180px'
-                      }
-                    }}
-                    sx={{ 
-                      mx: 2,
-                      '& input': { 
-                        textAlign: 'center',
-                        color: colors.primaryText,
-                        fontSize: '1.5rem',
-                        fontWeight: 'bold'
-                      }
-                    }}
-                  />
-                  
-                  <IconButton 
-                    onClick={() => setSimulationAmount(prev => Math.min(100000, prev + 1000))}
-                    sx={{
-                      color: colors.secondaryText,
-                      '&:hover': {
-                        color: colors.accentBlue,
-                        backgroundColor: 'rgba(33, 150, 243, 0.1)'
-                      }
-                    }}
-                  >
-                    <AddIcon />
-                  </IconButton>
-                </Box>
-                
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', maxWidth: '400px', mb: 2 }}>
-                  <Typography variant="body2" sx={{ color: colors.secondaryText }}>Min: $1,000</Typography>
-                  <Typography variant="body2" sx={{ color: colors.secondaryText }}>Max: $100,000</Typography>
+                {/* Numeric input for simulation amount */}
+                <TextField
+                  type="number"
+                  label="Simulation Amount"
+                  variant="outlined"
+                  value={simulationAmount}
+                  onChange={e => {
+                    let val = parseInt(e.target.value) || 1000;
+                    if (val < 1000) val = 1000;
+                    if (val > 100000) val = 100000;
+                    setSimulationAmount(val);
+                  }}
+                  inputProps={{ min: 1000, max: 100000, step: 1000 }}
+                  sx={{
+                    width: 220,
+                    mt: 2,
+                    mb: 1,
+                    '& input': { color: colors.primaryText, textAlign: 'center', fontWeight: 'bold', fontSize: 24 },
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: colors.panelBg,
+                      borderRadius: '8px',
+                      borderColor: colors.borderColor,
+                    },
+                    '& .MuiInputLabel-root': { color: colors.secondaryText },
+                    '& .MuiOutlinedInput-notchedOutline': { borderColor: colors.borderColor },
+                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: colors.accentBlue },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: colors.accentBlue },
+                  }}
+                />
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', width: 220, mt: 0.5 }}>
+                  <Typography variant="body2" sx={{ color: colors.secondaryText }}>$1,000</Typography>
+                  <Typography variant="body2" sx={{ color: colors.secondaryText }}>$100,000</Typography>
                 </Box>
               </Box>
-              
+            
               {/* Preset Buttons */}
               <Typography variant="subtitle2" sx={{ color: colors.primaryText, mb: 2, textAlign: 'center' }}>
                 Popular Starting Amounts
               </Typography>
-              
               <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 5, flexWrap: 'wrap' }}>
                 {[5000, 10000, 25000, 50000].map(amount => (
                   <Button 
@@ -718,12 +650,12 @@ const Trade = () => {
                   size="large"
                   onClick={() => window.history.back()}
                   sx={{
-                    borderColor: colors.borderColor,
+                        borderColor: colors.borderColor,
                     color: colors.secondaryText,
                     px: 3,
                     py: 1.5,
                     '&:hover': {
-                      borderColor: colors.accentBlue,
+                        borderColor: colors.accentBlue,
                       backgroundColor: 'transparent',
                     }
                   }}
@@ -740,11 +672,11 @@ const Trade = () => {
                     setStep(3); // Skip step 2 and go directly to step 3 (long-term trading)
                   }}
                   sx={{
-                    backgroundColor: colors.accentBlue,
+                              backgroundColor: colors.accentBlue,
                     px: 4,
                     py: 1.5,
                     '&:hover': {
-                      backgroundColor: colors.accentBlue,
+                                backgroundColor: colors.accentBlue,
                       opacity: 0.9,
                       transform: 'translateY(-2px)',
                       boxShadow: `0 6px 12px rgba(33, 150, 243, 0.3)`
