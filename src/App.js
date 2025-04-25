@@ -68,7 +68,7 @@ function App() {
             } 
           />
           <Route 
-            path="/TransactionPage" 
+            path="/HelpCenter" 
             element={
               <ProtectedRoute requiredRole="admin">
                 <AdminFAQ />
