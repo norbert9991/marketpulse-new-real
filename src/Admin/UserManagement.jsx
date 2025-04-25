@@ -70,167 +70,31 @@ const UserManagement = () => {
   const [filterRole, setFilterRole] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [stats, setStats] = useState({
-    totalUsers: 41,  // Updated to match the actual count in SQL
-    activeUsers: 41, // Update this too assuming all users are active
-    admins: 1,
-    recentLogins: 4,
-    newUsers: 2
+    totalUsers: 0,
+    activeUsers: 0,
+    admins: 0,
+    recentLogins: 0,
+    newUsers: 0
   });
   const navigate = useNavigate();
-
-  // Helper to generate mock users when API fails
-  const generateMockUsers = () => {
-    // Create an array of 41 users as shown in the SQL file
-    const mockUsers = [];
-    
-    // Add all 41 users based on data from SQL file
-    for(let i = 1; i <= 41; i++) {
-      // First three users from SQL with real data
-      if (i === 1) {
-        mockUsers.push({
-          user_id: 1,
-          username: 'nigga',
-          email: 'negger@gmail.com',
-          role: 'user',
-          account_status: 'active',
-          last_login: '2025-04-24 10:44:37 AM',
-          created_at: '2025-03-28 11:39:18'
-        });
-      } else if (i === 2) {
-        mockUsers.push({
-          user_id: 2,
-          username: 'admin',
-          email: 'admin@example.com',
-          role: 'admin',
-          account_status: 'active',
-          last_login: '2025-04-25 2:31:53 PM',
-          created_at: '2025-03-29 08:58:02'
-        });
-      } else if (i === 3) {
-        mockUsers.push({
-          user_id: 3,
-          username: 'test',
-          email: 'tes@gmail.com',
-          role: 'user',
-          account_status: 'active',
-          last_login: '2025-04-05 11:29:29 AM',
-          created_at: '2025-04-03 10:57:07'
-        });
-      } else if (i === 4) {
-        mockUsers.push({
-          user_id: 4,
-          username: 'norbert',
-          email: 'norbert@gmail.com',
-          role: 'user',
-          account_status: 'active',
-          last_login: '2025-04-25 2:07:04 PM',
-          created_at: '2025-04-09 10:20:07'
-        });
-      } else if (i === 5) {
-        mockUsers.push({
-          user_id: 5,
-          username: 'Jerico',
-          email: 'Ytsugikuni816@gmail.com',
-          role: 'user',
-          account_status: 'active',
-          last_login: '2025-04-10 2:14:37 AM',
-          created_at: '2025-04-10 10:20:07'
-        });
-      } else if (i === 6) {
-        mockUsers.push({
-          user_id: 6,
-          username: 'Merk',
-          email: 'lagreatpoel@gmail.com',
-          role: 'user',
-          account_status: 'active',
-          last_login: '2025-04-10 2:07:41 AM',
-          created_at: '2025-04-10 10:20:07'
-        });
-      } else if (i === 7) {
-        mockUsers.push({
-          user_id: 7,
-          username: 'Ernesto',
-          email: 'unworthyturtle@gmail.com',
-          role: 'user',
-          account_status: 'active',
-          last_login: '2025-04-10 4:12:54 AM',
-          created_at: '2025-04-10 10:20:07'
-        });
-      } else if (i === 40) {
-        mockUsers.push({
-          user_id: 40,
-          username: 'Norbertus',
-          email: 'norbertcabasag999@gmail.com',
-          role: 'user',
-          account_status: 'active',
-          last_login: '2025-04-25 9:32:18 AM',
-          created_at: '2025-04-25 13:00:00'
-        });
-      } else if (i === 41) {
-        mockUsers.push({
-          user_id: 41,
-          username: 'crstop',
-          email: 'cabasag.norbertcristopher@gmail.com',
-          role: 'user',
-          account_status: 'active',
-          last_login: '2025-04-25 10:32:07 AM',
-          created_at: '2025-04-25 12:00:00'
-        });
-      } else {
-        // Generate realistic data for the rest of the users
-        const firstNames = ['John', 'Jane', 'Michael', 'Sarah', 'David', 'Maria', 'Robert', 'Anna', 'Thomas', 'Emily'];
-        const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Miller', 'Davis', 'Garcia', 'Wilson', 'Martinez'];
-        const name = `${firstNames[i % firstNames.length]} ${lastNames[i % lastNames.length]}`;
-        const username = name.toLowerCase().replace(' ', '') + i;
-        
-        mockUsers.push({
-          user_id: i,
-          username: username,
-          email: `${username}@example.com`,
-          role: i % 15 === 0 ? 'admin' : 'user', // Make every 15th user an admin
-          account_status: 'active',
-          last_login: new Date(new Date().getTime() - ((42-i) * 24 * 60 * 60 * 1000)).toISOString().replace('T', ' ').substring(0, 19),
-          created_at: new Date(new Date().getTime() - ((42-i) * 48 * 60 * 60 * 1000)).toISOString().replace('T', ' ').substring(0, 19)
-        });
-      }
-    }
-    return mockUsers;
-  };
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
+      const response = await API.admin.getUsers();
+      setUsers(response.data.users);
       
-      let userData;
-      try {
-        // Try to get data from API first
-        const response = await API.admin.getUsers();
-        userData = response.data.users;
-        
-        // If API returns less than 41 users, supplement with mock data
-        if (!userData || userData.length < 41) {
-          console.log('API returned incomplete user data, supplementing with mock data');
-          userData = generateMockUsers();
-        }
-      } catch (error) {
-        console.log('API error, using mock data instead');
-        userData = generateMockUsers();
-      }
-      
-      setUsers(userData);
-      
-      // Calculate stats based on the data
+      // Calculate stats
       const now = new Date();
       const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       
-      // Ensure we're setting the correct stats to match the UI
       setStats({
-        totalUsers: 41, // Match SQL file count
-        activeUsers: userData.filter(user => user.account_status === 'active').length,
-        admins: userData.filter(user => user.role === 'admin').length,
-        recentLogins: 4, // Match screenshot
-        newUsers: 2 // Match screenshot
+        totalUsers: response.data.users.length,
+        activeUsers: response.data.users.filter(user => user.account_status === 'active').length,
+        admins: response.data.users.filter(user => user.role === 'admin').length,
+        recentLogins: response.data.users.filter(user => new Date(user.last_login) > dayAgo).length,
+        newUsers: response.data.users.filter(user => new Date(user.created_at) > weekAgo).length
       });
       
       setLoading(false);

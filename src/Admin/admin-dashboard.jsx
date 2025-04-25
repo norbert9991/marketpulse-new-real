@@ -161,7 +161,7 @@ const MetricsGrid = styled(Box)({
 const AdminDashboard = () => {
   const [user, setUser] = useState(null);
   const [users, setUsers] = useState([]);
-  const [userCount, setUserCount] = useState(41);
+  const [userCount, setUserCount] = useState(0);
   const [userGrowthData, setUserGrowthData] = useState([]);
   const [favoriteSymbolsData, setFavoriteSymbolsData] = useState([]);
   const [marketTrendsData, setMarketTrendsData] = useState(null);
@@ -181,108 +181,28 @@ const AdminDashboard = () => {
         // Get all users
         const usersResponse = await API.admin.getUsers();
         const userData = usersResponse.data.users || [];
-        
-        // Check if we have enough user data, if not, supplement with mock data
-        if (!userData || userData.length < 41) {
-          console.log('API returned incomplete user data, using fixed count of 41');
-          setUsers(userData);
-          setUserCount(41); // Use actual count from database (SQL file)
-        } else {
-          setUsers(userData);
-          setUserCount(userData.length);
-        }
+        setUsers(userData);
+        setUserCount(userData.length);
         
         // Get user growth stats
-        try {
-          const growthResponse = await API.admin.getUserGrowth();
-          const growthData = growthResponse.data?.data || [];
-          
-          // If we don't have enough growth data or it's empty, create synthetic data
-          if (!growthData || growthData.length === 0) {
-            const syntheticGrowthData = [
-              { month: 'Oct', users: 5 },
-              { month: 'Nov', users: 8 },
-              { month: 'Dec', users: 12 },
-              { month: 'Jan \'25', users: 18 },
-              { month: 'Feb', users: 25 },
-              { month: 'Mar', users: 32 },
-              { month: 'Apr', users: 41 }
-            ];
-            setUserGrowthData(syntheticGrowthData);
-          } else {
-            setUserGrowthData(growthData);
-          }
-        } catch (growthError) {
-          console.error('Error fetching growth data:', growthError);
-          // Provide synthetic growth data on error
-          const syntheticGrowthData = [
-            { month: 'Oct', users: 5 },
-            { month: 'Nov', users: 8 },
-            { month: 'Dec', users: 12 },
-            { month: 'Jan \'25', users: 18 },
-            { month: 'Feb', users: 25 },
-            { month: 'Mar', users: 32 },
-            { month: 'Apr', users: 41 }
-          ];
-          setUserGrowthData(syntheticGrowthData);
-        }
+        const growthResponse = await API.admin.getUserGrowth();
+        setUserGrowthData(growthResponse.data?.data || []);
         
         // Get popular symbols/pairs
-        try {
-          const symbolsResponse = await API.admin.getFavoriteSymbols();
-          const symbolsData = symbolsResponse.data?.data || [];
-          setFavoriteSymbolsData(symbolsData.length > 0 ? symbolsData : [
-            { symbol: 'EURUSD=X', count: 6 },
-            { symbol: 'USDJPY=X', count: 4 },
-            { symbol: 'NZDUSD=X', count: 3 },
-            { symbol: 'USDCAD=X', count: 2 },
-            { symbol: 'GBPUSD=X', count: 2 },
-            { symbol: 'AUDUSD=X', count: 1 },
-            { symbol: 'USDCHF=X', count: 1 }
-          ]);
-        } catch (symbolsError) {
-          console.error('Error fetching symbols data:', symbolsError);
-          // Provide synthetic symbols data on error
-          setFavoriteSymbolsData([
-            { symbol: 'EURUSD=X', count: 6 },
-            { symbol: 'USDJPY=X', count: 4 },
-            { symbol: 'NZDUSD=X', count: 3 },
-            { symbol: 'USDCAD=X', count: 2 },
-            { symbol: 'GBPUSD=X', count: 2 },
-            { symbol: 'AUDUSD=X', count: 1 },
-            { symbol: 'USDCHF=X', count: 1 }
-          ]);
-        }
+        const symbolsResponse = await API.admin.getFavoriteSymbols();
+        const symbolsData = symbolsResponse.data?.data || [];
+        setFavoriteSymbolsData(symbolsData);
         
         // Get current market trends
-        try {
-          const trendsResponse = await API.admin.getMarketTrends();
-          const trendsData = trendsResponse.data?.data;
-          
-          // Check if we have valid trends data
-          if (trendsData && typeof trendsData === 'object') {
-            setMarketTrendsData(trendsData);
-          } else {
-            // Use realistic bearish market trends matching the UI
-            setMarketTrendsData({
-              overall_trend: 'bearish',
-              bullish_percentage: 0,
-              bearish_percentage: 100,
-              neutral_percentage: 0,
-              total_symbols: 4
-            });
-          }
-        } catch (trendsError) {
-          console.error('Error fetching market trends:', trendsError);
-          // Provide synthetic market trends on error (matching UI)
-          setMarketTrendsData({
-            overall_trend: 'bearish',
-            bullish_percentage: 0,
-            bearish_percentage: 100,
-            neutral_percentage: 0,
-            total_symbols: 4
-          });
-        }
+        const trendsResponse = await API.admin.getMarketTrends();
+        const trendsData = trendsResponse.data?.data || {
+          overall_trend: 'neutral',
+          bullish_percentage: 33,
+          bearish_percentage: 33,
+          neutral_percentage: 34,
+          total_symbols: 30
+        };
+        setMarketTrendsData(trendsData);
         
         // Set chart loading false after small delay to allow rendering
         setTimeout(() => {
@@ -295,40 +215,17 @@ const AdminDashboard = () => {
         setError('Failed to load dashboard data');
         setLoading(false);
         
-        // Set values for metrics on error that match the database
-        setUserCount(41); // Match SQL total
+        // Set default values for metrics on error
+        setUserCount(0);
         setUsers([]);
-        setFavoriteSymbolsData([
-          { symbol: 'EURUSD=X', count: 6 },
-          { symbol: 'USDJPY=X', count: 4 },
-          { symbol: 'NZDUSD=X', count: 3 },
-          { symbol: 'USDCAD=X', count: 2 },
-          { symbol: 'GBPUSD=X', count: 2 },
-          { symbol: 'AUDUSD=X', count: 1 },
-          { symbol: 'USDCHF=X', count: 1 }
-        ]);
+        setFavoriteSymbolsData([]);
         setMarketTrendsData({
-          overall_trend: 'bearish',
-          bullish_percentage: 0,
-          bearish_percentage: 100,
-          neutral_percentage: 0,
-          total_symbols: 4
+          overall_trend: 'neutral',
+          bullish_percentage: 33,
+          bearish_percentage: 33,
+          neutral_percentage: 34,
+          total_symbols: 0
         });
-        
-        // Create synthetic growth data
-        const syntheticGrowthData = [
-          { month: 'Oct', users: 5 },
-          { month: 'Nov', users: 8 },
-          { month: 'Dec', users: 12 },
-          { month: 'Jan \'25', users: 18 },
-          { month: 'Feb', users: 25 },
-          { month: 'Mar', users: 32 },
-          { month: 'Apr', users: 41 }
-        ];
-        setUserGrowthData(syntheticGrowthData);
-        
-        // Set chart loading to false
-        setLoadingChart(false);
       }
     };
 
