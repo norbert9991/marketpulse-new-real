@@ -368,7 +368,7 @@ const ReportPage = () => {
           <Grid item xs={12} sm={6} md={4}>
             <StatCard>
               <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, height: 200, width: 350 }}>
                   <Typography variant="h6" sx={{ color: colors.secondaryText, fontSize: '0.9rem' }}>
                     Total Users
                   </Typography>
@@ -413,7 +413,7 @@ const ReportPage = () => {
           <Grid item xs={12} sm={6} md={4}>
             <StatCard>
               <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, height: 200, width: 350 }}>
                   <Typography variant="h6" sx={{ color: colors.secondaryText, fontSize: '0.9rem' }}>
                     Active Users
                   </Typography>
@@ -447,7 +447,7 @@ const ReportPage = () => {
           <Grid item xs={12} sm={6} md={4}>
             <StatCard>
               <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, height: 200, width: 350 }}>
                   <Typography variant="h6" sx={{ color: colors.secondaryText, fontSize: '0.9rem' }}>
                     Market Sentiment
                   </Typography>
@@ -519,7 +519,7 @@ const ReportPage = () => {
         <Grid container spacing={3}>
           {/* Main Chart */}
           <Grid item xs={12}>
-            <StyledCard>
+            <StyledCard sx={{ height: 600, width: 200 }}>
               <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText, fontWeight: 600 }}>
                 {reportType === 0 ? 'User Growth Trend' : 
                  reportType === 1 ? 'Popular Currency Pairs' : 
@@ -593,7 +593,7 @@ const ReportPage = () => {
                           color: colors.primaryText
                         }} 
                       />
-                      <Bar 
+                      <Bar  
                         dataKey="value" 
                         name="Percentage"
                         radius={[4, 4, 0, 0]}
