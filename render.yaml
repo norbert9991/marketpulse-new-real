@@ -35,9 +35,9 @@ services:
       - key: EMAIL_USERNAME
         value: norbertcabasag999@gmail.com  # Replace with your actual Gmail address
       - key: EMAIL_PASSWORD
-        value: ojzn uvzd asgb kggy  # Replace with your app password (not your regular password)
+        value: ojznuvzdasgbkggy  # App password without spaces
       - key: DEFAULT_FROM_EMAIL
-        value: no-reply@marketpulse.com
+        value: norbertcabasag999@gmail.com
   
   - type: web
     name: marketpulse-frontend
