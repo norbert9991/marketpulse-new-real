@@ -27,6 +27,17 @@ services:
         value: 5432
       - key: FRONTEND_URL
         value: https://marketpulse-new-real-static-2-0.onrender.com
+      # Email configuration
+      - key: SMTP_SERVER
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: 587
+      - key: EMAIL_USERNAME
+        value: norbertcabasag999@gmail.com  # Replace with your actual Gmail address
+      - key: EMAIL_PASSWORD
+        value: ojzn uvzd asgb kggy  # Replace with your app password (not your regular password)
+      - key: DEFAULT_FROM_EMAIL
+        value: no-reply@marketpulse.com
   
   - type: web
     name: marketpulse-frontend
