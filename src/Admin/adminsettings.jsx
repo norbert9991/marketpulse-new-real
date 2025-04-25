@@ -178,10 +178,9 @@ const AdminSettings = () => {
         return;
       }
 
-      const response = await API.admin.getUsers();
+      const response = await API.admin.getAdmins();
       
-      const adminUsers = response.data.users ? response.data.users.filter(user => user.role === 'admin') : [];
-      setAdmins(adminUsers);
+      setAdmins(response.data.admins || []);
     } catch (err) {
       setError('Failed to load admins: ' + err.message);
     } finally {
@@ -290,8 +289,7 @@ const AdminSettings = () => {
       const response = await API.admin.addAdmin({
         username: newAdmin.username,
         email: newAdmin.email,
-        password: newAdmin.password,
-        role: 'admin'
+        password: newAdmin.password
       });
 
       setAdminCreationSuccess(true);
@@ -322,12 +320,7 @@ const AdminSettings = () => {
   const handleDeleteAdmin = async (adminId) => {
     try {
       if (window.confirm('Are you sure you want to delete this admin?')) {
-        let response;
-        try {
-          response = await API.admin.deleteAdmin(adminId);
-        } catch (deleteErr) {
-          response = await API.admin.updateUserStatus(adminId, 'deleted');
-        }
+        const response = await API.admin.deleteAdmin(adminId);
         
         setSuccess('Admin deleted successfully');
         
@@ -875,7 +868,7 @@ const AdminSettings = () => {
                         </TableCell>
                         <TableCell sx={{ borderBottom: `1px solid ${colors.borderColor}` }}>
                           <Chip 
-                            label={admin.status || admin.account_status || 'active'} 
+                            label={admin.account_status || 'active'} 
                             size="small" 
                             sx={{ 
                               backgroundColor: `${colors.buyGreen}22`,

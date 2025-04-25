@@ -487,7 +487,7 @@ const ReportPage = () => {
                     </Typography>
                     <Typography variant="caption" sx={{ color: colors.secondaryText }}>
                       Bearish
-                    </Typography>
+                  </Typography>
                   </Box>
                 </Box>
               </CardContent>
@@ -600,18 +600,18 @@ const ReportPage = () => {
           <Grid container item spacing={3}>
             <Grid item xs={12} md={6}>
               <StyledCard sx={{ height: 600, width: 550 }}>
-                <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText, fontWeight: 600 }}>
+              <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText, fontWeight: 600 }}>
                   {reportType === 0 ? 'User Distribution by Role' : 
                    reportType === 1 ? 'Currency Pair Distribution' : 
                    'Market Sentiment Breakdown'}
-                </Typography>
-                
-                {loading ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
-                    <CircularProgress size={40} sx={{ color: colors.primary }} />
-                  </Box>
-                ) : (
-                  <ResponsiveContainer width="100%" height={350}>
+              </Typography>
+              
+              {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
+                  <CircularProgress size={40} sx={{ color: colors.primary }} />
+                </Box>
+              ) : (
+                <ResponsiveContainer width="100%" height={350}>
                     {reportType === 0 ? (
                       <PieChart>
                         <Pie
@@ -640,30 +640,30 @@ const ReportPage = () => {
                         />
                       </PieChart>
                     ) : reportType === 1 ? (
-                      <PieChart>
-                        <Pie
-                          data={marketData}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
+                  <PieChart>
+                    <Pie
+                      data={marketData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
                           outerRadius={120}
-                          fill="#8884d8"
-                          dataKey="value"
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        >
-                          {marketData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Legend />
-                        <RechartsTooltip 
-                          contentStyle={{ 
-                            backgroundColor: colors.cardBg,
-                            borderColor: colors.borderColor,
-                            color: colors.primaryText
-                          }} 
-                        />
-                      </PieChart>
+                      fill="#8884d8"
+                      dataKey="value"
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {marketData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Legend />
+                    <RechartsTooltip 
+                      contentStyle={{ 
+                        backgroundColor: colors.cardBg,
+                        borderColor: colors.borderColor,
+                        color: colors.primaryText
+                      }} 
+                    />
+                  </PieChart>
                     ) : (
                       <RadarChart cx="50%" cy="50%" outerRadius="70%" data={[
                         { subject: 'Bullish', A: marketTrendsData.bullish_percentage, fullMark: 100 },
@@ -684,8 +684,8 @@ const ReportPage = () => {
                         />
                       </RadarChart>
                     )}
-                  </ResponsiveContainer>
-                )}
+                </ResponsiveContainer>
+              )}
               </StyledCard>
             </Grid>
             
@@ -766,7 +766,7 @@ const ReportPage = () => {
                     )}
                   </ResponsiveContainer>
                 )}
-              </StyledCard>
+            </StyledCard>
             </Grid>
           </Grid>
         </Grid>
