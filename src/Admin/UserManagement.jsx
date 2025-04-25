@@ -176,6 +176,11 @@ const UserManagement = () => {
     const matchesStatus = filterStatus === 'all' || user.account_status === filterStatus;
     
     return matchesSearch && matchesRole && matchesStatus;
+  })
+  // Sort users by ID in ascending order
+  .sort((a, b) => {
+    // Convert to numbers to ensure correct numeric sorting
+    return parseInt(a.user_id) - parseInt(b.user_id);
   });
 
   if (loading) {
@@ -444,7 +449,8 @@ const UserManagement = () => {
                         size="small"
                         onClick={() => setFilterStatus('suspended')}
                         sx={{ 
-                          flex: 1,
+                          flex: 1.4,
+                          minWidth: '110px',
                           backgroundColor: filterStatus === 'suspended' ? colors.sellRed : 'transparent',
                           color: filterStatus === 'suspended' ? colors.primaryText : colors.sellRed,
                           borderColor: colors.sellRed,

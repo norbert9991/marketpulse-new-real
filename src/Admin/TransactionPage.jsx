@@ -1,20 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Chip, TextField, Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress, Alert, Avatar, Grid, IconButton, Tooltip, Card, CardContent } from '@mui/material';
+import { Box, Typography, Paper, TextField, Button, CircularProgress, Avatar, Grid, IconButton, Tooltip, Chip, Card, CardContent, Divider, List, ListItem, ListItemText, ListItemIcon } from '@mui/material';
 import { styled } from '@mui/system';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import Sidebar from './Sidebar';
 import { 
   Search as SearchIcon,
+  Send as SendIcon,
+  QuestionAnswer as QuestionAnswerIcon,
   Refresh as RefreshIcon,
-  CheckCircle as CheckCircleIcon,
-  Cancel as CancelIcon,
-  ArrowUpward as ArrowUpwardIcon,
-  ArrowDownward as ArrowDownwardIcon,
-  FilterList as FilterListIcon,
-  MoreVert as MoreVertIcon,
-  AttachMoney as AttachMoneyIcon
+  HelpOutline as HelpOutlineIcon,
+  Settings as SettingsIcon,
+  Security as SecurityIcon,
+  People as PeopleIcon,
+  BarChart as BarChartIcon,
+  Dashboard as DashboardIcon,
+  MenuBook as MenuBookIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon
 } from '@mui/icons-material';
-import { API } from '../axiosConfig';
 
 // Define theme colors to match the user components
 const colors = {
@@ -28,7 +30,9 @@ const colors = {
   buyGreen: '#4caf50',
   sellRed: '#f44336',
   hoverBg: '#2a2a2a',
-  warningOrange: '#ffa500'
+  warningOrange: '#ffa500',
+  userBlue: '#2196f3',
+  adminPurple: '#9c27b0'
 };
 
 const PageContainer = styled('div')({
@@ -60,194 +64,276 @@ const StyledCard = styled(Paper)({
   }
 });
 
-const StatusIndicator = styled(Box)(({ status }) => ({
-  width: 10,
-  height: 10,
-  borderRadius: '50%',
-  marginRight: '8px',
-  backgroundColor: 
-    status === 'approved' ? colors.buyGreen : 
-    status === 'rejected' ? colors.sellRed : 
-    colors.warningOrange,
-  boxShadow: 
-    status === 'approved' ? `0 0 10px ${colors.buyGreen}40` : 
-    status === 'rejected' ? `0 0 10px ${colors.sellRed}40` : 
-    `0 0 10px ${colors.warningOrange}40`
+const ChatContainer = styled(Box)({
+  display: 'flex',
+  flexDirection: 'column',
+  height: '60vh',
+  backgroundColor: `${colors.background}`,
+  borderRadius: '10px',
+  border: `1px solid ${colors.borderColor}`,
+  padding: '16px',
+  marginBottom: '16px',
+  overflow: 'hidden'
+});
+
+const MessagesContainer = styled(Box)({
+  flexGrow: 1,
+  overflowY: 'auto',
+  marginBottom: '16px',
+  padding: '8px',
+  '&::-webkit-scrollbar': {
+    width: '8px'
+  },
+  '&::-webkit-scrollbar-track': {
+    backgroundColor: colors.background
+  },
+  '&::-webkit-scrollbar-thumb': {
+    backgroundColor: colors.borderColor,
+    borderRadius: '4px',
+    '&:hover': {
+      backgroundColor: colors.primary
+    }
+  }
+});
+
+const MessageBubble = styled(Box)(({ isUser }) => ({
+  maxWidth: '75%',
+  padding: '12px 16px',
+  borderRadius: isUser ? '18px 18px 0 18px' : '18px 18px 18px 0',
+  backgroundColor: isUser ? `${colors.primary}22` : colors.cardBg,
+  border: `1px solid ${isUser ? colors.primary : colors.borderColor}`,
+  marginBottom: '8px',
+  alignSelf: isUser ? 'flex-end' : 'flex-start',
+  wordBreak: 'break-word',
+  position: 'relative'
 }));
 
-const TransactionPage = () => {
-  const [requests, setRequests] = useState([]);
-  const [selectedRequest, setSelectedRequest] = useState(null);
-  const [performanceData, setPerformanceData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
+const FAQItem = styled(Box)({
+  border: `1px solid ${colors.borderColor}`,
+  borderRadius: '8px',
+  marginBottom: '8px',
+  overflow: 'hidden',
+  transition: 'all 0.3s ease',
+  '&:hover': {
+    borderColor: colors.primary
+  }
+});
+
+const FAQQuestion = styled(Box)({
+  padding: '12px 16px',
+  backgroundColor: colors.cardBg,
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  cursor: 'pointer'
+});
+
+const FAQAnswer = styled(Box)({
+  padding: '16px',
+  borderTop: `1px solid ${colors.borderColor}`,
+  backgroundColor: `${colors.hoverBg}50`
+});
+
+// Sample FAQ data
+const faqData = [
+  {
+    id: 1,
+    question: "How do I manage user accounts?",
+    answer: "Navigate to the User Management page from the sidebar. From there, you can view all users, search for specific users, filter by role or status, and suspend or activate accounts as needed.",
+    category: "users"
+  },
+  {
+    id: 2,
+    question: "How can I monitor platform usage?",
+    answer: "The Admin Dashboard provides real-time statistics about platform usage, including user counts, active symbols, and market trends. Check the System Overview section for server and API status.",
+    category: "dashboard"
+  },
+  {
+    id: 3,
+    question: "How do I handle user support requests?",
+    answer: "When users submit support tickets, they will appear in the Support section. You can review, respond, and mark them as resolved from there. Make sure to provide detailed and helpful responses.",
+    category: "support"
+  },
+  {
+    id: 4,
+    question: "How can I add new forex pairs to the system?",
+    answer: "Go to the System Settings page and select the 'Markets' tab. From there, you can add new forex pairs by specifying the base and quote currencies. The system will automatically start tracking the new pair.",
+    category: "settings"
+  },
+  {
+    id: 5,
+    question: "What security features are available for administrators?",
+    answer: "Administrators have access to two-factor authentication, login history tracking, and IP restriction features. Go to your profile settings to enable these security features for your admin account.",
+    category: "security"
+  },
+  {
+    id: 6,
+    question: "How can I view system performance metrics?",
+    answer: "The System Health section in the Admin Dashboard provides real-time information about server status, API response times, database performance, and overall system load.",
+    category: "performance"
+  },
+  {
+    id: 7,
+    question: "How do I update the platform's terms of service?",
+    answer: "Navigate to System Settings → Legal Documents. You can edit the terms of service, privacy policy, and other legal documents from there. Changes will be reflected immediately to all users.",
+    category: "settings"
+  }
+];
+
+// Sample chatbot responses
+const botResponses = {
+  greeting: "Hello! I'm your Admin Assistant. How can I help you today? You can ask me any questions about managing the MarketPulse platform.",
+  fallback: "I'm not sure I understand that question. Could you try rephrasing it or select a topic from the suggestions below?",
+  categories: {
+    users: "What would you like to know about user management? I can help with account management, permissions, or user data.",
+    security: "I can provide information about platform security, permissions, authentication, or data protection measures.",
+    dashboard: "The dashboard shows key metrics about platform performance. What specific information are you looking for?",
+    settings: "System settings control how the platform operates. What specific setting would you like to learn about?",
+    support: "User support requests are managed through the support ticket system. What would you like to know about handling support?",
+    performance: "I can help with understanding system performance metrics and optimization techniques."
+  }
+};
+
+const suggestedQuestions = [
+  "How do I add a new administrator?",
+  "Where can I see login activity?",
+  "How do I update market information?",
+  "What analytics are available for user behavior?",
+  "How do I reset a user's password?"
+];
+
+const AdminFAQ = () => {
+  const [messages, setMessages] = useState([
+    { text: botResponses.greeting, isUser: false, timestamp: new Date() }
+  ]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [expandedFaq, setExpandedFaq] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [feedback, setFeedback] = useState('');
-  const [refreshing, setRefreshing] = useState(false);
-  const [performanceHistory, setPerformanceHistory] = useState([]);
-  const [historyLoading, setHistoryLoading] = useState(true);
-  const [historyError, setHistoryError] = useState(null);
-  const [stats, setStats] = useState({
-    totalRequests: 0,
-    pendingRequests: 0,
-    approvedRequests: 0,
-    rejectedRequests: 0,
-    totalAmount: 0
-  });
+  const [filteredFaq, setFilteredFaq] = useState(faqData);
+  const [activeCategory, setActiveCategory] = useState(null);
+  
+  const messagesEndRef = React.useRef(null);
 
   useEffect(() => {
-    fetchRequests();
-  }, []);
+    scrollToBottom();
+  }, [messages]);
 
-  const fetchRequests = async () => {
-    try {
-      setLoading(true);
-      const response = await API.balance.getRequests();
-      const requestsData = response.data.requests || [];
-      setRequests(requestsData);
-      
-      // Calculate stats
-      const totalAmount = requestsData.reduce((sum, req) => sum + (parseFloat(req.amount) || 0), 0);
-      setStats({
-        totalRequests: requestsData.length,
-        pendingRequests: requestsData.filter(req => req.status === 'pending').length,
-        approvedRequests: requestsData.filter(req => req.status === 'approved').length,
-        rejectedRequests: requestsData.filter(req => req.status === 'rejected').length,
-        totalAmount: totalAmount.toFixed(2)
-      });
-      
-      // Generate chart data
-      const chartData = [
-        { name: 'Pending', value: requestsData.filter(req => req.status === 'pending').length },
-        { name: 'Approved', value: requestsData.filter(req => req.status === 'approved').length },
-        { name: 'Rejected', value: requestsData.filter(req => req.status === 'rejected').length }
-      ];
-      setPerformanceData(chartData);
-      
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching balance requests:', error);
-      setError('Failed to load balance requests');
-      setLoading(false);
+  useEffect(() => {
+    if (searchTerm) {
+      setFilteredFaq(faqData.filter(item => 
+        item.question.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        item.answer.toLowerCase().includes(searchTerm.toLowerCase())
+      ));
+    } else if (activeCategory) {
+      setFilteredFaq(faqData.filter(item => item.category === activeCategory));
+    } else {
+      setFilteredFaq(faqData);
     }
+  }, [searchTerm, activeCategory]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const fetchPerformanceHistory = async (accountId) => {
-    try {
-      setHistoryLoading(true);
-      const response = await API.balance.getHistory(accountId);
-      setPerformanceHistory(response.data.history || []);
-      setHistoryLoading(false);
-    } catch (error) {
-      console.error('Error fetching performance history:', error);
-      setHistoryError('Failed to load performance history');
-      setHistoryLoading(false);
-    }
-  };
-
-  const handleReview = (request) => {
-    setSelectedRequest(request);
-    fetchPerformanceHistory(request.account_id);
-    setDialogOpen(true);
-  };
-
-  const handleApprove = async () => {
-    try {
-      setActionLoading(true);
-      await API.balance.approve({
-        request_id: selectedRequest.request_id,
-        feedback: feedback,
-      });
-      setDialogOpen(false);
-      fetchRequests();
-      setFeedback('');
-    } catch (error) {
-      console.error('Error approving request:', error);
-      setError('Failed to approve request');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleReject = async () => {
-    try {
-      setActionLoading(true);
-      await API.balance.reject({
-        request_id: selectedRequest.request_id,
-        feedback: feedback,
-      });
-      setDialogOpen(false);
-      fetchRequests();
-      setFeedback('');
-    } catch (error) {
-      console.error('Error rejecting request:', error);
-      setError('Failed to reject request');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleRefresh = () => {
-    fetchRequests();
-  };
-
-  const filteredRequests = requests.filter(request => {
-    const matchesSearch = request.username.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         request.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         request.account_id.toString().includes(searchTerm);
-    const matchesStatus = filterStatus === 'all' || request.status === filterStatus;
-    return matchesSearch && matchesStatus;
-  });
-
-  // Add a function to format date/time nicely
-  const formatDateTime = (dateTimeStr) => {
-    if (!dateTimeStr) return 'N/A';
-    const date = new Date(dateTimeStr);
-    return date.toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  // Add a function to get time ago
-  const getTimeAgo = (dateString) => {
-    if (!dateString) return 'N/A';
+  const handleSendMessage = () => {
+    if (!input.trim()) return;
     
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now - date;
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    // Add user message
+    const userMessage = { text: input, isUser: true, timestamp: new Date() };
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setLoading(true);
     
-    if (diffDays > 30) return `${Math.floor(diffDays / 30)} months ago`;
-    if (diffDays > 0) return `${diffDays} days ago`;
-    if (diffHours > 0) return `${diffHours} hours ago`;
-    if (diffMinutes > 0) return `${diffMinutes} minutes ago`;
-    return 'Just now';
+    // Simulate bot processing
+    setTimeout(() => {
+      let botResponse;
+      
+      // Simple keyword matching for demo
+      const lowerInput = input.toLowerCase();
+      if (lowerInput.includes('user') || lowerInput.includes('account') || lowerInput.includes('suspend')) {
+        botResponse = findRelevantFaq('users');
+      } else if (lowerInput.includes('security') || lowerInput.includes('password') || lowerInput.includes('authentication')) {
+        botResponse = findRelevantFaq('security');
+      } else if (lowerInput.includes('dashboard') || lowerInput.includes('metrics') || lowerInput.includes('statistics')) {
+        botResponse = findRelevantFaq('dashboard');
+      } else if (lowerInput.includes('settings') || lowerInput.includes('configuration') || lowerInput.includes('setup')) {
+        botResponse = findRelevantFaq('settings');
+      } else if (lowerInput.includes('support') || lowerInput.includes('help') || lowerInput.includes('ticket')) {
+        botResponse = findRelevantFaq('support');
+      } else if (lowerInput.includes('performance') || lowerInput.includes('speed') || lowerInput.includes('optimization')) {
+        botResponse = findRelevantFaq('performance');
+      } else {
+        botResponse = { text: botResponses.fallback, isUser: false, timestamp: new Date(), showSuggestions: true };
+      }
+      
+      setMessages(prev => [...prev, botResponse]);
+      setLoading(false);
+    }, 1000);
   };
 
-  // Define colors for pie chart
-  const COLORS = [colors.warningOrange, colors.buyGreen, colors.sellRed];
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSendMessage();
+    }
+  };
+
+  const findRelevantFaq = (category) => {
+    const relevantFaqs = faqData.filter(item => item.category === category);
+    if (relevantFaqs.length > 0) {
+      const randomIndex = Math.floor(Math.random() * relevantFaqs.length);
+      const selectedFaq = relevantFaqs[randomIndex];
+      return {
+        text: `${selectedFaq.answer}\n\nWould you like to know more about ${category}?`,
+        isUser: false,
+        timestamp: new Date(),
+        category: category
+      };
+    }
+    return { text: botResponses.fallback, isUser: false, timestamp: new Date() };
+  };
+
+  const handleSuggestedQuestion = (question) => {
+    setInput(question);
+    // Auto send after short delay to simulate clicking
+    setTimeout(() => {
+      handleSendMessage();
+    }, 100);
+  };
+
+  const handleCategoryClick = (category) => {
+    setActiveCategory(category === activeCategory ? null : category);
+    setSearchTerm('');
+  };
+
+  const toggleFaq = (id) => {
+    setExpandedFaq(expandedFaq === id ? null : id);
+  };
+
+  const formatTime = (date) => {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const categories = [
+    { id: 'users', name: 'User Management', icon: <PeopleIcon /> },
+    { id: 'dashboard', name: 'Dashboard', icon: <DashboardIcon /> },
+    { id: 'security', name: 'Security', icon: <SecurityIcon /> },
+    { id: 'settings', name: 'System Settings', icon: <SettingsIcon /> },
+    { id: 'support', name: 'Support', icon: <QuestionAnswerIcon /> },
+    { id: 'performance', name: 'Performance', icon: <BarChartIcon /> }
+  ];
 
   return (
     <PageContainer>
       <Sidebar />
       <MainContent>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h4" sx={{ color: colors.primaryText }}>
-            Balance Management
+          <Typography variant="h4" sx={{ color: colors.primaryText, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <HelpOutlineIcon fontSize="large" sx={{ color: colors.primary }} />
+            Admin FAQ & Support
           </Typography>
-          <Tooltip title="Refresh requests">
+          <Tooltip title="Refresh">
             <IconButton 
-              onClick={handleRefresh}
-              disabled={refreshing}
               sx={{ 
                 color: colors.primary,
                 '&:hover': { backgroundColor: `${colors.primary}22` }
@@ -257,235 +343,274 @@ const TransactionPage = () => {
             </IconButton>
           </Tooltip>
         </Box>
-        
-        {error && (
-          <Alert severity="error" sx={{ mb: 3, backgroundColor: `${colors.sellRed}22`, color: colors.sellRed, border: `1px solid ${colors.sellRed}` }}>
-            {error}
-          </Alert>
-        )}
 
-        {/* Dashboard stats at the top */}
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} sm={6} md={3}>
-            <StyledCard>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Avatar sx={{ bgcolor: `${colors.primary}22`, mr: 1.5 }}>
-                  <AttachMoneyIcon sx={{ color: colors.primary }} />
-                </Avatar>
-                <Typography variant="h6" sx={{ color: colors.primaryText }}>Total Requests</Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'baseline' }}>
-                <Typography variant="h3" sx={{ color: colors.primary, fontWeight: 600 }}>
-                  {stats.totalRequests}
-                </Typography>
-                <Typography variant="body2" sx={{ color: colors.secondaryText, ml: 1 }}>
-                  requests
-                </Typography>
-              </Box>
-            </StyledCard>
-          </Grid>
-          
-          <Grid item xs={12} sm={6} md={3}>
-            <StyledCard>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Avatar sx={{ bgcolor: `${colors.warningOrange}22`, mr: 1.5 }}>
-                  <FilterListIcon sx={{ color: colors.warningOrange }} />
-                </Avatar>
-                <Typography variant="h6" sx={{ color: colors.primaryText }}>Pending</Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'baseline' }}>
-                <Typography variant="h3" sx={{ color: colors.warningOrange, fontWeight: 600 }}>
-                  {stats.pendingRequests}
-                </Typography>
-                <Typography variant="body2" sx={{ color: colors.secondaryText, ml: 1 }}>
-                  awaiting action
-                </Typography>
-              </Box>
-            </StyledCard>
-          </Grid>
-          
-          <Grid item xs={12} sm={6} md={3}>
-            <StyledCard>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Avatar sx={{ bgcolor: `${colors.buyGreen}22`, mr: 1.5 }}>
-                  <CheckCircleIcon sx={{ color: colors.buyGreen }} />
-                </Avatar>
-                <Typography variant="h6" sx={{ color: colors.primaryText }}>Approved</Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'baseline' }}>
-                <Typography variant="h3" sx={{ color: colors.buyGreen, fontWeight: 600 }}>
-                  {stats.approvedRequests}
-                </Typography>
-                <Typography variant="body2" sx={{ color: colors.secondaryText, ml: 1 }}>
-                  requests
-                </Typography>
-              </Box>
-            </StyledCard>
-          </Grid>
-          
-          <Grid item xs={12} sm={6} md={3}>
-            <StyledCard>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Avatar sx={{ bgcolor: `${colors.sellRed}22`, mr: 1.5 }}>
-                  <CancelIcon sx={{ color: colors.sellRed }} />
-                </Avatar>
-                <Typography variant="h6" sx={{ color: colors.primaryText }}>Rejected</Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'baseline' }}>
-                <Typography variant="h3" sx={{ color: colors.sellRed, fontWeight: 600 }}>
-                  {stats.rejectedRequests}
-                </Typography>
-                <Typography variant="body2" sx={{ color: colors.secondaryText, ml: 1 }}>
-                  requests
-                </Typography>
-              </Box>
-            </StyledCard>
-          </Grid>
-        </Grid>
-        
-        {/* Overview charts section */}
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} md={8}>
-            <Paper sx={{ 
-              p: 3, 
-              backgroundColor: colors.cardBg,
-              border: `1px solid ${colors.borderColor}`,
-              borderRadius: '10px',
-              height: '100%'
-            }}>
-              <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText }}>Request Timeline</Typography>
+        <Grid container spacing={3}>
+          {/* Left sidebar with categories and FAQ search */}
+          <Grid item xs={12} md={3}>
+            <Paper sx={{ p: 2, backgroundColor: colors.cardBg, borderRadius: '10px', border: `1px solid ${colors.borderColor}` }}>
+              <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText }}>FAQ Categories</Typography>
               
-              {loading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
-                  <CircularProgress size={40} sx={{ color: colors.primary }} />
-                </Box>
-              ) : (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart
-                    data={[
-                      { name: 'Pending', value: stats.pendingRequests, color: colors.warningOrange },
-                      { name: 'Approved', value: stats.approvedRequests, color: colors.buyGreen },
-                      { name: 'Rejected', value: stats.rejectedRequests, color: colors.sellRed }
-                    ]}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+              <List component="nav" sx={{ mb: 3 }}>
+                {categories.map((category) => (
+                  <ListItem 
+                    button 
+                    key={category.id}
+                    selected={activeCategory === category.id}
+                    onClick={() => handleCategoryClick(category.id)}
+                    sx={{
+                      borderRadius: '8px',
+                      mb: 0.5,
+                      backgroundColor: activeCategory === category.id ? `${colors.primary}22` : 'transparent',
+                      '&:hover': {
+                        backgroundColor: activeCategory === category.id ? `${colors.primary}33` : colors.hoverBg
+                      }
+                    }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" stroke={colors.borderColor} />
-                    <XAxis dataKey="name" stroke={colors.secondaryText} />
-                    <YAxis stroke={colors.secondaryText} />
-                    <RechartsTooltip 
-                      contentStyle={{ 
-                        backgroundColor: colors.cardBg, 
-                        border: `1px solid ${colors.borderColor}`,
-                        color: colors.primaryText,
-                        borderRadius: '8px'
+                    <ListItemIcon sx={{ color: activeCategory === category.id ? colors.primary : colors.secondaryText, minWidth: '40px' }}>
+                      {category.icon}
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary={category.name} 
+                      primaryTypographyProps={{ 
+                        color: activeCategory === category.id ? colors.primary : colors.primaryText,
+                        fontWeight: activeCategory === category.id ? 'medium' : 'normal'
                       }} 
                     />
-                    <Bar dataKey="value" name="Count">
-                      {[
-                        { name: 'Pending', value: stats.pendingRequests, color: colors.warningOrange },
-                        { name: 'Approved', value: stats.approvedRequests, color: colors.buyGreen },
-                        { name: 'Rejected', value: stats.rejectedRequests, color: colors.sellRed }
-                      ].map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
+                  </ListItem>
+                ))}
+              </List>
+              
+              <Typography variant="h6" sx={{ mt: 3, mb: 2, color: colors.primaryText }}>Popular Questions</Typography>
+              <List component="nav">
+                {suggestedQuestions.slice(0, 3).map((question, index) => (
+                  <ListItem 
+                    button 
+                    key={index}
+                    onClick={() => handleSuggestedQuestion(question)}
+                    sx={{
+                      borderRadius: '8px',
+                      mb: 0.5,
+                      '&:hover': {
+                        backgroundColor: colors.hoverBg
+                      }
+                    }}
+                  >
+                    <ListItemIcon sx={{ color: colors.secondary, minWidth: '40px' }}>
+                      <MenuBookIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary={question} 
+                      primaryTypographyProps={{ 
+                        color: colors.primaryText,
+                        fontSize: '0.9rem'
+                      }} 
+                    />
+                  </ListItem>
+                ))}
+              </List>
             </Paper>
           </Grid>
           
-          <Grid item xs={12} md={4}>
-            <Paper sx={{ 
-              p: 3, 
-              backgroundColor: colors.cardBg,
-              border: `1px solid ${colors.borderColor}`,
-              borderRadius: '10px',
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column'
-            }}>
-              <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText }}>Request Distribution</Typography>
+          {/* Middle section with admin assistant chat */}
+          <Grid item xs={12} md={5}>
+            <Paper sx={{ p: 2, backgroundColor: colors.cardBg, borderRadius: '10px', border: `1px solid ${colors.borderColor}` }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Avatar sx={{ bgcolor: colors.primary, mr: 1.5 }}>
+                  <QuestionAnswerIcon />
+                </Avatar>
+                <Typography variant="h6" sx={{ color: colors.primaryText }}>Admin Assistant</Typography>
+              </Box>
               
-              {loading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1 }}>
-                  <CircularProgress size={40} sx={{ color: colors.primary }} />
-                </Box>
-              ) : (
-                <>
-                  <Box sx={{ height: 220, display: 'flex', justifyContent: 'center' }}>
-                    <ResponsiveContainer width="100%" height={220}>
-                      <PieChart>
-                        <Pie
-                          data={performanceData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={60}
-                          outerRadius={80}
-                          paddingAngle={5}
-                          dataKey="value"
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                          labelLine={false}
-                        >
-                          {performanceData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </Box>
-                  
-                  <Box sx={{ mt: 'auto' }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                      <Typography variant="body2" sx={{ color: colors.secondaryText }}>
-                        Total Balance Requested:
-                      </Typography>
-                      <Typography variant="body1" sx={{ fontWeight: 'bold', color: colors.primaryText }}>
-                        ${stats.totalAmount}
-                      </Typography>
-                    </Box>
-                    <Button 
-                      variant="outlined"
-                      fullWidth
-                      size="small"
-                      onClick={handleRefresh}
+              <ChatContainer>
+                <MessagesContainer>
+                  {messages.map((message, index) => (
+                    <Box 
+                      key={index} 
                       sx={{ 
-                        borderColor: colors.primary,
-                        color: colors.primary,
-                        '&:hover': {
-                          backgroundColor: `${colors.primary}22`,
-                          borderColor: colors.primary
-                        }
+                        display: 'flex', 
+                        flexDirection: 'column',
+                        alignItems: message.isUser ? 'flex-end' : 'flex-start',
+                        mb: 2
                       }}
                     >
-                      View Full Report
-                    </Button>
-                  </Box>
-                </>
-              )}
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                        {!message.isUser && (
+                          <Avatar 
+                            sx={{ 
+                              width: 24, 
+                              height: 24, 
+                              bgcolor: colors.primary,
+                              mr: 1,
+                              fontSize: '0.8rem'
+                            }}
+                          >
+                            A
+                          </Avatar>
+                        )}
+                        <Typography variant="caption" sx={{ color: colors.secondaryText }}>
+                          {message.isUser ? 'You' : 'Assistant'} • {formatTime(message.timestamp)}
+                        </Typography>
+                        {message.isUser && (
+                          <Avatar 
+                            sx={{ 
+                              width: 24, 
+                              height: 24, 
+                              bgcolor: colors.secondary,
+                              ml: 1,
+                              fontSize: '0.8rem'
+                            }}
+                          >
+                            A
+                          </Avatar>
+                        )}
+                      </Box>
+                      
+                      <MessageBubble isUser={message.isUser}>
+                        <Typography variant="body2" sx={{ color: colors.primaryText, whiteSpace: 'pre-line' }}>
+                          {message.text}
+                        </Typography>
+                      </MessageBubble>
+                      
+                      {message.showSuggestions && (
+                        <Box sx={{ alignSelf: 'flex-start', mt: 1, mb: 2 }}>
+                          <Typography variant="caption" sx={{ color: colors.secondaryText, mb: 1, display: 'block' }}>
+                            Try asking:
+                          </Typography>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                            {suggestedQuestions.map((question, idx) => (
+                              <Chip 
+                                key={idx}
+                                label={question}
+                                onClick={() => handleSuggestedQuestion(question)}
+                                sx={{ 
+                                  backgroundColor: `${colors.primary}22`,
+                                  color: colors.primaryText,
+                                  borderRadius: '16px',
+                                  '&:hover': {
+                                    backgroundColor: `${colors.primary}44`
+                                  }
+                                }}
+                              />
+                            ))}
+                          </Box>
+                        </Box>
+                      )}
+                      
+                      {message.category && (
+                        <Box sx={{ alignSelf: 'flex-start', mt: 1 }}>
+                          <Button 
+                            variant="outlined" 
+                            size="small"
+                            onClick={() => handleCategoryClick(message.category)}
+                            sx={{ 
+                              borderColor: colors.primary,
+                              color: colors.primary,
+                              '&:hover': {
+                                backgroundColor: `${colors.primary}22`
+                              }
+                            }}
+                          >
+                            View related FAQs
+                          </Button>
+                        </Box>
+                      )}
+                    </Box>
+                  ))}
+                  {loading && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                      <Avatar 
+                        sx={{ 
+                          width: 24, 
+                          height: 24, 
+                          bgcolor: colors.primary,
+                          mr: 1,
+                          fontSize: '0.8rem'
+                        }}
+                      >
+                        A
+                      </Avatar>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center',
+                        backgroundColor: colors.cardBg,
+                        borderRadius: '18px',
+                        padding: '8px 16px',
+                        border: `1px solid ${colors.borderColor}`
+                      }}>
+                        <CircularProgress size={16} sx={{ color: colors.primary, mr: 1 }} />
+                        <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                          Thinking...
+                        </Typography>
+                      </Box>
+                    </Box>
+                  )}
+                  <div ref={messagesEndRef} />
+                </MessagesContainer>
+                
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <TextField
+                    fullWidth
+                    placeholder="Ask a question about admin features..."
+                    variant="outlined"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    InputProps={{
+                      sx: {
+                        color: colors.primaryText,
+                        backgroundColor: colors.hoverBg,
+                        borderRadius: '24px',
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderColor: colors.borderColor
+                        },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: colors.primary
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: colors.primary
+                        }
+                      }
+                    }}
+                  />
+                  <Button 
+                    variant="contained" 
+                    color="primary" 
+                    onClick={handleSendMessage}
+                    disabled={!input.trim()}
+                    sx={{ 
+                      borderRadius: '24px',
+                      minWidth: '50px',
+                      width: '50px',
+                      height: '50px',
+                      padding: 0
+                    }}
+                  >
+                    <SendIcon />
+                  </Button>
+                </Box>
+              </ChatContainer>
             </Paper>
           </Grid>
-        </Grid>
-        
-        {/* Request list */}
-        <Paper sx={{ 
-          p: 3, 
-          backgroundColor: colors.cardBg,
-          border: `1px solid ${colors.borderColor}`,
-          borderRadius: '10px'
-        }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Typography variant="h5" sx={{ color: colors.primaryText }}>Balance Requests</Typography>
-            
-            <Box sx={{ display: 'flex', gap: 2 }}>
+          
+          {/* Right section with FAQ list */}
+          <Grid item xs={12} md={4}>
+            <Paper sx={{ p: 2, backgroundColor: colors.cardBg, borderRadius: '10px', border: `1px solid ${colors.borderColor}` }}>
+              <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText }}>
+                {activeCategory ? `${categories.find(c => c.id === activeCategory)?.name} FAQs` : 'Frequently Asked Questions'}
+              </Typography>
+              
               <TextField
-                placeholder="Search requests..."
+                fullWidth
+                placeholder="Search FAQs..."
                 variant="outlined"
                 size="small"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                sx={{ mb: 2 }}
                 InputProps={{
-                  startAdornment: <SearchIcon sx={{ mr: 1, color: colors.secondaryText }} />,
+                  startAdornment: (
+                    <SearchIcon sx={{ color: colors.secondaryText, mr: 1 }} />
+                  ),
                   sx: {
                     color: colors.primaryText,
                     '& .MuiOutlinedInput-notchedOutline': {
@@ -493,314 +618,58 @@ const TransactionPage = () => {
                     },
                     '&:hover .MuiOutlinedInput-notchedOutline': {
                       borderColor: colors.primary
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: colors.primary
                     }
                   }
                 }}
               />
               
-              <Box>
-                <Button 
-                  variant={filterStatus === 'all' ? 'contained' : 'outlined'} 
-                  size="small"
-                  onClick={() => setFilterStatus('all')}
-                  sx={{ 
-                    mr: 1,
-                    backgroundColor: filterStatus === 'all' ? colors.primary : 'transparent',
-                    color: filterStatus === 'all' ? '#fff' : colors.primary,
-                    borderColor: colors.primary,
-                    '&:hover': {
-                      backgroundColor: filterStatus === 'all' ? colors.primary : `${colors.primary}22`
-                    }
-                  }}
-                >
-                  All
-                </Button>
-                <Button 
-                  variant={filterStatus === 'pending' ? 'contained' : 'outlined'} 
-                  size="small"
-                  onClick={() => setFilterStatus('pending')}
-                  sx={{ 
-                    mr: 1,
-                    backgroundColor: filterStatus === 'pending' ? colors.warningOrange : 'transparent',
-                    color: filterStatus === 'pending' ? '#fff' : colors.warningOrange,
-                    borderColor: colors.warningOrange,
-                    '&:hover': {
-                      backgroundColor: filterStatus === 'pending' ? colors.warningOrange : `${colors.warningOrange}22`
-                    }
-                  }}
-                >
-                  Pending
-                </Button>
-              </Box>
-            </Box>
-          </Box>
-          
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>Request ID</TableCell>
-                  <TableCell sx={{ color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>User</TableCell>
-                  <TableCell sx={{ color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>Amount</TableCell>
-                  <TableCell sx={{ color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>Status</TableCell>
-                  <TableCell sx={{ color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>Date</TableCell>
-                  <TableCell sx={{ color: colors.secondaryText, borderBottom: `1px solid ${colors.borderColor}` }}>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredRequests && filteredRequests.length > 0 ? (
-                  filteredRequests.map((request) => (
-                    <TableRow key={request.request_id} sx={{ '&:hover': { backgroundColor: colors.hoverBg } }}>
-                      <TableCell sx={{ color: colors.primaryText, borderBottom: `1px solid ${colors.borderColor}` }}>
-                        #{request.request_id}
-                      </TableCell>
-                      <TableCell sx={{ color: colors.primaryText, borderBottom: `1px solid ${colors.borderColor}` }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <Avatar sx={{ width: 32, height: 32, bgcolor: colors.primary, mr: 1.5 }}>
-                            {request.username ? request.username.charAt(0).toUpperCase() : 'U'}
-                          </Avatar>
-                          <Box>
-                            <Typography variant="body2">{request.username}</Typography>
-                            <Typography variant="caption" color={colors.secondaryText}>{request.email}</Typography>
-                          </Box>
-                        </Box>
-                      </TableCell>
-                      <TableCell sx={{ color: colors.primaryText, borderBottom: `1px solid ${colors.borderColor}` }}>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          ${parseFloat(request.amount).toFixed(2)}
+              <Box sx={{ maxHeight: '60vh', overflowY: 'auto', pr: 1 }}>
+                {filteredFaq.length > 0 ? (
+                  filteredFaq.map((faq) => (
+                    <FAQItem key={faq.id}>
+                      <FAQQuestion onClick={() => toggleFaq(faq.id)}>
+                        <Typography variant="body1" sx={{ color: colors.primaryText, fontWeight: expandedFaq === faq.id ? 'medium' : 'normal' }}>
+                          {faq.question}
                         </Typography>
-                      </TableCell>
-                      <TableCell sx={{ borderBottom: `1px solid ${colors.borderColor}` }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <StatusIndicator status={request.status} />
-                          <Chip 
-                            label={request.status.toUpperCase()} 
-                            size="small"
-                            sx={{ 
-                              backgroundColor: 
-                                request.status === 'approved' ? `${colors.buyGreen}22` : 
-                                request.status === 'rejected' ? `${colors.sellRed}22` : 
-                                `${colors.warningOrange}22`,
-                              color: 
-                                request.status === 'approved' ? colors.buyGreen : 
-                                request.status === 'rejected' ? colors.sellRed : 
-                                colors.warningOrange,
-                              fontWeight: 500
-                            }}
-                          />
-                        </Box>
-                      </TableCell>
-                      <TableCell sx={{ color: colors.primaryText, borderBottom: `1px solid ${colors.borderColor}` }}>
-                        <Box>
-                          <Typography variant="body2">{formatDateTime(request.created_at)}</Typography>
-                          <Typography variant="caption" color={colors.secondaryText}>{getTimeAgo(request.created_at)}</Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell sx={{ borderBottom: `1px solid ${colors.borderColor}` }}>
-                        {request.status === 'pending' ? (
-                          <Box sx={{ display: 'flex', gap: 1 }}>
-                            <Button 
-                              variant="outlined" 
-                              size="small" 
-                              onClick={() => handleReview(request)}
+                        {expandedFaq === faq.id ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                      </FAQQuestion>
+                      {expandedFaq === faq.id && (
+                        <FAQAnswer>
+                          <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                            {faq.answer}
+                          </Typography>
+                          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+                            <Chip 
+                              label={faq.category} 
+                              size="small"
                               sx={{ 
-                                color: colors.primary,
-                                borderColor: colors.primary,
-                                '&:hover': {
-                                  backgroundColor: `${colors.primary}22`
-                                }
+                                backgroundColor: `${colors.primary}22`,
+                                color: colors.primaryText
                               }}
-                            >
-                              Review
-                            </Button>
+                              onClick={() => handleCategoryClick(faq.category)}
+                            />
                           </Box>
-                        ) : (
-                          <Button 
-                            variant="outlined" 
-                            size="small" 
-                            onClick={() => handleReview(request)}
-                            sx={{ 
-                              color: colors.secondaryText,
-                              borderColor: colors.borderColor,
-                              '&:hover': {
-                                backgroundColor: colors.hoverBg
-                              }
-                            }}
-                          >
-                            Details
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
+                        </FAQAnswer>
+                      )}
+                    </FAQItem>
                   ))
                 ) : (
-                  <TableRow>
-                    <TableCell colSpan={6} align="center" sx={{ color: colors.secondaryText, py: 4, borderBottom: `1px solid ${colors.borderColor}` }}>
-                      {loading ? (
-                        <CircularProgress size={32} sx={{ color: colors.primary }} />
-                      ) : (
-                        'No balance requests found'
-                      )}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Paper>
-
-        <Dialog 
-          open={dialogOpen} 
-          onClose={() => setDialogOpen(false)} 
-          maxWidth="md" 
-          fullWidth
-          PaperProps={{
-            sx: {
-              backgroundColor: colors.cardBg,
-              color: colors.primaryText,
-              border: `1px solid ${colors.borderColor}`
-            }
-          }}
-        >
-          <DialogTitle sx={{ borderBottom: `1px solid ${colors.borderColor}` }}>Review Balance Request</DialogTitle>
-          <DialogContent dividers sx={{ borderColor: colors.borderColor }}>
-            {selectedRequest && (
-              <Box>
-                <Typography variant="h6" gutterBottom sx={{ color: colors.primaryText }}>
-                  User: {selectedRequest.username} (Account #{selectedRequest.account_id})
-                </Typography>
-                <Typography gutterBottom sx={{ color: colors.primaryText }}>
-                  Requested Amount: <strong style={{ color: colors.primary }}>${selectedRequest.amount.toFixed(2)}</strong>
-                </Typography>
-                <Typography gutterBottom sx={{ color: colors.primaryText }}>
-                  Current Balance: <strong style={{ color: colors.primary }}>${selectedRequest.current_balance.toFixed(2)}</strong>
-                </Typography>
-                <Typography gutterBottom sx={{ color: colors.primaryText }}>
-                  Margin Used: <strong style={{ color: colors.primary }}>${selectedRequest.margin_used.toFixed(2)}</strong>
-                </Typography>
-
-                <Box sx={{ mt: 4, mb: 2 }}>
-                  <Typography variant="h6" gutterBottom sx={{ color: colors.primaryText }}>
-                    Performance History
-                  </Typography>
-                  {performanceHistory.length > 0 ? (
-                    <Box sx={{ height: 300, width: '100%' }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                        <LineChart
-                          data={performanceHistory}
-                          margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                        >
-                          <CartesianGrid strokeDasharray="3 3" stroke={colors.borderColor} />
-                          <XAxis 
-                            dataKey="date" 
-                            stroke={colors.secondaryText}
-                            tick={{ fill: colors.secondaryText }}
-                          />
-                          <YAxis 
-                            stroke={colors.secondaryText}
-                            tick={{ fill: colors.secondaryText }}
-                          />
-                          <Tooltip 
-                            contentStyle={{ 
-                              backgroundColor: colors.cardBg, 
-                              border: `1px solid ${colors.borderColor}`,
-                              color: colors.primaryText
-                            }}
-                          />
-                        <Legend />
-                          <Line 
-                            type="monotone" 
-                            dataKey="profit" 
-                            stroke={colors.buyGreen} 
-                            activeDot={{ r: 8 }} 
-                          />
-                          <Line 
-                            type="monotone" 
-                            dataKey="loss" 
-                            stroke={colors.sellRed} 
-                            activeDot={{ r: 8 }} 
-                          />
-                      </LineChart>
-                    </ResponsiveContainer>
+                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <Typography variant="body1" sx={{ color: colors.secondaryText }}>
+                      No FAQs match your search
+                    </Typography>
                   </Box>
-                  ) : (
-                    <Typography sx={{ color: colors.secondaryText }}>No performance data available</Typography>
-                  )}
-                </Box>
-
-                  <TextField
-                  fullWidth
-                    multiline
-                  rows={4}
-                  label="Feedback"
-                  variant="outlined"
-                    value={feedback}
-                    onChange={(e) => setFeedback(e.target.value)}
-                  sx={{ mt: 2 }}
-                  InputProps={{
-                    sx: {
-                      color: colors.primaryText,
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.borderColor
-                      },
-                      '&:hover .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.primary
-                      },
-                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                        borderColor: colors.primary
-                      }
-                    }
-                  }}
-                  InputLabelProps={{
-                    sx: { color: colors.secondaryText }
-                  }}
-                />
+                )}
               </Box>
-            )}
-          </DialogContent>
-          <DialogActions sx={{ borderTop: `1px solid ${colors.borderColor}`, p: 2 }}>
-            <Button 
-              onClick={() => setDialogOpen(false)}
-              sx={{ 
-                color: colors.secondaryText,
-                '&:hover': {
-                  backgroundColor: colors.hoverBg
-                }
-              }}
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleReject} 
-              disabled={actionLoading}
-              startIcon={<CancelIcon />}
-              sx={{ 
-                color: colors.sellRed,
-                '&:hover': {
-                  backgroundColor: `${colors.sellRed}22`
-                }
-              }}
-            >
-              Reject
-            </Button>
-            <Button 
-              onClick={handleApprove} 
-              disabled={actionLoading}
-              startIcon={<CheckCircleIcon />}
-              sx={{ 
-                color: colors.buyGreen,
-                '&:hover': {
-                  backgroundColor: `${colors.buyGreen}22`
-                }
-              }}
-            >
-              Approve
-            </Button>
-          </DialogActions>
-        </Dialog>
+            </Paper>
+          </Grid>
+        </Grid>
       </MainContent>
     </PageContainer>
   );
 };
 
-export default TransactionPage;
+export default AdminFAQ;
