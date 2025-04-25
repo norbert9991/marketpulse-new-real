@@ -394,11 +394,6 @@ const UserDashboard = () => {
                   <NotificationsIcon />
                 </IconButton>
               </Tooltip>
-              <Tooltip title="Settings">
-                <IconButton sx={{ color: colors.secondaryText }} onClick={handleSettings}>
-                  <SettingsIcon />
-                </IconButton>
-              </Tooltip>
               <Button 
                 startIcon={<Avatar sx={{ width: 30, height: 30, backgroundColor: colors.accentBlue }}>{user.username ? user.username.charAt(0).toUpperCase() : 'U'}</Avatar>}
                 onClick={handleMenuOpen}
@@ -424,9 +419,6 @@ const UserDashboard = () => {
               >
                 <MenuItem onClick={handleMenuClose} sx={{ color: colors.secondaryText }}>
                   <PersonIcon sx={{ mr: 1 }} /> Profile
-                </MenuItem>
-                <MenuItem onClick={handleSettings} sx={{ color: colors.secondaryText }}>
-                  <SettingsIcon sx={{ mr: 1 }} /> Settings
                 </MenuItem>
                 <Divider sx={{ backgroundColor: colors.borderColor }} />
                 <MenuItem onClick={handleLogout} sx={{ color: colors.sellRed }}>
