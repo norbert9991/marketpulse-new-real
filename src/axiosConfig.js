@@ -55,11 +55,10 @@ window.marketPulseApiCache = apiCache;
 // Create a custom axios instance
 const axiosInstance = axios.create({
   baseURL: API_URL,
-  withCredentials: true, // Set to true to include cookies for CORS requests
+  withCredentials: false, // Set to false for cross-domain requests without credentials
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
-    'X-Requested-With': 'XMLHttpRequest'
   }
 });
 

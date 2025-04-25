@@ -20,13 +20,14 @@ load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fb4f4f255fb38f23a4d7379be97c837b')
 
-# Get frontend URL from environment variable
-FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://marketpulse-new-real-static-2-0.onrender.com')
-print(f"Allowing CORS for: {FRONTEND_URL}")
+# Get allowed origins from environment variable or default to all
+allowed_origins = os.environ.get('CORS_ALLOWED_ORIGINS', '*')
+if allowed_origins != '*':
+    allowed_origins = allowed_origins.split(',')
 
-# Configure CORS to allow requests from specific origins
+# Configure CORS to allow requests from specified origins
 CORS(app, 
-     origins=[FRONTEND_URL, "https://marketpulse-new-real-static-2-0.onrender.com", "https://marketpulse-new-real-2-0.onrender.com"],
+     origins=allowed_origins,
      allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
      supports_credentials=True)
@@ -34,16 +35,10 @@ CORS(app,
 # Additional CORS headers added to all responses
 @app.after_request
 def after_request(response):
-    # Check if the request came from the allowed origin
-    origin = request.headers.get('Origin')
-    if origin in [FRONTEND_URL, "https://marketpulse-new-real-static-2-0.onrender.com", "https://marketpulse-new-real-2-0.onrender.com"]:
-        response.headers.add('Access-Control-Allow-Origin', origin)
-    
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
+    # Don't add Access-Control-Allow-Origin since flask-cors is already adding it
+    # response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
     response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-    response.headers.add('Access-Control-Allow-Credentials', 'true')
-    response.headers.add('Access-Control-Max-Age', '3600')  # Cache preflight response for 1 hour
-    
     return response
 
 # Register blueprints
