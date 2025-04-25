@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Box, Typography, Button, Paper, TextField, Select, MenuItem, FormControl, InputLabel, Tabs, Tab, Grid, Divider, IconButton, Chip, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Switch, Tooltip } from '@mui/material';
+import { Box, Typography, Button, Paper, TextField, Select, MenuItem, FormControl, InputLabel, Tabs, Tab, Grid, Divider, IconButton, Chip, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Switch, Tooltip, InputAdornment } from '@mui/material';
 import { createChart, CrosshairMode, LineStyle } from 'lightweight-charts';
 import Sidebar from './Sidebar';
 import { API } from '../axiosConfig';
@@ -12,6 +12,9 @@ import BarChartIcon from '@mui/icons-material/BarChart';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
 import CandlestickChartIcon from '@mui/icons-material/CandlestickChart';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import AddIcon from '@mui/icons-material/Add';
+import RemoveIcon from '@mui/icons-material/Remove';
+import { NumericFormat } from 'react-number-format';
 
 // Forex Trading Color Palette
 const colors = {
@@ -33,88 +36,27 @@ const colors = {
   shadowColor: 'rgba(0, 0, 0, 0.3)'
 };
 
-const sliderStyles = `
-  input[type=range] {
-    -webkit-appearance: none;
-    margin: 0;
-    background: transparent;
-  }
-  
-  input[type=range]:focus {
-    outline: none;
-  }
-  
-  input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    height: 22px;
-    width: 22px;
-    border-radius: 50%;
-    background: var(--accent-blue, #2196F3);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    cursor: pointer;
-    margin-top: -8px;
-    border: none;
-    transition: transform 0.2s ease;
-  }
-  
-  input[type=range]::-webkit-slider-thumb:hover {
-    transform: scale(1.1);
-  }
-  
-  input[type=range]::-moz-range-thumb {
-    height: 22px;
-    width: 22px;
-    border-radius: 50%;
-    background: var(--accent-blue, #2196F3);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    cursor: pointer;
-    border: none;
-    transition: transform 0.2s ease;
-  }
-  
-  input[type=range]::-moz-range-thumb:hover {
-    transform: scale(1.1);
-  }
-  
-  input[type=range]::-ms-thumb {
-    height: 22px;
-    width: 22px;
-    border-radius: 50%;
-    background: var(--accent-blue, #2196F3);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    cursor: pointer;
-    border: none;
-    transition: transform 0.2s ease;
-    margin-top: 0;
-  }
-  
-  input[type=range]::-ms-thumb:hover {
-    transform: scale(1.1);
-  }
-  
-  input[type=range]::-webkit-slider-runnable-track {
-    height: 6px;
-    cursor: pointer;
-    background: transparent;
-    border-radius: 3px;
-  }
-  
-  input[type=range]::-moz-range-track {
-    height: 6px;
-    cursor: pointer;
-    background: transparent;
-    border-radius: 3px;
-  }
-  
-  input[type=range]::-ms-track {
-    height: 6px;
-    cursor: pointer;
-    background: transparent;
-    border-radius: 3px;
-    border-color: transparent;
-    color: transparent;
-  }
-`;
+const NumberFormatCustom = React.forwardRef(function NumberFormatCustom(props, ref) {
+  const { onChange, ...other } = props;
+
+  return (
+    <NumericFormat
+      {...other}
+      getInputRef={ref}
+      onValueChange={(values) => {
+        onChange({
+          target: {
+            name: props.name,
+            value: values.value,
+          },
+        });
+      }}
+      thousandSeparator
+      valueIsNumericString
+      prefix=""
+    />
+  );
+});
 
 const Trade = () => {
   // Chart references
@@ -557,7 +499,6 @@ const Trade = () => {
         {showTutorial && <TutorialOverlay />}
         
         {step === 1 && (
-          // Step 1: Set simulation amount
           <Box sx={{ maxWidth: '800px', mx: 'auto', mt: 5 }}>
             <Paper 
               sx={{ 
@@ -568,21 +509,21 @@ const Trade = () => {
                 boxShadow: `0 12px 24px ${colors.shadowColor}`,
               }}
             >
-        <Typography 
-          variant="h4" 
-          sx={{ 
-            color: colors.primaryText,
-            fontWeight: 'bold',
+              <Typography 
+                variant="h4" 
+                sx={{ 
+                  color: colors.primaryText,
+                  fontWeight: 'bold',
                   mb: 1,
                   textAlign: 'center'
-          }}
-        >
+                }}
+              >
                 Set Your Simulation Amount
-        </Typography>
-        
+              </Typography>
+              
               <Typography 
                 variant="body1" 
-              sx={{ 
+                sx={{ 
                   color: colors.secondaryText,
                   mb: 4,
                   textAlign: 'center'
@@ -592,70 +533,92 @@ const Trade = () => {
               </Typography>
               
               <Box sx={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 4 }}>
-              <Typography 
+                <Typography 
                   variant="h3" 
-                sx={{ 
+                  sx={{ 
                     color: colors.accentBlue,
-                  fontWeight: 'bold',
-                    mb: 2,
+                    fontWeight: 'bold',
+                    mb: 3,
                     textShadow: '0 2px 8px rgba(33, 150, 243, 0.3)'
-                }}
-              >
+                  }}
+                >
                   ${simulationAmount.toLocaleString()}
-              </Typography>
-              
-                <Box sx={{ width: '100%', maxWidth: '600px', px: 4, position: 'relative', mt: 2 }}>
-                  {/* Progress fill effect - fixed to stay within bounds */}
-                  <Box sx={{ 
-                    position: 'absolute', 
-                    top: '50%', 
-                    left: 0, 
-                    right: 0, 
-                    height: '6px', 
-                    transform: 'translateY(-50%)',
-                    backgroundColor: colors.borderColor,
-                    borderRadius: '3px',
-                    mx: 4
-                  }} />
+                </Typography>
+                
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  width: '100%', 
+                  maxWidth: '400px', 
+                  mb: 4, 
+                  justifyContent: 'center',
+                  backgroundColor: colors.panelBg,
+                  p: 1,
+                  borderRadius: '8px',
+                  border: `1px solid ${colors.borderColor}`
+                }}>
+                  <IconButton 
+                    onClick={() => setSimulationAmount(prev => Math.max(1000, prev - 1000))}
+                    sx={{
+                      color: colors.secondaryText,
+                      '&:hover': {
+                        color: colors.accentBlue,
+                        backgroundColor: 'rgba(33, 150, 243, 0.1)'
+                      }
+                    }}
+                  >
+                    <RemoveIcon />
+                  </IconButton>
                   
-                  <Box sx={{ 
-                    position: 'absolute', 
-                    top: '50%', 
-                    left: 0,
-                    width: `${(Math.min(simulationAmount, 100000) - 1000) / (100000 - 1000) * 100}%`, 
-                    height: '6px', 
-                    transform: 'translateY(-50%)',
-                    background: `linear-gradient(90deg, ${colors.accentBlue}, ${colors.buyGreen})`,
-                    borderRadius: '3px',
-                    transition: 'width 0.3s ease',
-                    ml: 4,
-                    maxWidth: 'calc(100% - 32px)'
-                  }} />
-                  
-                  <input
-                    type="range"
-                    min="1000"
-                    max="100000"
-                    step="1000"
+                  <TextField
+                    variant="standard"
                     value={simulationAmount}
-                    onChange={(e) => setSimulationAmount(parseFloat(e.target.value))}
-                    style={{ 
-                      width: '100%',
-                      height: '24px',
-                      appearance: 'none',
-                      background: 'transparent',
-                      cursor: 'pointer',
-                      position: 'relative',
-                      zIndex: 2,
-                      '--accent-blue': colors.accentBlue
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value.replace(/,/g, ''));
+                      if (!isNaN(value)) {
+                        setSimulationAmount(Math.min(100000, Math.max(1000, value)));
+                      }
+                    }}
+                    InputProps={{
+                      disableUnderline: true,
+                      inputComponent: NumberFormatCustom,
+                      startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                      sx: {
+                        fontSize: '1.5rem', 
+                        textAlign: 'center',
+                        color: colors.primaryText,
+                        mx: 2,
+                        width: '180px'
+                      }
+                    }}
+                    sx={{ 
+                      mx: 2,
+                      '& input': { 
+                        textAlign: 'center',
+                        color: colors.primaryText,
+                        fontSize: '1.5rem',
+                        fontWeight: 'bold'
+                      }
                     }}
                   />
-                  <style jsx global>{sliderStyles}</style>
+                  
+                  <IconButton 
+                    onClick={() => setSimulationAmount(prev => Math.min(100000, prev + 1000))}
+                    sx={{
+                      color: colors.secondaryText,
+                      '&:hover': {
+                        color: colors.accentBlue,
+                        backgroundColor: 'rgba(33, 150, 243, 0.1)'
+                      }
+                    }}
+                  >
+                    <AddIcon />
+                  </IconButton>
                 </Box>
                 
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', maxWidth: '600px', px: 4, mt: 1 }}>
-                  <Typography variant="body2" sx={{ color: colors.secondaryText }}>$1,000</Typography>
-                  <Typography variant="body2" sx={{ color: colors.secondaryText }}>$100,000</Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', maxWidth: '400px', mb: 2 }}>
+                  <Typography variant="body2" sx={{ color: colors.secondaryText }}>Min: $1,000</Typography>
+                  <Typography variant="body2" sx={{ color: colors.secondaryText }}>Max: $100,000</Typography>
                 </Box>
               </Box>
               
@@ -671,7 +634,7 @@ const Trade = () => {
                     variant={simulationAmount === amount ? "contained" : "outlined"}
                     onClick={() => setSimulationAmount(amount)}
                     sx={{ 
-                        borderColor: colors.borderColor,
+                      borderColor: colors.borderColor,
                       color: simulationAmount === amount ? colors.primaryText : colors.secondaryText,
                       backgroundColor: simulationAmount === amount ? colors.accentBlue : 'transparent',
                       '&:hover': {
@@ -755,12 +718,12 @@ const Trade = () => {
                   size="large"
                   onClick={() => window.history.back()}
                   sx={{
-                        borderColor: colors.borderColor,
+                    borderColor: colors.borderColor,
                     color: colors.secondaryText,
                     px: 3,
                     py: 1.5,
                     '&:hover': {
-                        borderColor: colors.accentBlue,
+                      borderColor: colors.accentBlue,
                       backgroundColor: 'transparent',
                     }
                   }}
@@ -777,11 +740,11 @@ const Trade = () => {
                     setStep(3); // Skip step 2 and go directly to step 3 (long-term trading)
                   }}
                   sx={{
-                              backgroundColor: colors.accentBlue,
+                    backgroundColor: colors.accentBlue,
                     px: 4,
                     py: 1.5,
                     '&:hover': {
-                                backgroundColor: colors.accentBlue,
+                      backgroundColor: colors.accentBlue,
                       opacity: 0.9,
                       transform: 'translateY(-2px)',
                       boxShadow: `0 6px 12px rgba(33, 150, 243, 0.3)`
@@ -1610,8 +1573,7 @@ const Trade = () => {
                                   background: 'transparent',
                                   cursor: 'pointer',
                                   position: 'relative',
-                                  zIndex: 2,
-                                  '--accent-blue': colors.accentBlue
+                                  zIndex: 2
                                 }}
                               />
                             </Box>
