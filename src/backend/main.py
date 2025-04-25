@@ -8,7 +8,6 @@ from user_settings_routes import settings_bp  # Import the settings blueprint
 from market_analysis_routes import market_analysis_bp  # Import the market analysis blueprint
 from admin_settings_routes import admin_settings_bp  # Import the admin settings blueprint
 from news_routes import news_bp  # Import the news blueprint
-from password_reset_routes import password_reset_bp  # Import the password reset blueprint
 from db_connection import db_manager
 from market_analysis import analyze_stock
 import os
@@ -20,14 +19,9 @@ load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fb4f4f255fb38f23a4d7379be97c837b')
 
-# Get allowed origins from environment variable or default to all
-allowed_origins = os.environ.get('CORS_ALLOWED_ORIGINS', '*')
-if allowed_origins != '*':
-    allowed_origins = allowed_origins.split(',')
-
-# Configure CORS to allow requests from specified origins
+# Configure CORS to allow requests from any origin to ensure maximum compatibility
 CORS(app, 
-     origins=allowed_origins,
+     origins=["*"],
      allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
      supports_credentials=True)
@@ -49,7 +43,6 @@ app.register_blueprint(settings_bp)  # Register the settings blueprint
 app.register_blueprint(market_analysis_bp)  # Register the market analysis blueprint
 app.register_blueprint(admin_settings_bp)  # Register the admin settings blueprint
 app.register_blueprint(news_bp)  # Register the news blueprint
-app.register_blueprint(password_reset_bp)  # Register the password reset blueprint
 
 # Root route for testing
 @app.route('/', methods=['GET'])
