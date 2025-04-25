@@ -12,21 +12,9 @@ from db_connection import db_manager
 from market_analysis import analyze_stock
 import os
 from dotenv import load_dotenv
-import logging
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
-logger.info("Environment variables loaded from .env file")
-
-# Print key environment variables for debugging (without exposing sensitive data)
-logger.info(f"API environment: {os.getenv('FLASK_ENV', 'not set')}")
-logger.info(f"Email Configuration: SMTP_SERVER={os.getenv('SMTP_SERVER', 'not set')}")
-logger.info(f"Email Username configured: {'Yes' if os.getenv('EMAIL_USERNAME') else 'No'}")
-logger.info(f"Email Password configured: {'Yes' if os.getenv('EMAIL_PASSWORD') else 'No'}")
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fb4f4f255fb38f23a4d7379be97c837b')

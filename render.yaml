@@ -35,7 +35,7 @@ services:
       - key: EMAIL_USERNAME
         value: norbertcabasag999@gmail.com  # Replace with your actual Gmail address
       - key: EMAIL_PASSWORD
-        value: ojznuvzdasgbkggy  # App password without spaces
+        value: ojznuvzdasgbkggy  # Replace with your app password (not your regular password)
       - key: DEFAULT_FROM_EMAIL
         value: norbertcabasag999@gmail.com
   

@@ -36,6 +36,7 @@ import LoginDialog from '../Log/Login';
 import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
+import { API } from '../../axiosConfig';
 
 // Forex Trading Color Palette
 const colors = {
@@ -1029,15 +1030,14 @@ const ForgotPasswordForm = ({ onClose, onReturn }) => {
     setError('');
     
     try {
-      // This would normally connect to an API endpoint, but we'll simulate it for now
-      // In a real implementation, this would call an API endpoint like:
-      // await API.auth.forgotPassword({ email });
+      // Call the actual API endpoint instead of simulating
+      const response = await API.auth.forgotPassword({ email });
       
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Simulated success response
-      setSuccess(true);
+      if (response.data.status === 'success') {
+        setSuccess(true);
+      } else {
+        setError(response.data.message || 'An error occurred. Please try again.');
+      }
     } catch (err) {
       console.error('Password reset error:', err);
       setError(err.response?.data?.message || 'Failed to process your request. Please try again later.');
