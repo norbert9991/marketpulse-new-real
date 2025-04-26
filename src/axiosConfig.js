@@ -796,6 +796,15 @@ export const API = {
     updateProfile: (data) => axiosInstance.put('/api/admin/update-profile', data),
     addAdmin: (data) => axiosInstance.post('/api/admin/add-admin', data),
     deleteAdmin: (adminId) => axiosInstance.delete(`/api/admin/delete-admin/${adminId}`),
+    
+    // Notification API endpoints
+    getNotifications: () => axiosInstance.get('/api/admin/notifications'),
+    markNotificationRead: (notificationId) => axiosInstance.put(`/api/admin/notifications/${notificationId}/read`),
+    markAllNotificationsRead: () => axiosInstance.put('/api/admin/notifications/read-all'),
+    deleteNotification: (notificationId) => axiosInstance.delete(`/api/admin/notifications/${notificationId}`),
+    clearAllNotifications: () => axiosInstance.delete('/api/admin/notifications/clear-all'),
+    // Get unread notification count
+    getUnreadCount: () => axiosInstance.get('/api/admin/notifications/unread-count'),
   },
   
   // Balance requests

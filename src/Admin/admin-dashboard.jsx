@@ -31,7 +31,14 @@ import {
   Logout as LogoutIcon,
   Person as PersonIcon,
   Settings as SettingsIcon,
-  Notifications as NotificationsIcon
+  Notifications as NotificationsIcon,
+  CheckCircle as CheckCircleIcon,
+  Error as ErrorIcon,
+  Info as InfoIcon,
+  Warning as WarningIcon,
+  Close as CloseIcon,
+  MoreVert as MoreVertIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material';
 import { API } from '../axiosConfig';
 
@@ -158,6 +165,61 @@ const MetricsGrid = styled(Box)({
   }
 });
 
+const StyledPopover = styled(Menu)({
+  '& .MuiPaper-root': {
+    backgroundColor: colors.cardBg,
+    color: colors.primaryText,
+    border: `1px solid ${colors.borderColor}`,
+    borderRadius: '8px',
+    minWidth: 320,
+    maxWidth: 360,
+    padding: '8px 0',
+    marginTop: '8px',
+    maxHeight: '70vh',
+    overflowY: 'auto',
+    '&::-webkit-scrollbar': {
+      width: '8px',
+    },
+    '&::-webkit-scrollbar-track': {
+      backgroundColor: 'transparent',
+    },
+    '&::-webkit-scrollbar-thumb': {
+      backgroundColor: colors.borderColor,
+      borderRadius: '4px',
+    }
+  }
+});
+
+const NotificationItem = styled(Box)(({ read }) => ({
+  padding: '12px 16px',
+  borderBottom: `1px solid ${colors.borderColor}`,
+  backgroundColor: read ? 'transparent' : `${colors.primary}10`,
+  transition: 'background-color 0.2s ease',
+  cursor: 'pointer',
+  position: 'relative',
+  '&:hover': {
+    backgroundColor: colors.hoverBg
+  },
+  '&:last-child': {
+    borderBottom: 'none'
+  }
+}));
+
+// Get icon for notification type
+const getNotificationIcon = (type) => {
+  switch (type) {
+    case 'error':
+      return <ErrorIcon fontSize="small" sx={{ color: colors.sellRed }} />;
+    case 'warning':
+      return <WarningIcon fontSize="small" sx={{ color: '#FFA726' }} />;
+    case 'success':
+      return <CheckCircleIcon fontSize="small" sx={{ color: colors.buyGreen }} />;
+    case 'info':
+    default:
+      return <InfoIcon fontSize="small" sx={{ color: colors.accentBlue }} />;
+  }
+};
+
 const AdminDashboard = () => {
   const [user, setUser] = useState(null);
   const [users, setUsers] = useState([]);
@@ -169,6 +231,14 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  
+  // Notification states
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationsAnchorEl, setNotificationsAnchorEl] = useState(null);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
+  
+  const notificationsOpen = Boolean(notificationsAnchorEl);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -204,6 +274,9 @@ const AdminDashboard = () => {
         };
         setMarketTrendsData(trendsData);
         
+        // Fetch notifications
+        fetchNotifications();
+        
         // Set chart loading false after small delay to allow rendering
         setTimeout(() => {
           setLoadingChart(false);
@@ -230,7 +303,149 @@ const AdminDashboard = () => {
     };
 
     fetchDashboardData();
+    
+    // Set up a polling interval for notifications
+    const notificationInterval = setInterval(() => {
+      if (!loadingNotifications) {
+        fetchNotifications();
+      }
+    }, 60000); // Check for new notifications every minute
+    
+    return () => {
+      clearInterval(notificationInterval);
+    };
   }, []);
+  
+  // Fetch notifications from API
+  const fetchNotifications = async () => {
+    setLoadingNotifications(true);
+    try {
+      // Use the API endpoint for notifications
+      const response = await API.admin.getNotifications();
+      if (response && response.data && response.data.notifications) {
+        setNotifications(response.data.notifications);
+        // Calculate unread count
+        const unread = response.data.notifications.filter(notif => !notif.read).length;
+        setUnreadCount(unread);
+      } else {
+        // Initialize with empty array if response format is unexpected
+        setNotifications([]);
+        setUnreadCount(0);
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      // Reset to empty on error
+      setNotifications([]);
+      setUnreadCount(0);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
+  
+  // Mark a notification as read
+  const markAsRead = async (notificationId) => {
+    try {
+      await API.admin.markNotificationRead(notificationId);
+      
+      // Update local state to reflect the change
+      setNotifications(prevNotifications => 
+        prevNotifications.map(notif => 
+          notif.id === notificationId ? { ...notif, read: true } : notif
+        )
+      );
+      
+      // Update unread count
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      // Refresh notifications on error to ensure sync with server
+      fetchNotifications();
+    }
+  };
+  
+  // Mark all notifications as read
+  const markAllAsRead = async () => {
+    try {
+      await API.admin.markAllNotificationsRead();
+      
+      // Update local state
+      setNotifications(prevNotifications => 
+        prevNotifications.map(notif => ({ ...notif, read: true }))
+      );
+      
+      // Update unread count
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+      // Refresh notifications on error
+      fetchNotifications();
+    }
+  };
+  
+  // Delete a notification
+  const deleteNotification = async (notificationId) => {
+    try {
+      await API.admin.deleteNotification(notificationId);
+      
+      // Update local state
+      setNotifications(prevNotifications => 
+        prevNotifications.filter(notif => notif.id !== notificationId)
+      );
+      
+      // Update unread count if necessary
+      const deletedNotification = notifications.find(notif => notif.id === notificationId);
+      if (deletedNotification && !deletedNotification.read) {
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      // Refresh notifications on error
+      fetchNotifications();
+    }
+  };
+  
+  // Clear all notifications
+  const clearAllNotifications = async () => {
+    try {
+      await API.admin.clearAllNotifications();
+      
+      // Update local state
+      setNotifications([]);
+      
+      // Update unread count
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Error clearing notifications:', error);
+      // Refresh notifications on error
+      fetchNotifications();
+    }
+  };
+  
+  // Handle notification click
+  const handleNotificationClick = (notification) => {
+    // Mark as read
+    if (!notification.read) {
+      markAsRead(notification.id);
+    }
+    
+    // Navigate to link if provided
+    if (notification.link) {
+      navigate(notification.link);
+    }
+    
+    // Close the notification menu
+    setNotificationsAnchorEl(null);
+  };
+  
+  // Handle notification menu open
+  const handleNotificationsOpen = (event) => {
+    setNotificationsAnchorEl(event.currentTarget);
+  };
+  
+  // Handle notification menu close
+  const handleNotificationsClose = () => {
+    setNotificationsAnchorEl(null);
+  };
 
   // Get trend icon based on market trend
   const getTrendIcon = (trend) => {
@@ -318,8 +533,34 @@ const AdminDashboard = () => {
             <DashboardTitle variant="h4">Admin Dashboard</DashboardTitle>
             <UserInfo>
               <Tooltip title="Notifications">
-                <IconButton sx={{ color: colors.secondaryText }}>
+                <IconButton 
+                  sx={{ color: colors.secondaryText, position: 'relative' }}
+                  onClick={handleNotificationsOpen}
+                >
                   <NotificationsIcon />
+                  {unreadCount > 0 && (
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: 0,
+                        right: 0,
+                        backgroundColor: colors.sellRed,
+                        color: '#fff',
+                        fontSize: '0.65rem',
+                        fontWeight: 'bold',
+                        minWidth: '18px',
+                        height: '18px',
+                        borderRadius: '9px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: `2px solid ${colors.background}`,
+                        zIndex: 1
+                      }}
+                    >
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </Box>
+                  )}
                 </IconButton>
               </Tooltip>
               <Box sx={{ 
@@ -339,6 +580,133 @@ const AdminDashboard = () => {
             </UserInfo>
           </StyledToolbar>
         </StyledAppBar>
+
+        {/* Notifications Menu */}
+        <StyledPopover
+          anchorEl={notificationsAnchorEl}
+          open={notificationsOpen}
+          onClose={handleNotificationsClose}
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'right',
+          }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'right',
+          }}
+        >
+          <Box sx={{ px: 2, py: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${colors.borderColor}` }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, color: colors.primaryText }}>
+              Notifications
+            </Typography>
+            <Box>
+              {notifications.length > 0 && (
+                <>
+                  <Tooltip title="Mark all as read">
+                    <IconButton size="small" onClick={markAllAsRead} sx={{ color: colors.primary }}>
+                      <CheckCircleIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Clear all notifications">
+                    <IconButton size="small" onClick={clearAllNotifications} sx={{ color: colors.sellRed }}>
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </>
+              )}
+            </Box>
+          </Box>
+          
+          {loadingNotifications ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 3 }}>
+              <CircularProgress size={28} sx={{ color: colors.primary }} />
+            </Box>
+          ) : notifications.length > 0 ? (
+            <>
+              {notifications.map((notification) => (
+                <NotificationItem key={notification.id} read={notification.read}>
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                    <Box sx={{ 
+                      backgroundColor: `${notification.type === 'error' ? colors.sellRed : 
+                                        notification.type === 'warning' ? '#FFA726' : 
+                                        notification.type === 'success' ? colors.buyGreen : 
+                                        colors.accentBlue}20`,
+                      borderRadius: '50%',
+                      width: 34,
+                      height: 34,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      {getNotificationIcon(notification.type)}
+                    </Box>
+                    <Box sx={{ flex: 1 }} onClick={() => handleNotificationClick(notification)}>
+                      <Typography variant="subtitle2" sx={{ 
+                        fontWeight: notification.read ? 500 : 700,
+                        color: colors.primaryText,
+                        mb: 0.5
+                      }}>
+                        {notification.title}
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: colors.secondaryText, fontSize: '0.8rem' }}>
+                        {notification.message}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: `${colors.secondaryText}aa`, display: 'block', mt: 1, fontSize: '0.7rem' }}>
+                        {new Date(notification.timestamp).toLocaleString()}
+                      </Typography>
+                    </Box>
+                    <IconButton 
+                      size="small" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteNotification(notification.id);
+                      }}
+                      sx={{ 
+                        color: colors.secondaryText,
+                        opacity: 0.7,
+                        '&:hover': {
+                          opacity: 1,
+                          color: colors.sellRed
+                        }
+                      }}
+                    >
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                </NotificationItem>
+              ))}
+            </>
+          ) : (
+            <Box sx={{ py: 4, px: 2, textAlign: 'center' }}>
+              <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                No notifications
+              </Typography>
+            </Box>
+          )}
+          
+          {notifications.length > 0 && (
+            <Box sx={{ p: 1.5, textAlign: 'center', borderTop: `1px solid ${colors.borderColor}` }}>
+              <Button 
+                size="small" 
+                onClick={() => {
+                  navigate('/HelpCenter');
+                  handleNotificationsClose();
+                }}
+                sx={{ 
+                  color: colors.primary,
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  '&:hover': {
+                    backgroundColor: `${colors.primary}15`
+                  }
+                }}
+              >
+                View all notifications
+              </Button>
+            </Box>
+          )}
+        </StyledPopover>
 
         <MetricsGrid>
           {metrics.map((metric, index) => (
