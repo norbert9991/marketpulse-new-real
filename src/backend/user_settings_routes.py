@@ -4,46 +4,29 @@ import jwt
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from db_connection import db_manager
+from auth import token_required
 
 settings_bp = Blueprint('settings', __name__, url_prefix='/api/settings')
-
-def token_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        auth_header = request.headers.get('Authorization')
-        
-        if not auth_header:
-            return jsonify({'message': 'Token is missing!'}), 401
-            
-        try:
-            # Extract token from Bearer format
-            token = auth_header.split(' ')[1] if ' ' in auth_header else auth_header
-            data = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
-            conn = db_manager.get_connection()
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM login WHERE user_id = %s", (data['user_id'],))
-            current_user = cursor.fetchone()
-            cursor.close()
-        except Exception as e:
-            print(f"Error: {e}")
-            return jsonify({'message': 'Token is invalid!'}), 401
-            
-        return f(current_user, *args, **kwargs)
-        
-    return decorated
 
 @settings_bp.route('/profile', methods=['GET'])
 @token_required
 def get_profile(current_user):
     """Get the current user's profile information"""
     try:
-        # Remove sensitive information
-        if 'pass' in current_user:
-            del current_user['pass']
+        # Convert current_user tuple to dictionary
+        user_data = {
+            'user_id': current_user[0],
+            'username': current_user[1],
+            'email': current_user[2],
+            'role': current_user[4],
+            'account_status': current_user[6],
+            'last_login': current_user[5].isoformat() if current_user[5] else None,
+            'created_at': current_user[7].isoformat() if current_user[7] else None
+        }
         
         return jsonify({
             'status': 'success',
-            'data': current_user
+            'data': user_data
         })
     except Exception as e:
         print(f"Error fetching profile: {e}")
@@ -57,44 +40,67 @@ def get_profile(current_user):
 def update_email(current_user):
     """Update the user's email address"""
     data = request.get_json()
+    print(f"Received email update request: {data}")  # Debug log
+    
     new_email = data.get('email')
     password = data.get('password')
     
     if not new_email or not password:
+        print(f"Missing required fields: email={bool(new_email)}, password={bool(password)}")
         return jsonify({
             'status': 'error',
             'message': 'Email and password are required'
         }), 400
     
+    conn = None
+    cursor = None
     try:
         conn = db_manager.get_connection()
         cursor = conn.cursor()
         
+        # Get user_id from the tuple
+        user_id = current_user[0]
+        
         # Verify current password
-        cursor.execute("SELECT pass FROM login WHERE user_id = %s", (current_user['user_id'],))
+        print(f"Verifying password for user_id: {user_id}")
+        cursor.execute("SELECT pass FROM login WHERE user_id = %s", (user_id,))
         user = cursor.fetchone()
         
-        if not user or not check_password_hash(user['pass'], password):
+        if not user:
+            print(f"User not found with ID: {user_id}")
+            return jsonify({
+                'status': 'error', 
+                'message': 'User not found'
+            }), 404
+            
+        print(f"Stored password hash: {user[0][:20]}...") # Access first element of tuple
+        
+        if not check_password_hash(user[0], password): # Access first element of tuple
+            print(f"Password verification failed for user: {user_id}")
             return jsonify({
                 'status': 'error',
                 'message': 'Current password is incorrect'
             }), 401
         
-        # Check if email is already in use
+        # Password verified, check if email is already in use
+        print(f"Checking if email {new_email} is already in use")
         cursor.execute("SELECT user_id FROM login WHERE email = %s AND user_id != %s", 
-                      (new_email, current_user['user_id']))
+                      (new_email, user_id))
         existing_user = cursor.fetchone()
         
         if existing_user:
+            print(f"Email {new_email} is already in use by user_id: {existing_user[0]}")
             return jsonify({
                 'status': 'error',
                 'message': 'Email is already in use'
             }), 400
         
         # Update email
+        print(f"Updating email to {new_email} for user_id: {user_id}")
         cursor.execute("UPDATE login SET email = %s WHERE user_id = %s", 
-                      (new_email, current_user['user_id']))
+                      (new_email, user_id))
         conn.commit()
+        print(f"Email update successful")
         
         return jsonify({
             'status': 'success',
@@ -102,19 +108,28 @@ def update_email(current_user):
         })
     except Exception as e:
         print(f"Error updating email: {e}")
+        if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
         return jsonify({
             'status': 'error',
             'message': 'Failed to update email'
         }), 500
     finally:
-        if 'cursor' in locals():
+        if cursor:
             cursor.close()
+        if conn:
+            db_manager.release_connection(conn)
 
 @settings_bp.route('/update-password', methods=['PUT'])
 @token_required
 def update_password(current_user):
     """Update the user's password"""
     data = request.get_json()
+    print(f"Received password update request: {data}")  # Debug log
+    
     current_password = data.get('currentPassword')
     new_password = data.get('newPassword')
     
@@ -130,15 +145,19 @@ def update_password(current_user):
             'message': 'New password must be at least 8 characters long'
         }), 400
     
+    conn = None
+    cursor = None
     try:
+        user_id = current_user[0]  # Get user_id from tuple
+        
         conn = db_manager.get_connection()
         cursor = conn.cursor()
         
         # Verify current password
-        cursor.execute("SELECT pass FROM login WHERE user_id = %s", (current_user['user_id'],))
+        cursor.execute("SELECT pass FROM login WHERE user_id = %s", (user_id,))
         user = cursor.fetchone()
         
-        if not user or not check_password_hash(user['pass'], current_password):
+        if not user or not check_password_hash(user[0], current_password):
             return jsonify({
                 'status': 'error',
                 'message': 'Current password is incorrect'
@@ -147,7 +166,7 @@ def update_password(current_user):
         # Hash and update new password
         hashed_password = generate_password_hash(new_password)
         cursor.execute("UPDATE login SET pass = %s WHERE user_id = %s", 
-                      (hashed_password, current_user['user_id']))
+                      (hashed_password, user_id))
         conn.commit()
         
         return jsonify({
@@ -156,13 +175,20 @@ def update_password(current_user):
         })
     except Exception as e:
         print(f"Error updating password: {e}")
+        if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
         return jsonify({
             'status': 'error',
             'message': 'Failed to update password'
         }), 500
     finally:
-        if 'cursor' in locals():
+        if cursor:
             cursor.close()
+        if conn:
+            db_manager.release_connection(conn)
 
 @settings_bp.route('/delete-account', methods=['DELETE'])
 @token_required
@@ -177,15 +203,19 @@ def delete_account(current_user):
             'message': 'Password is required to confirm account deletion'
         }), 400
     
+    conn = None
+    cursor = None
     try:
+        user_id = current_user[0]  # Get user_id from tuple
+        
         conn = db_manager.get_connection()
         cursor = conn.cursor()
         
         # Verify password
-        cursor.execute("SELECT pass FROM login WHERE user_id = %s", (current_user['user_id'],))
+        cursor.execute("SELECT pass FROM login WHERE user_id = %s", (user_id,))
         user = cursor.fetchone()
         
-        if not user or not check_password_hash(user['pass'], password):
+        if not user or not check_password_hash(user[0], password):
             return jsonify({
                 'status': 'error',
                 'message': 'Password is incorrect'
@@ -195,16 +225,16 @@ def delete_account(current_user):
         conn.start_transaction()
         
         # Delete user's portfolio
-        cursor.execute("DELETE FROM portfolio WHERE user_id = %s", (current_user['user_id'],))
+        cursor.execute("DELETE FROM portfolio WHERE user_id = %s", (user_id,))
         
         # Delete user's balance requests
-        cursor.execute("DELETE FROM balance_requests WHERE user_id = %s", (current_user['user_id'],))
+        cursor.execute("DELETE FROM balance_requests WHERE user_id = %s", (user_id,))
         
         # Delete user's trades
-        cursor.execute("DELETE FROM trades WHERE user_id = %s", (current_user['user_id'],))
+        cursor.execute("DELETE FROM trades WHERE user_id = %s", (user_id,))
         
         # Finally, delete the user account
-        cursor.execute("DELETE FROM login WHERE user_id = %s", (current_user['user_id'],))
+        cursor.execute("DELETE FROM login WHERE user_id = %s", (user_id,))
         
         conn.commit()
         
@@ -213,13 +243,18 @@ def delete_account(current_user):
             'message': 'Account deleted successfully'
         })
     except Exception as e:
-        if 'conn' in locals():
-            conn.rollback()
+        if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
         print(f"Error deleting account: {e}")
         return jsonify({
             'status': 'error',
             'message': 'Failed to delete account'
         }), 500
     finally:
-        if 'cursor' in locals():
-            cursor.close() 
+        if cursor:
+            cursor.close()
+        if conn:
+            db_manager.release_connection(conn) 

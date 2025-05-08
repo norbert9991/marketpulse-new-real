@@ -106,13 +106,27 @@ const Settings = () => {
 
   const handleEmailUpdate = async (e) => {
     e.preventDefault();
+    console.log('Starting email update');
+    
+    if (!email) {
+      setMessage({ type: 'error', text: 'Please enter a valid email address' });
+      return;
+    }
+    
+    if (!currentPassword) {
+      setMessage({ type: 'error', text: 'Please enter your current password' });
+      return;
+    }
+    
     setProcessing(true);
     try {
+      console.log('Sending email update request with:', { email, password: currentPassword });
       const response = await API.settings.updateEmail({
         password: currentPassword,
         email: email
       });
       
+      console.log('Email update response:', response.data);
       setMessage({
         type: 'success',
         text: response.data.message || 'Email updated successfully'
@@ -122,6 +136,7 @@ const Settings = () => {
       fetchUserData();
     } catch (error) {
       console.error('Error updating email:', error);
+      console.error('Error response:', error.response?.data);
       setMessage({ 
         type: 'error', 
         text: error.response?.data?.message || 'Failed to update email' 
@@ -133,6 +148,7 @@ const Settings = () => {
 
   const handlePasswordUpdate = async (e) => {
     e.preventDefault();
+    console.log('Starting password update');
     
     if (newPassword !== confirmPassword) {
       setMessage({ type: 'error', text: 'Passwords do not match' });
@@ -146,11 +162,13 @@ const Settings = () => {
 
     setProcessing(true);
     try {
+      console.log('Sending password update request');
       const response = await API.settings.updatePassword({
         currentPassword: currentPassword,
         newPassword: newPassword
       });
       
+      console.log('Password update response:', response.data);
       setMessage({
         type: 'success',
         text: response.data.message || 'Password updated successfully'
@@ -161,6 +179,7 @@ const Settings = () => {
       setOpenPasswordDialog(false);
     } catch (error) {
       console.error('Error updating password:', error);
+      console.error('Error response:', error.response?.data);
       setMessage({ 
         type: 'error', 
         text: error.response?.data?.message || 'Failed to update password' 
@@ -171,6 +190,8 @@ const Settings = () => {
   };
 
   const handleDeleteAccount = async () => {
+    console.log('Starting account deletion');
+    
     if (!deletePassword) {
       setMessage({ type: 'error', text: 'Please enter your password to confirm account deletion' });
       return;
@@ -178,13 +199,16 @@ const Settings = () => {
 
     setProcessing(true);
     try {
+      console.log('Sending delete account request');
       await API.settings.deleteAccount({ password: deletePassword });
       
+      console.log('Account deletion successful, clearing local data');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       navigate('/');
     } catch (error) {
       console.error('Error deleting account:', error);
+      console.error('Error response:', error.response?.data);
       setMessage({ 
         type: 'error', 
         text: error.response?.data?.message || 'Failed to delete account' 
@@ -641,7 +665,7 @@ const Settings = () => {
           <Typography sx={{ color: colors.secondaryText, mb: 3 }}>
             Enter your new email address and current password to verify your identity.
           </Typography>
-          <Box component="form" onSubmit={handleEmailUpdate} sx={{ mt: 1 }}>
+          <Box component="form" id="email-update-form" onSubmit={handleEmailUpdate} sx={{ mt: 1 }}>
             <StyledTextField
               fullWidth
               label="New Email"
@@ -680,7 +704,8 @@ const Settings = () => {
             Cancel
           </Button>
           <Button
-            onClick={handleEmailUpdate} 
+            type="submit"
+            form="email-update-form"
             variant="contained"
             disabled={processing}
             sx={{ 

@@ -21,18 +21,23 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fb4f4f255fb38f23a4d7379
 
 # Configure CORS to allow requests from any origin to ensure maximum compatibility
 CORS(app, 
-     origins=["*"],
-     allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+     origins=["*", "http://localhost:3000", "http://localhost:5000", "https://marketpulse-new-real-3.onrender.com", "https://marketpulse-new-real-3-web.onrender.com"],
+     allow_headers=["Content-Type", "Authorization", "X-Requested-With", "Accept"],
      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-     supports_credentials=True)
+     supports_credentials=True,
+     expose_headers=["Content-Type", "Authorization"])
 
 # Additional CORS headers added to all responses
 @app.after_request
 def after_request(response):
-    # Don't add Access-Control-Allow-Origin since flask-cors is already adding it
-    # response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    # Allow credentials
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    # Allow specific headers
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,Accept')
+    # Allow all methods
     response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    # Add additional debug headers to help troubleshoot
+    response.headers.add('X-API-Version', '1.0')
     return response
 
 # Register blueprints
