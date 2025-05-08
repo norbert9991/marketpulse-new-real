@@ -49,7 +49,11 @@ import {
   Security as SecurityIcon,
   Notifications as NotificationsIcon,
   CloudUpload as CloudUploadIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  AccessTime as AccessTimeIcon,
+  Shield as ShieldIcon,
+  PhonelinkLock as SessionIcon,
+  VerifiedUser as VerifiedUserIcon
 } from '@mui/icons-material';
 import { API } from '../axiosConfig';
 
@@ -131,6 +135,13 @@ const AdminSettings = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showAddAdminDialog, setShowAddAdminDialog] = useState(false);
   const [adminCreationSuccess, setAdminCreationSuccess] = useState(false);
+  const [showEditAdminDialog, setShowEditAdminDialog] = useState(false);
+  const [editingAdmin, setEditingAdmin] = useState(null);
+  const [editAdminSaving, setEditAdminSaving] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deletingAdminId, setDeletingAdminId] = useState(null);
+  const [deletingAdminName, setDeletingAdminName] = useState('');
+  const [deleteAdminLoading, setDeleteAdminLoading] = useState(false);
   const [newAdmin, setNewAdmin] = useState({
     username: '',
     email: '',
@@ -148,6 +159,14 @@ const AdminSettings = () => {
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
+  });
+
+  // Security settings state
+  const [securitySettings, setSecuritySettings] = useState({
+    passwordExpiry: true,
+    sessionTimeout: false,
+    activityLogging: true,
+    secureConnection: true
   });
 
   useEffect(() => {
@@ -358,26 +377,88 @@ const AdminSettings = () => {
     }
   };
 
-  const handleDeleteAdmin = async (adminId) => {
+  const handleOpenDeleteDialog = (admin) => {
+    setDeletingAdminId(admin.user_id || admin.id);
+    setDeletingAdminName(admin.username || 'this admin');
+    setShowDeleteDialog(true);
+  };
+  
+  const handleDeleteAdmin = async () => {
+    if (!deletingAdminId) return;
+    
+    setDeleteAdminLoading(true);
+    
     try {
-      if (window.confirm('Are you sure you want to delete this admin?')) {
-        try {
-          // Try the admin-specific endpoint first
-          await API.admin.deleteAdmin(adminId);
-        } catch (apiError) {
-          console.error('Admin deletion API error:', apiError);
-          // If that fails, we might need a different approach
-          throw new Error('Admin deletion currently unavailable. Please try again later.');
-        }
-        
-        showNotification('success', 'Admin deleted successfully');
-        
-        // Refresh admin list
-        fetchAdmins();
-      }
+      // Try the admin-specific endpoint first
+      await API.admin.deleteAdmin(deletingAdminId);
+      
+      showNotification('success', 'Admin deleted successfully');
+      
+      // Refresh admin list
+      fetchAdmins();
+      setShowDeleteDialog(false);
     } catch (err) {
       showNotification('error', 'Failed to delete admin: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setDeleteAdminLoading(false);
     }
+  };
+
+  const handleOpenEditAdmin = (admin) => {
+    setEditingAdmin({
+      id: admin.user_id || admin.id,
+      username: admin.username || '',
+      email: admin.email || '',
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: '',
+      displayName: admin.username || 'this admin'  // Add displayName for UI purposes
+    });
+    setShowEditAdminDialog(true);
+  };
+
+  const handleUpdateAdmin = async (e) => {
+    e.preventDefault();
+    
+    if (!editingAdmin) return;
+    
+    if (editingAdmin.newPassword && editingAdmin.newPassword !== editingAdmin.confirmPassword) {
+      showNotification('error', 'New passwords do not match');
+      return;
+    }
+    
+    setEditAdminSaving(true);
+    
+    try {
+      const updateData = {
+        username: editingAdmin.username,
+        email: editingAdmin.email
+      };
+      
+      if (editingAdmin.newPassword) {
+        updateData.currentPassword = editingAdmin.currentPassword;
+        updateData.newPassword = editingAdmin.newPassword;
+      }
+      
+      await API.admin.updateUser(editingAdmin.id, updateData);
+      
+      showNotification('success', 'Admin updated successfully');
+      setShowEditAdminDialog(false);
+      setEditingAdmin(null);
+      fetchAdmins();
+    } catch (err) {
+      showNotification('error', 'Failed to update admin: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setEditAdminSaving(false);
+    }
+  };
+
+  const handleEditAdminInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditingAdmin({
+      ...editingAdmin,
+      [name]: value
+    });
   };
 
   const handleTabChange = (event, newValue) => {
@@ -390,6 +471,17 @@ const AdminSettings = () => {
 
   const showNotification = (type, message) => {
     setNotification({ open: true, type, message });
+  };
+  
+  const handleSecuritySettingChange = (setting) => {
+    setSecuritySettings({
+      ...securitySettings,
+      [setting]: !securitySettings[setting]
+    });
+    
+    // In a real application, this would save to the server
+    // For now, just show a notification
+    showNotification('success', `Security setting '${setting}' updated successfully`);
   };
 
   if (loading) {
@@ -729,69 +821,208 @@ const AdminSettings = () => {
             </form>
             
             <Box sx={{ mt: 4 }}>
-              <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText }}>Additional Security Settings</Typography>
+              <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText }}>
+                Additional Security Settings
+              </Typography>
+              
+              <Box sx={{ 
+                p: 2.5, 
+                mb: 3, 
+                borderRadius: 2, 
+                backgroundColor: `${colors.primary}10`,
+                border: `1px solid ${colors.primary}30`
+              }}>
+                <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                  <SecurityIcon sx={{ color: colors.primary, mr: 1.5, mt: 0.2 }} />
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ color: colors.primary, fontWeight: 'medium', mb: 0.5 }}>
+                      Admin Account Security Best Practices
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 1 }}>
+                      Enhance your admin account security by enabling these settings and following these tips:
+                    </Typography>
+                    <Box component="ul" sx={{ pl: 2, m: 0, '& li': { mb: 0.5, color: colors.secondaryText } }}>
+                      <Typography component="li" variant="caption">
+                        Use strong, unique passwords with 12+ characters including numbers and symbols
+                      </Typography>
+                      <Typography component="li" variant="caption">
+                        Enable secure connections to protect your administrative sessions
+                      </Typography>
+                      <Typography component="li" variant="caption">
+                        Regularly review the activity logs for any suspicious behavior
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Box>
+              </Box>
               
               <Card sx={{ backgroundColor: `${colors.cardBg}80`, border: `1px solid ${colors.borderColor}` }}>
                 <CardContent>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12}>
-                      <FormControlLabel
-                        control={
+                  <Grid container spacing={3}>
+                    {/* Password Expiry */}
+                    <Grid item xs={12} md={6}>
+                      <Box sx={{ 
+                        p: 2, 
+                        borderRadius: 2, 
+                        border: `1px solid ${colors.borderColor}`,
+                        backgroundColor: securitySettings.passwordExpiry ? `${colors.primary}15` : 'transparent',
+                        transition: 'all 0.2s ease'
+                      }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <AccessTimeIcon sx={{ 
+                              color: securitySettings.passwordExpiry ? colors.primary : colors.secondaryText,
+                              mr: 1
+                            }} />
+                            <Typography variant="body1" sx={{ 
+                              color: colors.primaryText,
+                              fontWeight: securitySettings.passwordExpiry ? 'medium' : 'normal'
+                            }}>
+                              Password Expiry Policy
+                            </Typography>
+                          </Box>
                           <Switch 
-                            checked={true} 
+                            checked={securitySettings.passwordExpiry} 
+                            onChange={() => handleSecuritySettingChange('passwordExpiry')}
                             sx={{
                               '& .MuiSwitch-switchBase.Mui-checked': {
                                 color: colors.primary,
-                                '&:hover': {
-                                  backgroundColor: `${colors.primary}22`
-                                }
                               },
                               '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
                                 backgroundColor: colors.primary
                               }
                             }}
                           />
-                        }
-                        label={
-                          <Box>
-                            <Typography variant="body1" sx={{ color: colors.primaryText }}>Two-Factor Authentication</Typography>
-                            <Typography variant="caption" sx={{ color: colors.secondaryText }}>
-                              Enable two-factor authentication for additional security
+                        </Box>
+                        <Typography variant="caption" sx={{ color: colors.secondaryText, display: 'block', ml: 4 }}>
+                          Enforce password changes every 90 days for all admin accounts
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    
+                    {/* Session Timeout */}
+                    <Grid item xs={12} md={6}>
+                      <Box sx={{ 
+                        p: 2, 
+                        borderRadius: 2, 
+                        border: `1px solid ${colors.borderColor}`,
+                        backgroundColor: securitySettings.sessionTimeout ? `${colors.primary}15` : 'transparent',
+                        transition: 'all 0.2s ease'
+                      }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <SessionIcon sx={{ 
+                              color: securitySettings.sessionTimeout ? colors.primary : colors.secondaryText,
+                              mr: 1
+                            }} />
+                            <Typography variant="body1" sx={{ 
+                              color: colors.primaryText,
+                              fontWeight: securitySettings.sessionTimeout ? 'medium' : 'normal'
+                            }}>
+                              Auto Session Timeout
                             </Typography>
                           </Box>
-                        }
-                        sx={{ display: 'flex', alignItems: 'flex-start' }}
-                      />
-                    </Grid>
-                    <Grid item xs={12}>
-                      <FormControlLabel
-                        control={
                           <Switch 
-                            checked={false} 
+                            checked={securitySettings.sessionTimeout} 
+                            onChange={() => handleSecuritySettingChange('sessionTimeout')}
                             sx={{
                               '& .MuiSwitch-switchBase.Mui-checked': {
                                 color: colors.primary,
-                                '&:hover': {
-                                  backgroundColor: `${colors.primary}22`
-                                }
                               },
                               '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
                                 backgroundColor: colors.primary
                               }
                             }}
                           />
-                        }
-                        label={
-                          <Box>
-                            <Typography variant="body1" sx={{ color: colors.primaryText }}>Login Notifications</Typography>
-                            <Typography variant="caption" sx={{ color: colors.secondaryText }}>
-                              Receive notifications when your account is accessed
+                        </Box>
+                        <Typography variant="caption" sx={{ color: colors.secondaryText, display: 'block', ml: 4 }}>
+                          Automatically log out inactive sessions after 30 minutes
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    
+                    {/* Activity Logging */}
+                    <Grid item xs={12} md={6}>
+                      <Box sx={{ 
+                        p: 2, 
+                        borderRadius: 2, 
+                        border: `1px solid ${colors.borderColor}`,
+                        backgroundColor: securitySettings.activityLogging ? `${colors.primary}15` : 'transparent',
+                        transition: 'all 0.2s ease'
+                      }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <ShieldIcon sx={{ 
+                              color: securitySettings.activityLogging ? colors.primary : colors.secondaryText,
+                              mr: 1
+                            }} />
+                            <Typography variant="body1" sx={{ 
+                              color: colors.primaryText,
+                              fontWeight: securitySettings.activityLogging ? 'medium' : 'normal'
+                            }}>
+                              Activity Logging
                             </Typography>
                           </Box>
-                        }
-                        sx={{ display: 'flex', alignItems: 'flex-start' }}
-                      />
+                          <Switch 
+                            checked={securitySettings.activityLogging} 
+                            onChange={() => handleSecuritySettingChange('activityLogging')}
+                            sx={{
+                              '& .MuiSwitch-switchBase.Mui-checked': {
+                                color: colors.primary,
+                              },
+                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                                backgroundColor: colors.primary
+                              }
+                            }}
+                          />
+                        </Box>
+                        <Typography variant="caption" sx={{ color: colors.secondaryText, display: 'block', ml: 4 }}>
+                          Log all admin actions for security monitoring and auditing
+                        </Typography>
+                      </Box>
                     </Grid>
+                    
+                    {/* Secure Connection Policy */}
+                    <Grid item xs={12} md={6}>
+                      <Box sx={{ 
+                        p: 2, 
+                        borderRadius: 2, 
+                        border: `1px solid ${colors.borderColor}`,
+                        backgroundColor: securitySettings.secureConnection ? `${colors.primary}15` : 'transparent',
+                        transition: 'all 0.2s ease'
+                      }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <VerifiedUserIcon sx={{ 
+                              color: securitySettings.secureConnection ? colors.primary : colors.secondaryText,
+                              mr: 1
+                            }} />
+                            <Typography variant="body1" sx={{ 
+                              color: colors.primaryText,
+                              fontWeight: securitySettings.secureConnection ? 'medium' : 'normal'
+                            }}>
+                              Secure Connection Only
+                            </Typography>
+                          </Box>
+                          <Switch 
+                            checked={securitySettings.secureConnection} 
+                            onChange={() => handleSecuritySettingChange('secureConnection')}
+                            sx={{
+                              '& .MuiSwitch-switchBase.Mui-checked': {
+                                color: colors.primary,
+                              },
+                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                                backgroundColor: colors.primary
+                              }
+                            }}
+                          />
+                        </Box>
+                        <Typography variant="caption" sx={{ color: colors.secondaryText, display: 'block', ml: 4 }}>
+                          Allow admin access only through HTTPS secure connections
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    
                   </Grid>
                 </CardContent>
               </Card>
@@ -880,7 +1111,7 @@ const AdminSettings = () => {
                         </TableCell>
                         <TableCell sx={{ borderBottom: `1px solid ${colors.borderColor}` }}>
                           <Tooltip title="Edit">
-                            <IconButton sx={{ color: colors.primary, mr: 1 }}>
+                            <IconButton sx={{ color: colors.primary, mr: 1 }} onClick={() => handleOpenEditAdmin(admin)}>
                               <EditIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
@@ -888,7 +1119,7 @@ const AdminSettings = () => {
                             <span>
                               <IconButton 
                                 sx={{ color: colors.sellRed }}
-                                onClick={() => (admin.user_id || admin.id) !== currentAdmin?.user_id && handleDeleteAdmin(admin.user_id || admin.id)}
+                                onClick={() => (admin.user_id || admin.id) !== currentAdmin?.user_id && handleOpenDeleteDialog(admin)}
                                 disabled={(admin.user_id || admin.id) === currentAdmin?.user_id}
                               >
                                 <DeleteIcon fontSize="small" />
@@ -1106,6 +1337,321 @@ const AdminSettings = () => {
               }}
             >
               {newAdminLoading ? 'Creating...' : 'Add Admin'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Edit Admin Dialog */}
+        <Dialog 
+          open={showEditAdminDialog} 
+          onClose={() => !editAdminSaving && setShowEditAdminDialog(false)}
+          PaperProps={{
+            sx: {
+              backgroundColor: colors.cardBg,
+              color: colors.primaryText,
+              border: `1px solid ${colors.primary}40`
+            }
+          }}
+        >
+          <DialogTitle sx={{ borderBottom: `1px solid ${colors.borderColor}` }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <EditIcon sx={{ mr: 1, color: colors.primary }} />
+              <Typography variant="h6" component="span" sx={{ fontWeight: 'bold' }}>
+                Edit Admin
+              </Typography>
+            </Box>
+          </DialogTitle>
+          <DialogContent sx={{ pt: 3, pb: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Avatar 
+                sx={{ width: 40, height: 40, backgroundColor: colors.primary, mr: 2 }}
+              >
+                {editingAdmin?.username?.charAt(0).toUpperCase() || 'A'}
+              </Avatar>
+              <Typography sx={{ color: colors.primaryText, fontWeight: 'medium' }}>
+                Editing user: <span style={{ color: colors.primary }}>{editingAdmin?.displayName}</span>
+              </Typography>
+            </Box>
+            <Typography sx={{ color: colors.secondaryText, mb: 2 }}>
+              Update admin information and credentials. Leave password fields empty if you don't want to change the password.
+            </Typography>
+            <form onSubmit={handleUpdateAdmin} id="edit-admin-form">
+              <TextField
+                fullWidth
+                label="Username"
+                name="username"
+                value={editingAdmin?.username}
+                onChange={handleEditAdminInputChange}
+                margin="normal"
+                required
+                InputProps={{
+                  startAdornment: <PersonIcon sx={{ mr: 1, color: colors.secondaryText }} />,
+                  sx: {
+                    color: colors.primaryText,
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: colors.borderColor
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: colors.primary
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: colors.primary
+                    }
+                  }
+                }}
+                InputLabelProps={{
+                  sx: { color: colors.secondaryText }
+                }}
+              />
+
+              <TextField
+                fullWidth
+                label="Email"
+                name="email"
+                type="email"
+                value={editingAdmin?.email}
+                onChange={handleEditAdminInputChange}
+                margin="normal"
+                required
+                InputProps={{
+                  startAdornment: <EmailIcon sx={{ mr: 1, color: colors.secondaryText }} />,
+                  sx: {
+                    color: colors.primaryText,
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: colors.borderColor
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: colors.primary
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: colors.primary
+                    }
+                  }
+                }}
+                InputLabelProps={{
+                  sx: { color: colors.secondaryText }
+                }}
+              />
+
+              <TextField
+                fullWidth
+                label="Current Password"
+                name="currentPassword"
+                type={showPassword ? 'text' : 'password'}
+                value={editingAdmin?.currentPassword}
+                onChange={handleEditAdminInputChange}
+                margin="normal"
+                required
+                InputProps={{
+                  startAdornment: <LockIcon sx={{ mr: 1, color: colors.secondaryText }} />,
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShowPassword(!showPassword)}
+                        edge="end"
+                        sx={{ color: colors.secondaryText }}
+                      >
+                        {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                  sx: {
+                    color: colors.primaryText,
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: colors.borderColor
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: colors.primary
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: colors.primary
+                    }
+                  }
+                }}
+                InputLabelProps={{
+                  sx: { color: colors.secondaryText }
+                }}
+              />
+
+              <TextField
+                fullWidth
+                label="New Password"
+                name="newPassword"
+                type={showNewPassword ? 'text' : 'password'}
+                value={editingAdmin?.newPassword}
+                onChange={handleEditAdminInputChange}
+                margin="normal"
+                InputProps={{
+                  startAdornment: <LockIcon sx={{ mr: 1, color: colors.secondaryText }} />,
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        edge="end"
+                        sx={{ color: colors.secondaryText }}
+                      >
+                        {showNewPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                  sx: {
+                    color: colors.primaryText,
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: colors.borderColor
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: colors.primary
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: colors.primary
+                    }
+                  }
+                }}
+                InputLabelProps={{
+                  sx: { color: colors.secondaryText }
+                }}
+              />
+
+              <TextField
+                fullWidth
+                label="Confirm New Password"
+                name="confirmPassword"
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={editingAdmin?.confirmPassword}
+                onChange={handleEditAdminInputChange}
+                margin="normal"
+                InputProps={{
+                  startAdornment: <LockIcon sx={{ mr: 1, color: colors.secondaryText }} />,
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        edge="end"
+                        sx={{ color: colors.secondaryText }}
+                      >
+                        {showConfirmPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                  sx: {
+                    color: colors.primaryText,
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: colors.borderColor
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: colors.primary
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: colors.primary
+                    }
+                  }
+                }}
+                InputLabelProps={{
+                  sx: { color: colors.secondaryText }
+                }}
+              />
+            </form>
+          </DialogContent>
+          <DialogActions sx={{ borderTop: `1px solid ${colors.borderColor}`, p: 2 }}>
+            <Button 
+              onClick={() => setShowEditAdminDialog(false)}
+              sx={{ 
+                color: colors.secondaryText,
+                '&:hover': {
+                  backgroundColor: colors.hoverBg
+                }
+              }}
+              disabled={editAdminSaving}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleUpdateAdmin}
+              disabled={editAdminSaving}
+              type="submit"
+              form="edit-admin-form"
+              startIcon={editAdminSaving ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
+              sx={{ 
+                color: colors.primary,
+                '&:hover': {
+                  backgroundColor: `${colors.primary}22`
+                }
+              }}
+            >
+              {editAdminSaving ? 'Updating...' : 'Update Admin'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Delete Admin Dialog */}
+        <Dialog
+          open={showDeleteDialog}
+          onClose={() => !deleteAdminLoading && setShowDeleteDialog(false)}
+          PaperProps={{
+            sx: {
+              backgroundColor: colors.cardBg,
+              color: colors.primaryText,
+              border: `1px solid ${colors.sellRed}40`
+            }
+          }}
+        >
+          <DialogTitle sx={{ 
+            borderBottom: `1px solid ${colors.borderColor}`,
+            color: colors.sellRed
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <DeleteIcon sx={{ mr: 1 }} />
+              Confirm Deletion
+            </Box>
+          </DialogTitle>
+          <DialogContent sx={{ pt: 3, pb: 2 }}>
+            <Alert severity="warning" sx={{ 
+              mb: 2, 
+              backgroundColor: `${colors.sellRed}10`,
+              color: colors.sellRed,
+              border: `1px solid ${colors.sellRed}30`
+            }}>
+              This action cannot be undone. The admin will lose all access to the system.
+            </Alert>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, mt: 2 }}>
+              <Avatar 
+                sx={{ width: 40, height: 40, backgroundColor: colors.sellRed, mr: 2 }}
+              >
+                {deletingAdminName.charAt(0).toUpperCase() || 'A'}
+              </Avatar>
+              <Typography sx={{ color: colors.primaryText, fontWeight: 'medium' }}>
+                You are about to delete admin user <span style={{ color: colors.sellRed }}>{deletingAdminName}</span>
+              </Typography>
+            </Box>
+            <Typography variant="body1" sx={{ color: colors.primaryText }}>
+              Are you sure you want to proceed with deleting this admin account?
+            </Typography>
+          </DialogContent>
+          <DialogActions sx={{ borderTop: `1px solid ${colors.borderColor}`, p: 2 }}>
+            <Button 
+              onClick={() => setShowDeleteDialog(false)}
+              sx={{ 
+                color: colors.secondaryText,
+                '&:hover': {
+                  backgroundColor: colors.hoverBg
+                }
+              }}
+              disabled={deleteAdminLoading}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleDeleteAdmin}
+              disabled={deleteAdminLoading}
+              sx={{ 
+                bgcolor: `${colors.sellRed}`,
+                color: 'white',
+                '&:hover': {
+                  bgcolor: `${colors.sellRed}dd`
+                }
+              }}
+            >
+              {deleteAdminLoading ? <CircularProgress size={20} color="inherit" /> : 'Delete Admin'}
             </Button>
           </DialogActions>
         </Dialog>

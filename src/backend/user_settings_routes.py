@@ -149,6 +149,7 @@ def update_password(current_user):
     cursor = None
     try:
         user_id = current_user[0]  # Get user_id from tuple
+        print(f"Processing password update for user_id: {user_id}")
         
         conn = db_manager.get_connection()
         cursor = conn.cursor()
@@ -157,17 +158,27 @@ def update_password(current_user):
         cursor.execute("SELECT pass FROM login WHERE user_id = %s", (user_id,))
         user = cursor.fetchone()
         
-        if not user or not check_password_hash(user[0], current_password):
+        if not user:
+            print(f"User not found with ID: {user_id}")
+            return jsonify({
+                'status': 'error',
+                'message': 'User not found'
+            }), 404
+            
+        if not check_password_hash(user[0], current_password):
+            print(f"Password verification failed for user: {user_id}")
             return jsonify({
                 'status': 'error',
                 'message': 'Current password is incorrect'
             }), 401
         
         # Hash and update new password
+        print(f"Updating password for user_id: {user_id}")
         hashed_password = generate_password_hash(new_password)
         cursor.execute("UPDATE login SET pass = %s WHERE user_id = %s", 
                       (hashed_password, user_id))
         conn.commit()
+        print(f"Password update successful for user_id: {user_id}")
         
         return jsonify({
             'status': 'success',
@@ -178,17 +189,19 @@ def update_password(current_user):
         if conn:
             try:
                 conn.rollback()
-            except:
-                pass
+                print("Transaction rolled back")
+            except Exception as rollback_error:
+                print(f"Error during rollback: {rollback_error}")
         return jsonify({
             'status': 'error',
-            'message': 'Failed to update password'
+            'message': f'Failed to update password: {str(e)}'
         }), 500
     finally:
         if cursor:
             cursor.close()
         if conn:
             db_manager.release_connection(conn)
+            print("Database connection released")
 
 @settings_bp.route('/delete-account', methods=['DELETE'])
 @token_required

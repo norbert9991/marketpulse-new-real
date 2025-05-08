@@ -169,13 +169,12 @@ const Settings = () => {
 
     setProcessing(true);
     try {
-      console.log('Sending password update request');
+      console.log('Sending password update request with correct parameters');
       const now = new Date();
       
       const response = await API.settings.updatePassword({
         currentPassword: currentPassword,
-        newPassword: newPassword,
-        passwordLastChanged: now.toISOString()
+        newPassword: newPassword
       });
       
       console.log('Password update response:', response.data);

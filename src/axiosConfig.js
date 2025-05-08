@@ -105,20 +105,17 @@ axiosInstance.interceptors.response.use(
         const isExpired = error.response.data?.expired === true;
         
         // If we're not already on the login page and not trying to log in
-        const isLoginPage = window.location.hash.includes('/login');
+        const isLoginPage = window.location.pathname === '/' || window.location.pathname === '/login' || window.location.hash.includes('/login');
         const isLoginRequest = error.config.url.includes('/api/auth/login');
         
         if (!isLoginPage && !isLoginRequest) {
           console.log('Auth failure detected, handling session...');
           
-          // If token is explicitly expired, clear it
-          if (isExpired) {
-            console.log('Token expired, clearing authentication data');
-            localStorage.removeItem('token');
-          }
+          // Clear token on 401 errors - the token is likely invalid or expired
+          localStorage.removeItem('token');
+          console.log('Token cleared due to authentication failure');
           
-          // On 401 errors, we should either redirect to login or 
-          // rely on the fallback to localStorage user data
+          // Redirect to login page
           console.log('Redirecting to login page due to auth failure');
           window.location.href = window.location.origin + '/#/';
         }
