@@ -53,7 +53,7 @@ services:
         value: no-store
     envVars:
       - key: REACT_APP_API_URL
-        value: https://marketpulse-new-real-2-0.onrender.com/api
+        value: https://marketpulse-new-real-3-web.onrender.com/api
 
 # Using existing database instead of creating a new one
 # databases:
