@@ -308,30 +308,6 @@ const UserDashboard = () => {
     fetchMarketData();
   }, [selectedSymbol]);
 
-  // Add event listener for userDataUpdated event
-  useEffect(() => {
-    const handleUserDataUpdated = (e) => {
-      console.log('UserDashboard: Received userDataUpdated event');
-      const updatedUser = e.detail.user;
-      console.log('UserDashboard: Updated user has profile image?', !!updatedUser.profile_image);
-      console.log('UserDashboard: Profile image URL:', updatedUser.profile_image);
-      setUser(updatedUser);
-    };
-
-    window.addEventListener('userDataUpdated', handleUserDataUpdated);
-    
-    return () => {
-      window.removeEventListener('userDataUpdated', handleUserDataUpdated);
-    };
-  }, []);
-
-  // Add debug logging when user state changes
-  useEffect(() => {
-    if (user) {
-      console.log('UserDashboard: User state updated - profile image:', user.profile_image);
-    }
-  }, [user]);
-
   const handleLogout = () => {
     console.log('UserDashboard - Logging out');
     // Clear authentication data
@@ -420,19 +396,8 @@ const UserDashboard = () => {
                     backgroundColor: colors.accentBlue,
                     boxShadow: `0 0 10px ${colors.accentBlue}60`
                   }}
-                  src={user.profile_image || ''}
-                  alt={user.username || 'User'}
-                  imgProps={{
-                    onError: (e) => {
-                      console.error('Dashboard: Image failed to load:', user.profile_image);
-                      e.target.onerror = null; // Prevent infinite error loop
-                      e.target.style.display = 'none'; // Hide the broken image
-                    },
-                    onLoad: () => console.log('Dashboard: Image loaded successfully:', user.profile_image)
-                  }}
                 >
-                  {console.log('Dashboard Avatar - Using profile image?', !!user.profile_image, 'URL:', user.profile_image)}
-                  {(!user.profile_image && user.username) ? user.username.charAt(0).toUpperCase() : 'U'}
+                  {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
                 </Avatar>
                 <Typography sx={{ color: colors.primaryText }}>
                   {user.username || 'User'}

@@ -37,62 +37,9 @@ const Sidebar = ({ activePage }) => {
     // Get user data from localStorage
     const userData = localStorage.getItem('user');
     if (userData) {
-      const parsedUser = JSON.parse(userData);
-      console.log('Sidebar: User data from localStorage:', { 
-        username: parsedUser.username,
-        hasProfileImage: !!parsedUser.profile_image,
-        profileImage: parsedUser.profile_image
-      });
-      setUser(parsedUser);
+      setUser(JSON.parse(userData));
     }
   }, [location.pathname]);
-
-  // Add this new effect to listen for localStorage changes
-  useEffect(() => {
-    // Function to handle storage events
-    const handleStorageChange = (e) => {
-      if (e.key === 'user') {
-        console.log('Sidebar: user data changed in localStorage, updating...');
-        const updatedUser = JSON.parse(e.newValue);
-        setUser(updatedUser);
-      }
-    };
-
-    // Add event listener
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Cleanup
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, []);
-
-  // Add this new effect to listen for custom userDataUpdated event
-  useEffect(() => {
-    // Function to handle custom user data updated event
-    const handleUserDataUpdated = (e) => {
-      console.log('Sidebar: Received userDataUpdated event');
-      const updatedUser = e.detail.user;
-      console.log('Sidebar: Updated user has profile image?', !!updatedUser.profile_image);
-      console.log('Sidebar: Profile image URL:', updatedUser.profile_image);
-      setUser(updatedUser);
-    };
-
-    // Add event listener
-    window.addEventListener('userDataUpdated', handleUserDataUpdated);
-    
-    // Cleanup
-    return () => {
-      window.removeEventListener('userDataUpdated', handleUserDataUpdated);
-    };
-  }, []);
-  
-  // Add debug logging when user state changes 
-  useEffect(() => {
-    if (user) {
-      console.log('Sidebar: User state updated - profile image:', user.profile_image);
-    }
-  }, [user]);
 
   const handleNavigation = (path) => {
     navigate(path);
@@ -178,19 +125,8 @@ const Sidebar = ({ activePage }) => {
               mb: 1,
               border: `2px solid ${colors.borderColor}`
             }}
-            src={user.profile_image || ''}
-            alt={user.username || 'User'}
-            imgProps={{
-              onError: (e) => {
-                console.error('Sidebar: Image failed to load:', user.profile_image);
-                e.target.onerror = null; // Prevent infinite error loop
-                e.target.style.display = 'none'; // Hide the broken image
-              },
-              onLoad: () => console.log('Sidebar: Image loaded successfully:', user.profile_image)
-            }}
           >
-            {console.log('Sidebar Avatar - Using profile image?', !!user.profile_image, 'URL:', user.profile_image)}
-            {(!user.profile_image && user.username) ? user.username.charAt(0).toUpperCase() : 'U'}
+            {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
           </Avatar>
           <Typography 
             sx={{ 
