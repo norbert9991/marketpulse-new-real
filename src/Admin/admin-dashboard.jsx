@@ -776,7 +776,7 @@ const AdminDashboard = () => {
         <StyledAppBar position="static">
           <StyledToolbar>
             <DashboardTitle variant="h4">Admin Dashboard</DashboardTitle>
-            <UserInfo>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <Tooltip title="Notifications">
                 <IconButton 
                   sx={{ color: colors.secondaryText, position: 'relative' }}
@@ -808,21 +808,7 @@ const AdminDashboard = () => {
                   )}
                 </IconButton>
               </Tooltip>
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: 1,
-                py: 1, 
-                px: 2, 
-                borderRadius: 2,
-                backgroundColor: `${colors.hoverBg}50`
-              }}>
-                <UserAvatar>{user.username.charAt(0).toUpperCase()}</UserAvatar>
-                <Typography variant="body2" sx={{ color: colors.primaryText }}>
-                  {user.username}
-                </Typography>
-              </Box>
-            </UserInfo>
+            </Box>
           </StyledToolbar>
         </StyledAppBar>
 
