@@ -29,7 +29,8 @@ import {
   InputAdornment,
   Tooltip,
   Switch,
-  FormControlLabel
+  FormControlLabel,
+  Snackbar
 } from '@mui/material';
 import { styled } from '@mui/system';
 import { useNavigate } from 'react-router-dom';
@@ -47,7 +48,8 @@ import {
   Settings as SettingsIcon,
   Security as SecurityIcon,
   Notifications as NotificationsIcon,
-  CloudUpload as CloudUploadIcon
+  CloudUpload as CloudUploadIcon,
+  Close as CloseIcon
 } from '@mui/icons-material';
 import { API } from '../axiosConfig';
 
@@ -105,14 +107,24 @@ const SettingsSection = styled(Paper)({
   marginBottom: '24px'
 });
 
+// Styled notification component
+const StyledAlert = styled(Alert)({
+  borderRadius: '8px',
+  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+  animation: 'fadeIn 0.5s ease',
+  '@keyframes fadeIn': {
+    '0%': { opacity: 0, transform: 'translateY(-10px)' },
+    '100%': { opacity: 1, transform: 'translateY(0)' }
+  }
+});
+
 const AdminSettings = () => {
   const navigate = useNavigate();
   const [currentAdmin, setCurrentAdmin] = useState(null);
   const [loading, setLoading] = useState(true);
   const [adminsLoading, setAdminsLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState('');
+  const [notification, setNotification] = useState({ open: false, type: '', message: '' });
   const [admins, setAdmins] = useState([]);
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -164,7 +176,7 @@ const AdminSettings = () => {
         confirmPassword: ''
       });
     } catch (err) {
-      setError('Failed to load admin data: ' + err.message);
+      showNotification('error', 'Failed to load admin data: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -180,14 +192,12 @@ const AdminSettings = () => {
       }
 
       // Use a general users endpoint instead of admin-specific endpoint
-      // Since we can't rely on the admin-specific endpoint
       const response = await API.admin.getUsers();
       
       // Filter only admin users if the response includes a role or is_admin field
       let adminUsers = response.data.users || [];
       
       // Filter for admin users if we have role information
-      // This assumes the API provides some way to identify admins
       adminUsers = adminUsers.filter(user => 
         user.role === 'admin' || 
         user.is_admin === true || 
@@ -197,7 +207,7 @@ const AdminSettings = () => {
       setAdmins(adminUsers);
     } catch (err) {
       console.error('Error fetching admins:', err);
-      setError('Failed to load admins: ' + err.message);
+      showNotification('error', 'Failed to load admins: ' + err.message);
       
       // Fallback: If we can't get the admin list, at least show the current admin
       if (currentAdmin) {
@@ -227,8 +237,6 @@ const AdminSettings = () => {
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     setSaving(true);
-    setError('');
-    setSuccess('');
 
     try {
       const token = localStorage.getItem('token');
@@ -240,12 +248,12 @@ const AdminSettings = () => {
       // Validate passwords if changing
       if (formData.newPassword) {
         if (formData.newPassword !== formData.confirmPassword) {
-          setError('New passwords do not match');
+          showNotification('error', 'New passwords do not match');
           setSaving(false);
           return;
         }
         if (!formData.currentPassword) {
-          setError('Current password is required to change password');
+          showNotification('error', 'Current password is required to change password');
           setSaving(false);
           return;
         }
@@ -258,7 +266,7 @@ const AdminSettings = () => {
         newPassword: formData.newPassword
       });
 
-      setSuccess('Profile updated successfully');
+      showNotification('success', 'Profile updated successfully');
       setFormData({
         ...formData,
         currentPassword: '',
@@ -273,7 +281,7 @@ const AdminSettings = () => {
         email: formData.email
       });
     } catch (err) {
-      setError('Failed to update profile: ' + (err.response?.data?.message || err.message));
+      showNotification('error', 'Failed to update profile: ' + (err.response?.data?.message || err.message));
     } finally {
       setSaving(false);
     }
@@ -317,7 +325,6 @@ const AdminSettings = () => {
       } catch (apiError) {
         console.error('Admin API error:', apiError);
         // If the admin endpoint fails, try the general register endpoint
-        // This is a fallback that may require manual assignment of admin role later
         await API.auth.register({
           username: newAdmin.username,
           email: newAdmin.email,
@@ -327,7 +334,7 @@ const AdminSettings = () => {
       }
 
       setAdminCreationSuccess(true);
-      setSuccess('Admin added successfully');
+      showNotification('success', 'Admin added successfully');
       
       // Reset form
       setNewAdmin({
@@ -360,22 +367,29 @@ const AdminSettings = () => {
         } catch (apiError) {
           console.error('Admin deletion API error:', apiError);
           // If that fails, we might need a different approach
-          // This depends on your API structure
           throw new Error('Admin deletion currently unavailable. Please try again later.');
         }
         
-        setSuccess('Admin deleted successfully');
+        showNotification('success', 'Admin deleted successfully');
         
         // Refresh admin list
         fetchAdmins();
       }
     } catch (err) {
-      setError('Failed to delete admin: ' + (err.response?.data?.message || err.message));
+      showNotification('error', 'Failed to delete admin: ' + (err.response?.data?.message || err.message));
     }
   };
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
+  };
+
+  const handleCloseNotification = () => {
+    setNotification({ ...notification, open: false });
+  };
+
+  const showNotification = (type, message) => {
+    setNotification({ open: true, type, message });
   };
 
   if (loading) {
@@ -427,27 +441,6 @@ const AdminSettings = () => {
                 >
                   {currentAdmin?.username ? currentAdmin.username.charAt(0).toUpperCase() : 'A'}
                 </Avatar>
-                
-                <Button 
-                  variant="outlined" 
-                  component="label"
-                  startIcon={<CloudUploadIcon />}
-                  sx={{ 
-                    borderColor: colors.primary,
-                    color: colors.primary,
-                    '&:hover': {
-                      backgroundColor: `${colors.primary}22`,
-                      borderColor: colors.primary
-                    }
-                  }}
-                >
-                  Upload Photo
-                  <input type="file" hidden />
-                </Button>
-                
-                <Typography variant="caption" sx={{ color: colors.secondaryText, mt: 1, textAlign: 'center' }}>
-                  Recommended: Square image, at least 200x200px
-                </Typography>
               </Box>
               
               <Box sx={{ flexGrow: 1 }}>
@@ -554,18 +547,6 @@ const AdminSettings = () => {
                 </form>
               </Box>
             </Box>
-            
-            {success && (
-              <Alert severity="success" sx={{ mb: 2, backgroundColor: `${colors.buyGreen}22`, color: colors.buyGreen }}>
-                {success}
-              </Alert>
-            )}
-            
-            {error && (
-              <Alert severity="error" sx={{ mb: 2, backgroundColor: `${colors.sellRed}22`, color: colors.sellRed }}>
-                {error}
-              </Alert>
-            )}
           </SettingsSection>
         )}
         
@@ -815,18 +796,6 @@ const AdminSettings = () => {
                 </CardContent>
               </Card>
             </Box>
-            
-            {success && (
-              <Alert severity="success" sx={{ mt: 3, backgroundColor: `${colors.buyGreen}22`, color: colors.buyGreen }}>
-                {success}
-              </Alert>
-            )}
-            
-            {error && (
-              <Alert severity="error" sx={{ mt: 3, backgroundColor: `${colors.sellRed}22`, color: colors.sellRed }}>
-                {error}
-              </Alert>
-            )}
           </SettingsSection>
         )}
         
@@ -849,18 +818,6 @@ const AdminSettings = () => {
                 Add Admin
               </Button>
             </Box>
-            
-            {success && (
-              <Alert severity="success" sx={{ mb: 3, backgroundColor: `${colors.buyGreen}22`, color: colors.buyGreen }}>
-                {success}
-              </Alert>
-            )}
-            
-            {error && (
-              <Alert severity="error" sx={{ mb: 3, backgroundColor: `${colors.sellRed}22`, color: colors.sellRed }}>
-                {error}
-              </Alert>
-            )}
             
             <TableContainer>
               <Table>
@@ -970,18 +927,6 @@ const AdminSettings = () => {
             Add New Admin
           </DialogTitle>
           <DialogContent sx={{ pt: 2 }}>
-            {newAdminError && (
-              <Alert severity="error" sx={{ mb: 2, backgroundColor: `${colors.sellRed}22`, color: colors.sellRed, border: `1px solid ${colors.sellRed}` }}>
-                {newAdminError}
-              </Alert>
-            )}
-            
-            {adminCreationSuccess && (
-              <Alert severity="success" sx={{ mb: 2, backgroundColor: `${colors.buyGreen}22`, color: colors.buyGreen, border: `1px solid ${colors.buyGreen}` }}>
-                Admin created successfully!
-              </Alert>
-            )}
-            
             <form onSubmit={handleAddAdmin} id="add-admin-form">
               <TextField
                 fullWidth
@@ -1164,6 +1109,41 @@ const AdminSettings = () => {
             </Button>
           </DialogActions>
         </Dialog>
+
+        {/* Notification Snackbar */}
+        <Snackbar
+          open={notification.open}
+          autoHideDuration={5000}
+          onClose={handleCloseNotification}
+          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+          sx={{ mt: 6 }}
+        >
+          <StyledAlert
+            onClose={handleCloseNotification}
+            severity={notification.type}
+            sx={{
+              width: '100%',
+              bgcolor: notification.type === 'success' ? `${colors.buyGreen}10` : `${colors.sellRed}10`,
+              color: notification.type === 'success' ? colors.buyGreen : colors.sellRed,
+              border: `1px solid ${notification.type === 'success' ? `${colors.buyGreen}30` : `${colors.sellRed}30`}`,
+              '& .MuiAlert-icon': {
+                color: notification.type === 'success' ? colors.buyGreen : colors.sellRed,
+              }
+            }}
+            action={
+              <IconButton
+                size="small"
+                aria-label="close"
+                color="inherit"
+                onClick={handleCloseNotification}
+              >
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            }
+          >
+            {notification.message}
+          </StyledAlert>
+        </Snackbar>
       </MainContent>
     </PageContainer>
   );

@@ -79,6 +79,7 @@ const Settings = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [username, setUsername] = useState('');
+  const [passwordLastChanged, setPasswordLastChanged] = useState(null);
   const [openEmailDialog, setOpenEmailDialog] = useState(false);
   const [openPasswordDialog, setOpenPasswordDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
@@ -96,6 +97,12 @@ const Settings = () => {
       setUser(userResponse.data.user);
       setEmail(userResponse.data.user.email);
       setUsername(userResponse.data.user.username);
+      
+      // Get password last changed date if available
+      if (userResponse.data.user.passwordLastChanged) {
+        setPasswordLastChanged(new Date(userResponse.data.user.passwordLastChanged));
+      }
+      
       setLoading(false);
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -163,12 +170,24 @@ const Settings = () => {
     setProcessing(true);
     try {
       console.log('Sending password update request');
+      const now = new Date();
+      
       const response = await API.settings.updatePassword({
         currentPassword: currentPassword,
-        newPassword: newPassword
+        newPassword: newPassword,
+        passwordLastChanged: now.toISOString()
       });
       
       console.log('Password update response:', response.data);
+      
+      // Update the passwordLastChanged date to current time
+      setPasswordLastChanged(now);
+      
+      // Update the user data in localStorage to reflect the password change
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      userData.passwordLastChanged = now.toISOString();
+      localStorage.setItem('user', JSON.stringify(userData));
+      
       setMessage({
         type: 'success',
         text: response.data.message || 'Password updated successfully'
@@ -491,7 +510,9 @@ const Settings = () => {
                             Password
                           </Typography>
                           <Typography sx={{ color: colors.secondaryText, fontSize: '0.9rem' }}>
-                            Last changed: Not available
+                            Last changed: {passwordLastChanged 
+                              ? passwordLastChanged.toLocaleDateString() + ' at ' + passwordLastChanged.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) 
+                              : 'Not available'}
                           </Typography>
                         </Box>
                       </Box>
