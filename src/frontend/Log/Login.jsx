@@ -225,6 +225,11 @@ const LoginDialog = ({ open, onClose, isLogin, toggleForm, onForgotPassword }) =
       return;
     }
     
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters long');
+      return;
+    }
+    
     setLoading(true);
     setError('');
     try {
@@ -423,6 +428,10 @@ const LoginDialog = ({ open, onClose, isLogin, toggleForm, onForgotPassword }) =
                 onChange={(e) => setPassword(e.target.value)}
                 InputProps={{
                   sx: { borderRadius: '12px' }
+                }}
+                helperText="Password must be at least 8 characters long"
+                FormHelperTextProps={{
+                  sx: { color: colors.secondaryText }
                 }}
               />
               <StyledTextField 
