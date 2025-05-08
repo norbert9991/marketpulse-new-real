@@ -12,6 +12,7 @@ from db_connection import db_manager
 from market_analysis import analyze_stock
 import os
 from dotenv import load_dotenv
+from upload_profile_image import register_upload_routes  # Import the upload image route registration function
 
 # Load environment variables
 load_dotenv()
@@ -48,6 +49,9 @@ app.register_blueprint(settings_bp)  # Register the settings blueprint
 app.register_blueprint(market_analysis_bp)  # Register the market analysis blueprint
 app.register_blueprint(admin_settings_bp)  # Register the admin settings blueprint
 app.register_blueprint(news_bp)  # Register the news blueprint
+
+# Register upload routes
+register_upload_routes(app)
 
 # Root route for testing
 @app.route('/', methods=['GET'])

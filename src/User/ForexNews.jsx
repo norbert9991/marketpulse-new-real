@@ -92,6 +92,10 @@ const ForexNews = () => {
   const [showSavedArticles, setShowSavedArticles] = useState(false);
   // Add state for save success dialog
   const [saveNotification, setSaveNotification] = useState({ open: false, message: '', type: 'success' });
+  // Add state for sort order
+  const [sortOrder, setSortOrder] = useState('desc'); // 'desc' or 'asc'
+  // Add state for sort menu
+  const [sortMenuAnchorEl, setSortMenuAnchorEl] = useState(null);
   
   // Menu handling
   const handleMenuOpen = (event) => {
@@ -100,6 +104,53 @@ const ForexNews = () => {
   
   const handleMenuClose = () => {
     setAnchorEl(null);
+  };
+
+  // Sort menu handling
+  const handleSortMenuOpen = (event) => {
+    setSortMenuAnchorEl(event.currentTarget);
+    handleMenuClose(); // Close the main menu
+  };
+
+  const handleSortMenuClose = () => {
+    setSortMenuAnchorEl(null);
+  };
+
+  // Handle sort order change
+  const handleSortOrderChange = (order) => {
+    setSortOrder(order);
+    handleSortMenuClose();
+    
+    // Show notification
+    setSaveNotification({
+      open: true,
+      message: `Articles sorted by date (${order === 'asc' ? 'oldest first' : 'newest first'})`,
+      type: 'info'
+    });
+    
+    // Sort the current articles
+    sortArticlesByDate(order);
+  };
+
+  // Function to sort articles by date
+  const sortArticlesByDate = (order = sortOrder) => {
+    if (showSavedArticles) {
+      // Sort saved articles
+      const sorted = [...savedArticles].sort((a, b) => {
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+        return order === 'asc' ? dateA - dateB : dateB - dateA;
+      });
+      setSavedArticles(sorted);
+    } else {
+      // Sort news articles
+      const sorted = [...newsData].sort((a, b) => {
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+        return order === 'asc' ? dateA - dateB : dateB - dateA;
+      });
+      setNewsData(sorted);
+    }
   };
 
   // Pagination handling
@@ -141,7 +192,18 @@ const ForexNews = () => {
         const data = await response.json();
         
         if (data && data.articles) {
-          setNewsData(data.articles);
+          let articlesData = data.articles;
+          
+          // Sort the articles if needed
+          if (sortOrder !== 'default') {
+            articlesData = [...articlesData].sort((a, b) => {
+              const dateA = new Date(a.date);
+              const dateB = new Date(b.date);
+              return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+            });
+          }
+          
+          setNewsData(articlesData);
           setApiSource(data.source || 'API');
           setTotalPages(data.totalPages || 1);
           setError(null);
@@ -157,7 +219,18 @@ const ForexNews = () => {
           // Try to use the axiosConfig mock data as a fallback
           const fallbackResponse = await API.news.getForexNews({ category: currentCategory });
           if (fallbackResponse && fallbackResponse.data && fallbackResponse.data.articles) {
-            setNewsData(fallbackResponse.data.articles);
+            let articlesData = fallbackResponse.data.articles;
+            
+            // Sort the articles if needed
+            if (sortOrder !== 'default') {
+              articlesData = [...articlesData].sort((a, b) => {
+                const dateA = new Date(a.date);
+                const dateB = new Date(b.date);
+                return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+              });
+            }
+            
+            setNewsData(articlesData);
             setApiSource('Local Cache');
             setTotalPages(1);
           } else {
@@ -177,10 +250,22 @@ const ForexNews = () => {
     fetchData();
   }, [currentCategory, refreshCount, page, pageSize, showSavedArticles]);
 
+  // Effect to apply sorting when sort order changes
+  useEffect(() => {
+    if (newsData.length > 0 || savedArticles.length > 0) {
+      sortArticlesByDate();
+    }
+  }, [sortOrder]);
+
   // Handle view saved articles
   const handleViewSavedArticles = () => {
     setShowSavedArticles(true);
     handleMenuClose();
+    
+    // Sort saved articles when viewing them
+    setTimeout(() => {
+      sortArticlesByDate();
+    }, 0);
   };
 
   // Handle return to all news
@@ -192,6 +277,18 @@ const ForexNews = () => {
   const formatDate = (dateString) => {
     const options = { year: 'numeric', month: 'short', day: 'numeric' };
     return new Date(dateString).toLocaleDateString(undefined, options);
+  };
+
+  // Format date with time
+  const formatDateWithTime = (dateString) => {
+    const options = { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    };
+    return new Date(dateString).toLocaleString(undefined, options);
   };
 
   // Get color based on sentiment
@@ -384,8 +481,8 @@ const ForexNews = () => {
             </Box>
             <Typography variant="body2" sx={{ color: colors.secondaryText, mt: 0.5 }}>
               {showSavedArticles 
-                ? `You have ${savedArticles.length} saved article${savedArticles.length !== 1 ? 's' : ''}` 
-                : 'Stay updated with the latest news affecting major currency pairs and forex markets'
+                ? `You have ${savedArticles.length} saved article${savedArticles.length !== 1 ? 's' : ''} • Sorted by date (${sortOrder === 'asc' ? 'oldest first' : 'newest first'})` 
+                : `Stay updated with the latest news affecting major currency pairs and forex markets • Sorted by date (${sortOrder === 'asc' ? 'oldest first' : 'newest first'})`
               }
             </Typography>
           </Box>
@@ -447,7 +544,54 @@ const ForexNews = () => {
               ) : (
                 <MenuItem onClick={handleViewSavedArticles}>View Saved Articles ({savedArticles.length})</MenuItem>
               )}
-              <MenuItem onClick={handleMenuClose}>Filter by Date</MenuItem>
+              <MenuItem onClick={handleSortMenuOpen}>Filter by Date</MenuItem>
+            </Menu>
+            
+            {/* Sort Order Menu */}
+            <Menu
+              anchorEl={sortMenuAnchorEl}
+              open={Boolean(sortMenuAnchorEl)}
+              onClose={handleSortMenuClose}
+              PaperProps={{
+                sx: {
+                  bgcolor: colors.cardBg,
+                  color: colors.primaryText,
+                  border: `1px solid ${colors.borderColor}`
+                }
+              }}
+            >
+              <MenuItem 
+                onClick={() => handleSortOrderChange('desc')}
+                sx={{
+                  fontWeight: sortOrder === 'desc' ? 'bold' : 'normal',
+                  '&::after': sortOrder === 'desc' ? {
+                    content: '""',
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    bgcolor: colors.accentBlue,
+                    ml: 1
+                  } : {}
+                }}
+              >
+                Newest First
+              </MenuItem>
+              <MenuItem 
+                onClick={() => handleSortOrderChange('asc')}
+                sx={{
+                  fontWeight: sortOrder === 'asc' ? 'bold' : 'normal',
+                  '&::after': sortOrder === 'asc' ? {
+                    content: '""',
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    bgcolor: colors.accentBlue,
+                    ml: 1
+                  } : {}
+                }}
+              >
+                Oldest First
+              </MenuItem>
             </Menu>
           </Box>
         </Box>
@@ -584,7 +728,7 @@ const ForexNews = () => {
                               {article.source}
                             </Typography>
                             <Typography variant="caption" sx={{ color: colors.secondaryText }}>
-                              {formatDate(article.date)}
+                              {formatDateWithTime(article.date)}
                             </Typography>
                           </Box>
                         </Box>

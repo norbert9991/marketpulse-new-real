@@ -216,6 +216,16 @@ export const API = {
     updateEmail: (data) => axiosInstance.put('/api/settings/update-email', data),
     updatePassword: (data) => axiosInstance.put('/api/settings/update-password', data),
     deleteAccount: (data) => axiosInstance.delete('/api/settings/delete-account', { data }),
+    uploadProfileImage: (formData, config) => {
+      // Create a custom config with multipart/form-data content type for file uploads
+      const uploadConfig = {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        },
+        ...config
+      };
+      return axiosInstance.post('/api/settings/upload-profile-image', formData, uploadConfig);
+    },
   },
   
   // News endpoints

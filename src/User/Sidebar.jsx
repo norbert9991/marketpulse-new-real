@@ -125,8 +125,9 @@ const Sidebar = ({ activePage }) => {
               mb: 1,
               border: `2px solid ${colors.borderColor}`
             }}
+            src={user.profile_image}
           >
-            {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
+            {(!user.profile_image && user.username) ? user.username.charAt(0).toUpperCase() : 'U'}
           </Avatar>
           <Typography 
             sx={{ 

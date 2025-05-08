@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Box, 
   Typography, 
@@ -14,7 +14,9 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  CircularProgress
+  CircularProgress,
+  Input,
+  Tooltip
 } from '@mui/material';
 import { styled } from '@mui/system';
 import { useNavigate } from 'react-router-dom';
@@ -69,6 +71,19 @@ const StyledTextField = styled(TextField)({
   }
 });
 
+// Add styled component for hidden file input
+const VisuallyHiddenInput = styled('input')({
+  clip: 'rect(0 0 0 0)',
+  clipPath: 'inset(50%)',
+  height: 1,
+  overflow: 'hidden',
+  position: 'absolute',
+  bottom: 0,
+  left: 0,
+  whiteSpace: 'nowrap',
+  width: 1,
+});
+
 const Settings = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
@@ -84,10 +99,23 @@ const Settings = () => {
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [processing, setProcessing] = useState(false);
-
+  const [profileImage, setProfileImage] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const fileInputRef = useRef(null);
+  
   useEffect(() => {
     fetchUserData();
   }, []);
+  
+  useEffect(() => {
+    // Clean up object URL when component unmounts or when previewUrl changes
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   const fetchUserData = async () => {
     try {
@@ -96,6 +124,12 @@ const Settings = () => {
       setUser(userResponse.data.user);
       setEmail(userResponse.data.user.email);
       setUsername(userResponse.data.user.username);
+      
+      // If user has a profile image, set it
+      if (userResponse.data.user.profile_image) {
+        setPreviewUrl(userResponse.data.user.profile_image);
+      }
+      
       setLoading(false);
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -219,6 +253,79 @@ const Settings = () => {
     }
   };
 
+  const handleImageClick = () => {
+    fileInputRef.current.click();
+  };
+
+  const handleImageChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.match('image.*')) {
+        setMessage({ type: 'error', text: 'Please select an image file' });
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setMessage({ type: 'error', text: 'Image size should be less than 5MB' });
+        return;
+      }
+      
+      setProfileImage(file);
+      
+      // Create and set preview URL
+      const objectUrl = URL.createObjectURL(file);
+      setPreviewUrl(objectUrl);
+      
+      // Upload image
+      handleImageUpload(file);
+    }
+  };
+
+  const handleImageUpload = async (file) => {
+    setProcessing(true);
+    setUploadProgress(0);
+    
+    try {
+      const formData = new FormData();
+      formData.append('profileImage', file);
+      
+      const response = await API.settings.uploadProfileImage(formData, {
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(percentCompleted);
+        }
+      });
+      
+      console.log('Image upload response:', response.data);
+      setMessage({
+        type: 'success',
+        text: 'Profile image updated successfully'
+      });
+      
+      // Update user data
+      const userResponse = await API.auth.me();
+      setUser(userResponse.data.user);
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      setMessage({ 
+        type: 'error', 
+        text: error.response?.data?.message || 'Failed to upload image' 
+      });
+      
+      // Reset preview if upload fails
+      if (user?.profile_image) {
+        setPreviewUrl(user.profile_image);
+      } else {
+        setPreviewUrl('');
+      }
+    } finally {
+      setProcessing(false);
+      setUploadProgress(0);
+    }
+  };
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: colors.darkBg }}>
@@ -333,27 +440,61 @@ const Settings = () => {
                         bgcolor: `${colors.accentBlue}80`,
                         border: `4px solid ${colors.borderColor}`,
                         boxShadow: `0 4px 20px rgba(0, 0, 0, 0.2)`,
+                        cursor: 'pointer'
                       }}
+                      src={previewUrl}
+                      onClick={handleImageClick}
                     >
-                      <PersonIcon sx={{ fontSize: 50 }} />
+                      {!previewUrl && <PersonIcon sx={{ fontSize: 50 }} />}
                     </Avatar>
-                    <Box sx={{ 
-                      position: 'absolute', 
-                      bottom: 0, 
-                      right: 0, 
-                      bgcolor: colors.accentBlue,
-                      borderRadius: '50%',
-                      p: 0.5,
-                      border: `2px solid ${colors.cardBg}`,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        bgcolor: colors.gradientEnd,
-                        transform: 'scale(1.1)'
-                      }
-                    }}>
-                      <EditIcon sx={{ fontSize: 18 }} />
-                    </Box>
+                    <Tooltip title="Change profile picture">
+                      <Box sx={{ 
+                        position: 'absolute', 
+                        bottom: 0, 
+                        right: 0, 
+                        bgcolor: colors.accentBlue,
+                        borderRadius: '50%',
+                        p: 0.5,
+                        border: `2px solid ${colors.cardBg}`,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          bgcolor: colors.gradientEnd,
+                          transform: 'scale(1.1)'
+                        }
+                      }}
+                      onClick={handleImageClick}
+                      >
+                        <EditIcon sx={{ fontSize: 18 }} />
+                      </Box>
+                    </Tooltip>
+                    <VisuallyHiddenInput
+                      type="file"
+                      accept="image/*"
+                      ref={fileInputRef}
+                      onChange={handleImageChange}
+                    />
+                    {processing && (
+                      <Box sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        bgcolor: 'rgba(0, 0, 0, 0.5)',
+                        borderRadius: '50%',
+                      }}>
+                        <CircularProgress
+                          variant="determinate"
+                          value={uploadProgress}
+                          size={60}
+                          sx={{ color: colors.gradientEnd }}
+                        />
+                      </Box>
+                    )}
                   </Box>
                   <Box sx={{ textAlign: {xs: 'center', sm: 'left'} }}>
                     <Typography 
