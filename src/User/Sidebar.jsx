@@ -73,6 +73,8 @@ const Sidebar = ({ activePage }) => {
     const handleUserDataUpdated = (e) => {
       console.log('Sidebar: Received userDataUpdated event');
       const updatedUser = e.detail.user;
+      console.log('Sidebar: Updated user has profile image?', !!updatedUser.profile_image);
+      console.log('Sidebar: Profile image URL:', updatedUser.profile_image);
       setUser(updatedUser);
     };
 
@@ -84,6 +86,13 @@ const Sidebar = ({ activePage }) => {
       window.removeEventListener('userDataUpdated', handleUserDataUpdated);
     };
   }, []);
+  
+  // Add debug logging when user state changes 
+  useEffect(() => {
+    if (user) {
+      console.log('Sidebar: User state updated - profile image:', user.profile_image);
+    }
+  }, [user]);
 
   const handleNavigation = (path) => {
     navigate(path);
@@ -169,8 +178,18 @@ const Sidebar = ({ activePage }) => {
               mb: 1,
               border: `2px solid ${colors.borderColor}`
             }}
-            src={user.profile_image}
+            src={user.profile_image || ''}
+            alt={user.username || 'User'}
+            imgProps={{
+              onError: (e) => {
+                console.error('Sidebar: Image failed to load:', user.profile_image);
+                e.target.onerror = null; // Prevent infinite error loop
+                e.target.style.display = 'none'; // Hide the broken image
+              },
+              onLoad: () => console.log('Sidebar: Image loaded successfully:', user.profile_image)
+            }}
           >
+            {console.log('Sidebar Avatar - Using profile image?', !!user.profile_image, 'URL:', user.profile_image)}
             {(!user.profile_image && user.username) ? user.username.charAt(0).toUpperCase() : 'U'}
           </Avatar>
           <Typography 

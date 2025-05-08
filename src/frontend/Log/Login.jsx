@@ -187,6 +187,9 @@ const LoginDialog = ({ open, onClose, isLogin, toggleForm, onForgotPassword }) =
         
         // Store user data
         localStorage.removeItem('user');
+        console.log('Login - Full user data from server:', response.data.user);
+        console.log('Login - User has profile image?', !!response.data.user.profile_image);
+        console.log('Login - Profile image URL:', response.data.user.profile_image);
         localStorage.setItem('user', JSON.stringify(response.data.user));
         
         console.log('User data stored, role:', response.data.user.role);
