@@ -24,7 +24,7 @@ services:
       - key: DB_PORT
         value: 5432
       - key: FRONTEND_URL
-        value: https://marketpulse-new-real-3.onrender.com
+        value: https://marketpulse-new-real-static-2-0.onrender.com
       # Email configuration
       - key: SMTP_SERVER
         value: smtp.gmail.com
@@ -53,7 +53,7 @@ services:
         value: no-store
     envVars:
       - key: REACT_APP_API_URL
-        value: https://marketpulse-new-real-3.onrender.com/api
+        value: https://marketpulse-new-real-2-0.onrender.com/api
 
 # Using existing database instead of creating a new one
 # databases:
