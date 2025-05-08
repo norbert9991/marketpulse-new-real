@@ -3,7 +3,7 @@ import axios from 'axios';
 // Get API URL from environment variable or use the production URL
 const API_URL = 
   process.env.NODE_ENV === 'production' 
-    ? 'https://marketpulse-new-real-2-0.onrender.com'
+    ? 'https://marketpulse-new-real-3.onrender.com'
     : (process.env.REACT_APP_API_URL || 'http://localhost:5000');
 
 console.log('Using API URL:', API_URL); // Debug log
