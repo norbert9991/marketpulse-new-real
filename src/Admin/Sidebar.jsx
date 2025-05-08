@@ -32,17 +32,79 @@ const colors = {
   errorRed: '#f44336'
 };
 
+// Styled menu button for better transitions
+const MenuButton = styled(Button)(({ theme, active }) => ({
+  justifyContent: 'flex-start',
+  color: active ? colors.primaryText : colors.secondaryText,
+  marginBottom: '12px',
+  borderRadius: '12px',
+  padding: '12px 16px',
+  backgroundColor: active ? colors.activeItemBg : 'transparent',
+  position: 'relative',
+  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+  overflow: 'hidden',
+  '&:hover': {
+    backgroundColor: active ? colors.activeItemBg : colors.hoverBg,
+    color: colors.primaryText,
+    transform: active ? 'none' : 'translateX(3px)',
+  },
+  '& .MuiSvgIcon-root': {
+    color: active ? colors.primary : colors.secondaryText,
+    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+    marginRight: '8px',
+  },
+  '&:hover .MuiSvgIcon-root': {
+    color: colors.primary,
+    transform: active ? 'none' : 'scale(1.1)',
+  },
+  '&::before': active ? {
+    content: '""',
+    position: 'absolute',
+    left: 0,
+    top: '50%',
+    transform: 'translateY(-50%)',
+    width: '4px',
+    height: '60%',
+    background: `linear-gradient(to bottom, ${colors.gradientStart}, ${colors.gradientEnd})`,
+    borderRadius: '0 4px 4px 0',
+    animation: 'fadeIn 0.3s ease'
+  } : {},
+  '&::after': {
+    content: '""',
+    position: 'absolute',
+    bottom: 0,
+    left: '10%',
+    width: '80%',
+    height: '1px',
+    backgroundColor: `${colors.borderColor}50`,
+    opacity: 0.5
+  },
+  '@keyframes fadeIn': {
+    '0%': { opacity: 0, height: '0%' },
+    '100%': { opacity: 1, height: '60%' }
+  }
+}));
+
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState('');
   const [pendingRequests, setPendingRequests] = useState(0);
   const [user, setUser] = useState(null);
+  const [animating, setAnimating] = useState(false);
 
   // Set active tab based on current path when component mounts
   useEffect(() => {
     const currentPath = location.pathname;
+    
+    // Add animation flag
+    setAnimating(true);
     setActiveTab(currentPath);
+    
+    // Reset animation flag after animation completes
+    const timer = setTimeout(() => {
+      setAnimating(false);
+    }, 300);
     
     // Fetch the current user data
     const fetchUserData = async () => {
@@ -67,10 +129,14 @@ const Sidebar = () => {
     
     fetchUserData();
     fetchPendingRequests();
+    
+    return () => clearTimeout(timer);
   }, [location.pathname]);
 
   const handleNavigation = (path) => {
-    navigate(path);
+    if (path !== activeTab) {
+      navigate(path);
+    }
   };
   
   const handleLogout = () => {
@@ -190,58 +256,13 @@ const Sidebar = () => {
         overflow: 'auto'
       }}>
         {menuItems.map((item) => (
-          <Button 
+          <MenuButton 
             key={item.name} 
             onClick={() => handleNavigation(item.path)}
             fullWidth 
             startIcon={item.icon}
-            sx={{
-              justifyContent: 'flex-start',
-              color: (location.pathname === item.path) ? colors.primaryText : colors.secondaryText,
-              mb: 1.5,
-              borderRadius: '12px',
-              px: 2,
-              py: 1.5,
-              backgroundColor: (location.pathname === item.path) ? colors.activeItemBg : 'transparent',
-              position: 'relative',
-              transition: 'all 0.3s ease',
-              overflow: 'hidden',
-              '&:hover': {
-                backgroundColor: colors.hoverBg,
-                color: colors.primaryText,
-                transform: 'translateX(3px)',
-                '& .MuiSvgIcon-root': {
-                  color: colors.primary,
-                  transform: 'scale(1.2)'
-                }
-              },
-              '& .MuiSvgIcon-root': {
-                color: (location.pathname === item.path) ? colors.primary : colors.secondaryText,
-                transition: 'all 0.3s ease',
-                mr: 1
-              },
-              '&::before': (location.pathname === item.path) ? {
-                content: '""',
-                position: 'absolute',
-                left: 0,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                width: '4px',
-                height: '60%',
-                background: `linear-gradient(to bottom, ${colors.gradientStart}, ${colors.gradientEnd})`,
-                borderRadius: '0 4px 4px 0'
-              } : {},
-              '&::after': {
-                content: '""',
-                position: 'absolute',
-                bottom: 0,
-                left: '10%',
-                width: '80%',
-                height: '1px',
-                backgroundColor: `${colors.borderColor}50`,
-                opacity: 0.5
-              }
-            }}
+            active={activeTab === item.path}
+            className={animating && activeTab === item.path ? 'animating' : ''}
           >
             {item.name}
             {item.badge > 0 && (
@@ -251,7 +272,7 @@ const Sidebar = () => {
                 sx={{ ml: 'auto' }}
               />
             )}
-          </Button>
+          </MenuButton>
         ))}
       </Box>
 
@@ -276,12 +297,12 @@ const Sidebar = () => {
               py: 1.2,
               justifyContent: 'flex-start',
               '&:hover': {
-                backgroundColor: `${colors.errorRed}10`,
+                backgroundColor: `${colors.errorRed}15`,
                 borderColor: colors.errorRed,
                 transform: 'translateY(-2px)',
                 boxShadow: `0 4px 12px ${colors.errorRed}30`
               },
-              transition: 'all 0.3s ease'
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
             }}
           >
             Logout

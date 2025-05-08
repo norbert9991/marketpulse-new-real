@@ -384,13 +384,19 @@ const AdminSettings = () => {
   };
   
   const handleDeleteAdmin = async () => {
-    if (!deletingAdminId) return;
+    if (!deletingAdminId) {
+      showNotification('error', 'No admin selected for deletion');
+      return;
+    }
     
     setDeleteAdminLoading(true);
     
     try {
-      // Try the admin-specific endpoint first
-      await API.admin.deleteAdmin(deletingAdminId);
+      console.log(`Deleting admin with ID: ${deletingAdminId}`);
+      
+      // Make the API call
+      const response = await API.admin.deleteAdmin(deletingAdminId);
+      console.log('Delete admin response:', response);
       
       showNotification('success', 'Admin deleted successfully');
       
@@ -398,7 +404,22 @@ const AdminSettings = () => {
       fetchAdmins();
       setShowDeleteDialog(false);
     } catch (err) {
-      showNotification('error', 'Failed to delete admin: ' + (err.response?.data?.message || err.message));
+      console.error('Error deleting admin:', err);
+      
+      let errorMessage = 'Failed to delete admin';
+      
+      // Handle specific error cases
+      if (err.response?.status === 400 && err.response?.data?.message === 'Cannot delete your own account') {
+        errorMessage = 'You cannot delete your own admin account';
+      } else if (err.response?.status === 404) {
+        errorMessage = 'Admin account not found';
+      } else if (err.response?.data?.message) {
+        errorMessage = `Failed to delete admin: ${err.response.data.message}`;
+      } else if (err.message) {
+        errorMessage = `Failed to delete admin: ${err.message}`;
+      }
+      
+      showNotification('error', errorMessage);
     } finally {
       setDeleteAdminLoading(false);
     }
@@ -430,23 +451,36 @@ const AdminSettings = () => {
     setEditAdminSaving(true);
     
     try {
+      // Create update data object
       const updateData = {
         username: editingAdmin.username,
         email: editingAdmin.email
       };
       
+      // Only include password fields if a new password is provided
       if (editingAdmin.newPassword) {
         updateData.currentPassword = editingAdmin.currentPassword;
         updateData.newPassword = editingAdmin.newPassword;
       }
       
+      // Log what we're about to send to help with debugging
+      console.log(`Updating admin ${editingAdmin.id} with data:`, {
+        ...updateData, 
+        currentPassword: updateData.currentPassword ? '****' : undefined,
+        newPassword: updateData.newPassword ? '****' : undefined 
+      });
+      
+      // Make the API call
       await API.admin.updateUser(editingAdmin.id, updateData);
       
       showNotification('success', 'Admin updated successfully');
       setShowEditAdminDialog(false);
       setEditingAdmin(null);
+      
+      // Refresh admin list after a successful update
       fetchAdmins();
     } catch (err) {
+      console.error('Error updating admin:', err);
       showNotification('error', 'Failed to update admin: ' + (err.response?.data?.message || err.message));
     } finally {
       setEditAdminSaving(false);

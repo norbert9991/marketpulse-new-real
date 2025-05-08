@@ -791,6 +791,7 @@ export const API = {
     getProfile: () => axiosInstance.get('/api/admin/profile'),
     getAdmins: () => axiosInstance.get('/api/admin/admins'),
     updateProfile: (data) => axiosInstance.put('/api/admin/update-profile', data),
+    updateUser: (userId, data) => axiosInstance.put(`/api/admin/users/${userId}`, data),
     addAdmin: (data) => axiosInstance.post('/api/admin/add-admin', data),
     deleteAdmin: (adminId) => axiosInstance.delete(`/api/admin/delete-admin/${adminId}`),
     

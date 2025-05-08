@@ -196,15 +196,25 @@ def delete_admin(current_user, admin_id):
         cursor = conn.cursor()
         
         # Check if admin exists
-        cursor.execute('SELECT * FROM login WHERE user_id = %s AND role = "admin"', (admin_id,))
+        cursor.execute('SELECT * FROM login WHERE user_id = %s', (admin_id,))
         admin = cursor.fetchone()
         
         if not admin:
             cursor.close()
             return jsonify({'message': 'Admin account not found'}), 404
+        
+        # Check if the user is actually an admin
+        if admin[4] != 'admin':  # role is at index 4
+            cursor.close()
+            return jsonify({'message': 'The specified user is not an admin'}), 400
             
         # Delete admin account
         cursor.execute('DELETE FROM login WHERE user_id = %s', (admin_id,))
+        
+        if cursor.rowcount == 0:
+            conn.rollback()
+            cursor.close()
+            return jsonify({'message': 'Failed to delete admin, no rows affected'}), 500
         
         conn.commit()
         cursor.close()
@@ -214,4 +224,83 @@ def delete_admin(current_user, admin_id):
             'message': 'Admin account deleted successfully'
         }), 200
     except Exception as e:
+        print(f"Error deleting admin: {e}")
+        return jsonify({'message': str(e)}), 500
+
+# Update a specific admin user
+@admin_settings_bp.route('/api/admin/users/<int:user_id>', methods=['PUT'])
+@token_required
+def update_admin_user(current_user, user_id):
+    if current_user[4] != 'admin':  # Check if user is admin using index 4 (role)
+        return jsonify({'message': 'Admin access required'}), 403
+    
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'message': 'No data provided'}), 400
+            
+        username = data.get('username')
+        email = data.get('email')
+        current_password = data.get('currentPassword')
+        new_password = data.get('newPassword')
+        
+        if not username or not email:
+            return jsonify({'message': 'Username and email are required'}), 400
+            
+        conn = db_manager.get_connection()
+        cursor = conn.cursor()
+        
+        # Check if target user exists and is an admin
+        cursor.execute('SELECT * FROM login WHERE user_id = %s', (user_id,))
+        target_user = cursor.fetchone()
+        
+        if not target_user:
+            cursor.close()
+            return jsonify({'message': 'User not found'}), 404
+            
+        # Check if username or email already exists (excluding the user being updated)
+        cursor.execute('SELECT * FROM login WHERE (username = %s OR email = %s) AND user_id != %s', 
+                      (username, email, user_id))
+        existing_user = cursor.fetchone()
+        
+        if existing_user:
+            cursor.close()
+            return jsonify({'message': 'Username or email already exists'}), 400
+            
+        # If changing password
+        if new_password:
+            # Only the user themselves should provide current password for verification
+            # Admin can reset other admin passwords without verification
+            if user_id == current_user[0] and not current_password:  # user_id is at index 0
+                cursor.close()
+                return jsonify({'message': 'Current password is required to change your own password'}), 400
+                
+            # If changing own password, verify current password
+            if user_id == current_user[0] and current_password:
+                cursor.execute('SELECT pass FROM login WHERE user_id = %s', (user_id,))
+                user = cursor.fetchone()
+                
+                if not check_password_hash(user[0], current_password):  # password hash is the first column
+                    cursor.close()
+                    return jsonify({'message': 'Current password is incorrect'}), 400
+            
+            # Update with new password
+            hashed_password = generate_password_hash(new_password)
+            cursor.execute('UPDATE login SET username = %s, email = %s, pass = %s WHERE user_id = %s',
+                          (username, email, hashed_password, user_id))
+        else:
+            # Update without changing password
+            cursor.execute('UPDATE login SET username = %s, email = %s WHERE user_id = %s',
+                          (username, email, user_id))
+            
+        conn.commit()
+        cursor.close()
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Admin user updated successfully'
+        }), 200
+    except Exception as e:
+        print(f"Error updating admin user: {e}")
         return jsonify({'message': str(e)}), 500 
