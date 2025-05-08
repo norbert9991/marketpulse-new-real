@@ -109,8 +109,8 @@ const Settings = () => {
     setProcessing(true);
     try {
       const response = await API.settings.updateEmail({
-        current_password: currentPassword,
-        new_email: email
+        password: currentPassword,
+        email: email
       });
       
       setMessage({
@@ -147,8 +147,8 @@ const Settings = () => {
     setProcessing(true);
     try {
       const response = await API.settings.updatePassword({
-        current_password: currentPassword,
-        new_password: newPassword
+        currentPassword: currentPassword,
+        newPassword: newPassword
       });
       
       setMessage({
@@ -178,7 +178,7 @@ const Settings = () => {
 
     setProcessing(true);
     try {
-      await API.settings.deleteAccount();
+      await API.settings.deleteAccount({ password: deletePassword });
       
       localStorage.removeItem('token');
       localStorage.removeItem('user');

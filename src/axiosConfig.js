@@ -215,7 +215,7 @@ export const API = {
   settings: {
     updateEmail: (data) => axiosInstance.put('/api/settings/update-email', data),
     updatePassword: (data) => axiosInstance.put('/api/settings/update-password', data),
-    deleteAccount: () => axiosInstance.delete('/api/settings/delete-account'),
+    deleteAccount: (data) => axiosInstance.delete('/api/settings/delete-account', { data }),
   },
   
   // News endpoints
