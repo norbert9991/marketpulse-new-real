@@ -637,6 +637,13 @@ const AdminFAQ = () => {
                       '&.Mui-focused fieldset': {
                         borderColor: colors.primary
                       }
+                    },
+                    '& .MuiInputBase-input': {
+                      color: colors.primaryText
+                    },
+                    '& ::placeholder': { 
+                      color: `${colors.secondaryText}`,
+                      opacity: 0.7
                     }
                   }}
                   InputProps={{
@@ -669,18 +676,34 @@ const AdminFAQ = () => {
                 placeholder="Search FAQs..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                sx={{ mb: 3 }}
-                InputProps={{
-                  startAdornment: <SearchIcon sx={{ mr: 1, color: colors.secondaryText }} />,
-                  sx: {
+                sx={{
+                  mb: 3,
+                  '& .MuiOutlinedInput-root': {
                     color: colors.primaryText,
-                    '& .MuiOutlinedInput-notchedOutline': {
+                    backgroundColor: `${colors.background}80`,
+                    '& fieldset': {
                       borderColor: colors.borderColor
                     },
-                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                    '&:hover fieldset': {
+                      borderColor: colors.primary
+                    },
+                    '&.Mui-focused fieldset': {
                       borderColor: colors.primary
                     }
+                  },
+                  '& .MuiInputBase-input': {
+                    color: colors.primaryText
+                  },
+                  '& ::placeholder': { 
+                    color: `${colors.secondaryText}`,
+                    opacity: 0.7
                   }
+                }}
+                InputProps={{
+                  startAdornment: <SearchIcon sx={{ mr: 1, color: colors.secondaryText }} />,
+                }}
+                InputLabelProps={{
+                  sx: { color: colors.secondaryText }
                 }}
               />
               
