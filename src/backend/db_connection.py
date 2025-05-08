@@ -12,12 +12,12 @@ class DatabaseConnection:
         # Get database credentials from environment variables
         # with names matching Render's configuration
         self.config = {
-            'host': os.environ.get('DB_HOST', 'dpg-cvpr2b8dl3ps73866gc0-a'),
-            'user': os.environ.get('DB_USER', 'finals_gzev_user'),
-            'password': os.environ.get('DB_PASSWORD', 'prnrRDareyMyh720g7BGCHfDE7eSjdjV'),
-            'database': os.environ.get('DB_NAME', 'finals_gzev'),
+            'host': os.environ.get('DB_HOST', 'dpg-d0e4k6h5pdvs73ao5d2g-a.oregon-postgres.render.com'),
+            'user': os.environ.get('DB_USER', 'finals2'),
+            'password': os.environ.get('DB_PASSWORD', 'kHp9MSWHJpK7XhrzAbvKCosZDxKzPkC3'),
+            'database': os.environ.get('DB_NAME', 'finals2'),
             'port': os.environ.get('DB_PORT', 5432),
-            'databaseurl': os.environ.get('DATABASE_URL', 'postgresql://finals_gzev_user:prnrRDareyMyh720g7BGCHfDE7eSjdjV@dpg-cvpr2b8dl3ps73866gc0-a.oregon-postgres.render.com/finals_gzev')
+            'databaseurl': os.environ.get('DATABASE_URL', 'postgresql://finals2:kHp9MSWHJpK7XhrzAbvKCosZDxKzPkC3@dpg-d0e4k6h5pdvs73ao5d2g-a.oregon-postgres.render.com/finals2')
         }
         
         logging.basicConfig(

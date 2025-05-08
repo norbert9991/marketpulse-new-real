@@ -12,17 +12,15 @@ services:
       - key: SECRET_KEY
         value: fb4f4f255fb38f23a4d7379be97c837b
       - key: DATABASE_URL
-        fromDatabase:
-          name: finals_gzev
-          property: connectionString
+        value: postgresql://finals2:kHp9MSWHJpK7XhrzAbvKCosZDxKzPkC3@dpg-d0e4k6h5pdvs73ao5d2g-a.oregon-postgres.render.com/finals2
       - key: DB_HOST
-        value: dpg-cvpr2b8dl3ps73866gc0-a
+        value: dpg-d0e4k6h5pdvs73ao5d2g-a.oregon-postgres.render.com
       - key: DB_USER
-        value: finals_gzev_user
+        value: finals2
       - key: DB_PASSWORD
-        value: prnrRDareyMyh720g7BGCHfDE7eSjdjV
+        value: kHp9MSWHJpK7XhrzAbvKCosZDxKzPkC3
       - key: DB_NAME
-        value: finals_gzev
+        value: finals2
       - key: DB_PORT
         value: 5432
       - key: FRONTEND_URL

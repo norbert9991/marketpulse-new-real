@@ -608,7 +608,7 @@ const Home = () => {
           }}>
             {[
               {
-                title: "Advanced Predictive Models",
+                title: "Robust Predictive Algorithm",
                 description: "Our proprietary algorithms analyze historical data patterns to forecast market movements with high accuracy."
               },
               {
@@ -616,8 +616,8 @@ const Home = () => {
                 description: "Stay ahead with real-time market analysis, sentiment tracking, and trend identification across multiple timeframes."
               },
               {
-                title: "Comprehensive Data Coverage",
-                description: "Access comprehensive market data across forex, stocks, commodities, and cryptocurrencies with detailed technical indicators."
+                title: "Comprehensive Forex Data Coverage",
+                description: "Access comprehensive market data across major currency pairs with detailed technical indicators for precise forex trading analysis."
               }
             ].map((feature, index) => (
               <Box key={index} sx={{ flex: { xs: '1 1 100%', md: '1 1 calc(33.333% - 32px)' } }}>
