@@ -308,6 +308,21 @@ const UserDashboard = () => {
     fetchMarketData();
   }, [selectedSymbol]);
 
+  // Add event listener for userDataUpdated event
+  useEffect(() => {
+    const handleUserDataUpdated = (e) => {
+      console.log('UserDashboard: Received userDataUpdated event');
+      const updatedUser = e.detail.user;
+      setUser(updatedUser);
+    };
+
+    window.addEventListener('userDataUpdated', handleUserDataUpdated);
+    
+    return () => {
+      window.removeEventListener('userDataUpdated', handleUserDataUpdated);
+    };
+  }, []);
+
   const handleLogout = () => {
     console.log('UserDashboard - Logging out');
     // Clear authentication data
@@ -396,8 +411,9 @@ const UserDashboard = () => {
                     backgroundColor: colors.accentBlue,
                     boxShadow: `0 0 10px ${colors.accentBlue}60`
                   }}
+                  src={user.profile_image}
                 >
-                  {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
+                  {(!user.profile_image && user.username) ? user.username.charAt(0).toUpperCase() : 'U'}
                 </Avatar>
                 <Typography sx={{ color: colors.primaryText }}>
                   {user.username || 'User'}

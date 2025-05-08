@@ -37,9 +37,53 @@ const Sidebar = ({ activePage }) => {
     // Get user data from localStorage
     const userData = localStorage.getItem('user');
     if (userData) {
-      setUser(JSON.parse(userData));
+      const parsedUser = JSON.parse(userData);
+      console.log('Sidebar: User data from localStorage:', { 
+        username: parsedUser.username,
+        hasProfileImage: !!parsedUser.profile_image,
+        profileImage: parsedUser.profile_image
+      });
+      setUser(parsedUser);
     }
   }, [location.pathname]);
+
+  // Add this new effect to listen for localStorage changes
+  useEffect(() => {
+    // Function to handle storage events
+    const handleStorageChange = (e) => {
+      if (e.key === 'user') {
+        console.log('Sidebar: user data changed in localStorage, updating...');
+        const updatedUser = JSON.parse(e.newValue);
+        setUser(updatedUser);
+      }
+    };
+
+    // Add event listener
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
+  // Add this new effect to listen for custom userDataUpdated event
+  useEffect(() => {
+    // Function to handle custom user data updated event
+    const handleUserDataUpdated = (e) => {
+      console.log('Sidebar: Received userDataUpdated event');
+      const updatedUser = e.detail.user;
+      setUser(updatedUser);
+    };
+
+    // Add event listener
+    window.addEventListener('userDataUpdated', handleUserDataUpdated);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('userDataUpdated', handleUserDataUpdated);
+    };
+  }, []);
 
   const handleNavigation = (path) => {
     navigate(path);

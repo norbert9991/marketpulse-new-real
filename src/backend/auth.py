@@ -123,7 +123,8 @@ def login():
                 'user_id': user[0],
                 'username': user[1],
                 'email': user[2],
-                'role': user[4]
+                'role': user[4],
+                'profile_image': user[8] if len(user) > 8 else None
             }
         })
     except Exception as e:
@@ -136,7 +137,7 @@ def login():
 @token_required
 def get_current_user(current_user):
     # Convert the tuple current_user to a dictionary for consistent response format
-    # Assuming column order: user_id, username, email, pass, role, last_login, account_status, created_at
+    # Assuming column order: user_id, username, email, pass, role, last_login, account_status, created_at, profile_image
     if current_user:
         user_data = {
             'user_id': current_user[0],
@@ -145,7 +146,8 @@ def get_current_user(current_user):
             'role': current_user[4],
             'account_status': current_user[6],
             'last_login': current_user[5].isoformat() if current_user[5] else None,
-            'created_at': current_user[7].isoformat() if current_user[7] else None
+            'created_at': current_user[7].isoformat() if current_user[7] else None,
+            'profile_image': current_user[8] if len(current_user) > 8 else None
         }
         return jsonify({'user': user_data})
     else:

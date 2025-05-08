@@ -299,14 +299,27 @@ const Settings = () => {
       });
       
       console.log('Image upload response:', response.data);
+      console.log('Image URL from response:', response.data.profile_image);
+      
       setMessage({
         type: 'success',
         text: 'Profile image updated successfully'
       });
       
-      // Update user data
-      const userResponse = await API.auth.me();
-      setUser(userResponse.data.user);
+      // Update user data in state
+      const updatedUserData = { ...user, profile_image: response.data.profile_image };
+      setUser(updatedUserData);
+      
+      // Update the user data in localStorage to ensure profile image is available across the app
+      const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const updatedUser = { ...storedUser, profile_image: response.data.profile_image };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      console.log('Updated user data in localStorage with new profile image:', response.data.profile_image);
+      
+      // Dispatch a custom event to notify other components of the user data change
+      window.dispatchEvent(new CustomEvent('userDataUpdated', { 
+        detail: { user: updatedUser }
+      }));
     } catch (error) {
       console.error('Error uploading image:', error);
       setMessage({ 
