@@ -1596,7 +1596,7 @@ const Market = () => {
           justifyContent: 'space-between',
           alignItems: 'center'
         }}>
-          <Typography variant="h6" component="div">
+          <Typography variant="h6" component="div" sx={{ color: colors.primaryText }}>
             {getCurrencyInfo().name} Information
           </Typography>
           <IconButton
@@ -1609,7 +1609,7 @@ const Market = () => {
           </IconButton>
         </DialogTitle>
         <DialogContent sx={{ mt: 2 }}>
-          <Typography variant="body1" sx={{ mb: 2 }}>
+          <Typography variant="body1" sx={{ mb: 2, color: colors.primaryText }}>
             {getCurrencyInfo().description}
           </Typography>
           
@@ -1629,7 +1629,7 @@ const Market = () => {
                     <Typography variant="subtitle2" sx={{ color: colors.secondaryText }}>
                       Base Currency:
                     </Typography>
-                    <Typography variant="body2">
+                    <Typography variant="body2" sx={{ color: colors.primaryText }}>
                       {getCurrencyInfo().baseCurrency}
                     </Typography>
                   </Box>
@@ -1637,7 +1637,7 @@ const Market = () => {
                     <Typography variant="subtitle2" sx={{ color: colors.secondaryText }}>
                       Quote Currency:
                     </Typography>
-                    <Typography variant="body2">
+                    <Typography variant="body2" sx={{ color: colors.primaryText }}>
                       {getCurrencyInfo().quoteCurrency}
                     </Typography>
                   </Box>
@@ -1645,7 +1645,7 @@ const Market = () => {
                     <Typography variant="subtitle2" sx={{ color: colors.secondaryText }}>
                       Central Banks:
                     </Typography>
-                    <Typography variant="body2">
+                    <Typography variant="body2" sx={{ color: colors.primaryText }}>
                       {getCurrencyInfo().centralBanks}
                     </Typography>
                   </Box>
@@ -1667,7 +1667,7 @@ const Market = () => {
                     <Typography variant="subtitle2" sx={{ color: colors.secondaryText }}>
                       Trading Hours:
                     </Typography>
-                    <Typography variant="body2">
+                    <Typography variant="body2" sx={{ color: colors.primaryText }}>
                       {getCurrencyInfo().tradingHours}
                     </Typography>
                   </Box>
@@ -1675,7 +1675,7 @@ const Market = () => {
                     <Typography variant="subtitle2" sx={{ color: colors.secondaryText }}>
                       Typical Spread:
                     </Typography>
-                    <Typography variant="body2">
+                    <Typography variant="body2" sx={{ color: colors.primaryText }}>
                       {getCurrencyInfo().typicalSpread}
                     </Typography>
                   </Box>
@@ -1683,7 +1683,7 @@ const Market = () => {
                     <Typography variant="subtitle2" sx={{ color: colors.secondaryText }}>
                       Volatility:
                     </Typography>
-                    <Typography variant="body2">
+                    <Typography variant="body2" sx={{ color: colors.primaryText }}>
                       {getCurrencyInfo().volatility}
                     </Typography>
                   </Box>
@@ -1701,7 +1701,7 @@ const Market = () => {
             <Typography variant="subtitle1" sx={{ mb: 1, color: colors.accentBlue, fontWeight: 'bold' }}>
               Major Influences
             </Typography>
-            <Typography variant="body2">
+            <Typography variant="body2" sx={{ color: colors.primaryText }}>
               {getCurrencyInfo().majorInfluences}
             </Typography>
           </Paper>
@@ -1710,22 +1710,40 @@ const Market = () => {
             <Typography variant="subtitle2" sx={{ color: colors.secondaryText }}>
               Learn more about forex trading:
             </Typography>
-            <Link 
-              href="https://www.investopedia.com/trading/forex-trading-basics/" 
-              target="_blank" 
-              rel="noopener"
-              sx={{ 
-                display: 'flex', 
-                alignItems: 'center',
-                color: colors.accentBlue,
-                '&:hover': {
-                  color: colors.gradientStart
-                }
-              }}
-            >
-              Investopedia Forex Guide
-              <LaunchIcon fontSize="small" sx={{ ml: 0.5 }} />
-            </Link>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Link 
+                href="https://www.babypips.com/learn/forex" 
+                target="_blank" 
+                rel="noopener"
+                sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  color: colors.accentBlue,
+                  '&:hover': {
+                    color: colors.gradientStart
+                  }
+                }}
+              >
+                BabyPips School of Pipsology
+                <LaunchIcon fontSize="small" sx={{ ml: 0.5 }} />
+              </Link>
+              <Link 
+                href="https://www.forexfactory.com/education" 
+                target="_blank" 
+                rel="noopener"
+                sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  color: colors.accentBlue,
+                  '&:hover': {
+                    color: colors.gradientStart
+                  }
+                }}
+              >
+                Forex Factory
+                <LaunchIcon fontSize="small" sx={{ ml: 0.5 }} />
+              </Link>
+            </Box>
           </Box>
         </DialogContent>
         <DialogActions sx={{ borderTop: `1px solid ${colors.borderColor}`, px: 3, py: 2 }}>

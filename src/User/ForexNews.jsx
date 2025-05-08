@@ -20,7 +20,12 @@ import {
   MenuItem,
   Alert,
   Pagination,
-  Stack
+  Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Snackbar
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
@@ -83,6 +88,11 @@ const ForexNews = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [pageSize] = useState(5); // Fixed page size
   
+  // Add new state for viewing saved articles
+  const [showSavedArticles, setShowSavedArticles] = useState(false);
+  // Add state for save success dialog
+  const [saveNotification, setSaveNotification] = useState({ open: false, message: '', type: 'success' });
+  
   // Menu handling
   const handleMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -112,6 +122,12 @@ const ForexNews = () => {
 
   // Effect to fetch news data
   useEffect(() => {
+    // Skip fetching news if we're showing saved articles
+    if (showSavedArticles) {
+      setLoading(false);
+      return;
+    }
+    
     const fetchData = async () => {
       setLoading(true);
       try {
@@ -159,7 +175,18 @@ const ForexNews = () => {
     };
 
     fetchData();
-  }, [currentCategory, refreshCount, page, pageSize]);
+  }, [currentCategory, refreshCount, page, pageSize, showSavedArticles]);
+
+  // Handle view saved articles
+  const handleViewSavedArticles = () => {
+    setShowSavedArticles(true);
+    handleMenuClose();
+  };
+
+  // Handle return to all news
+  const handleReturnToNews = () => {
+    setShowSavedArticles(false);
+  };
 
   // Format date to be more readable
   const formatDate = (dateString) => {
@@ -202,8 +229,20 @@ const ForexNews = () => {
     
     if (isCurrentlySaved) {
       newSaved = savedArticles.filter(saved => saved.id !== article.id);
+      // Show notification
+      setSaveNotification({
+        open: true,
+        message: 'Article removed from bookmarks',
+        type: 'info'
+      });
     } else {
       newSaved = [...savedArticles, article];
+      // Show notification
+      setSaveNotification({
+        open: true,
+        message: 'Article saved to bookmarks',
+        type: 'success'
+      });
     }
     
     setSavedArticles(newSaved);
@@ -212,7 +251,23 @@ const ForexNews = () => {
       localStorage.setItem('saved_forex_articles', JSON.stringify(newSaved));
     } catch (error) {
       console.error('Error saving article to localStorage:', error);
+      // Show error notification
+      setSaveNotification({
+        open: true,
+        message: 'Failed to save article',
+        type: 'error'
+      });
     }
+    
+    // If in saved view and removing an article, refresh the view
+    if (showSavedArticles && isCurrentlySaved) {
+      setSavedArticles(newSaved);
+    }
+  };
+
+  // Close notification
+  const handleCloseNotification = () => {
+    setSaveNotification({ ...saveNotification, open: false });
   };
 
   // Force refresh - bypasses cache completely
@@ -226,16 +281,44 @@ const ForexNews = () => {
     // Clear the cache first
     localStorage.removeItem(`forex_news_${currentCategory}`);
     
+    // Make sure we're viewing news, not saved articles
+    setShowSavedArticles(false);
+    
     // Then fetch fresh data by incrementing the refresh counter
     setRefreshCount(prev => prev + 1);
   };
 
   // Handle standard refresh with optimistic UI update
   const handleRefresh = () => {
+    // If showing saved articles, just refresh from localStorage
+    if (showSavedArticles) {
+      try {
+        const saved = JSON.parse(localStorage.getItem('saved_forex_articles') || '[]');
+        setSavedArticles(saved);
+        return;
+      } catch (error) {
+        console.error('Error refreshing saved articles:', error);
+      }
+    }
+    
     setLoading(true);
     
     // Increment refresh counter to trigger the useEffect
     setRefreshCount(prev => prev + 1);
+  };
+
+  // Clear all saved articles
+  const handleClearSavedArticles = () => {
+    setSavedArticles([]);
+    localStorage.removeItem('saved_forex_articles');
+    handleMenuClose();
+    
+    // Show notification
+    setSaveNotification({
+      open: true,
+      message: 'All bookmarks cleared',
+      type: 'info'
+    });
   };
 
   // Share article - in a real app, this would open a share dialog
@@ -261,6 +344,7 @@ const ForexNews = () => {
   const handleCategoryChange = (category) => {
     setCurrentCategory(category);
     setPage(1); // Reset to first page when changing category
+    setShowSavedArticles(false); // Return to news view when changing category
   };
 
   // Get API URL from environment or default to localhost
@@ -268,6 +352,9 @@ const ForexNews = () => {
     process.env.NODE_ENV === 'production' 
       ? 'https://marketpulse-new-real-3-web.onrender.com'
       : (process.env.REACT_APP_API_URL || 'http://localhost:5000');
+
+  // Determine which articles to display
+  const displayedArticles = showSavedArticles ? savedArticles : newsData;
 
   return (
     <Box sx={{ display: 'flex', bgcolor: colors.darkBg, height: '100vh', overflow: 'hidden' }}>
@@ -287,19 +374,39 @@ const ForexNews = () => {
           <Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography variant="h5" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
-                Forex News
+                {showSavedArticles ? 'Saved Articles' : 'Forex News'}
               </Typography>
-              <Tooltip title="Latest forex market updates" arrow>
+              <Tooltip title={showSavedArticles ? "Your saved articles" : "Latest forex market updates"} arrow>
                 <IconButton sx={{ color: colors.secondaryText, p: 0.5 }}>
                   <HelpOutlineIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
             </Box>
             <Typography variant="body2" sx={{ color: colors.secondaryText, mt: 0.5 }}>
-              Stay updated with the latest news affecting major currency pairs and forex markets
+              {showSavedArticles 
+                ? `You have ${savedArticles.length} saved article${savedArticles.length !== 1 ? 's' : ''}` 
+                : 'Stay updated with the latest news affecting major currency pairs and forex markets'
+              }
             </Typography>
           </Box>
           <Box>
+            {showSavedArticles && (
+              <Button
+                variant="outlined"
+                onClick={handleReturnToNews}
+                sx={{
+                  borderColor: colors.borderColor,
+                  color: colors.primaryText,
+                  mr: 2,
+                  '&:hover': {
+                    borderColor: colors.accentBlue,
+                    bgcolor: 'rgba(33, 150, 243, 0.1)',
+                  }
+                }}
+              >
+                Back to News
+              </Button>
+            )}
             <Button
               variant="contained"
               startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <RefreshIcon />}
@@ -335,52 +442,58 @@ const ForexNews = () => {
               }}
             >
               <MenuItem onClick={handleForceRefresh}>Force Refresh (Clear Cache)</MenuItem>
-              <MenuItem onClick={handleMenuClose}>View Saved Articles</MenuItem>
-              <MenuItem onClick={handleMenuClose}>Manage Notifications</MenuItem>
+              {showSavedArticles ? (
+                <MenuItem onClick={handleClearSavedArticles}>Clear All Bookmarks</MenuItem>
+              ) : (
+                <MenuItem onClick={handleViewSavedArticles}>View Saved Articles ({savedArticles.length})</MenuItem>
+              )}
+              <MenuItem onClick={handleMenuClose}>Filter by Date</MenuItem>
             </Menu>
           </Box>
         </Box>
         
-        {/* Filter chips row */}
-        <Box 
-          sx={{ 
-            display: 'flex', 
-            p: 2, 
-            bgcolor: colors.panelBg, 
-            gap: 1,
-            overflowX: 'auto',
-            borderBottom: `1px solid ${colors.borderColor}`,
-            '&::-webkit-scrollbar': {
-              height: '8px',
-            },
-            '&::-webkit-scrollbar-thumb': {
-              backgroundColor: colors.borderColor,
-              borderRadius: '4px',
-            }
-          }}
-        >
-          {newsCategories.map(category => (
-            <Chip
-              key={category.value}
-              label={category.label}
-              onClick={() => handleCategoryChange(category.value)}
-              sx={{
-                bgcolor: currentCategory === category.value ? colors.accentBlue : colors.cardBg,
-                color: colors.primaryText,
+        {/* Filter chips row - only show when not in saved articles view */}
+        {!showSavedArticles && (
+          <Box 
+            sx={{ 
+              display: 'flex', 
+              p: 2, 
+              bgcolor: colors.panelBg, 
+              gap: 1,
+              overflowX: 'auto',
+              borderBottom: `1px solid ${colors.borderColor}`,
+              '&::-webkit-scrollbar': {
+                height: '8px',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                backgroundColor: colors.borderColor,
                 borderRadius: '4px',
-                px: 1,
-                py: 2.5,
-                fontWeight: currentCategory === category.value ? 'bold' : 'normal',
-                '&:hover': {
-                  bgcolor: currentCategory === category.value ? colors.accentBlue : colors.hoverBg,
-                },
-              }}
-            />
-          ))}
-        </Box>
+              }
+            }}
+          >
+            {newsCategories.map(category => (
+              <Chip
+                key={category.value}
+                label={category.label}
+                onClick={() => handleCategoryChange(category.value)}
+                sx={{
+                  bgcolor: currentCategory === category.value ? colors.accentBlue : colors.cardBg,
+                  color: colors.primaryText,
+                  borderRadius: '4px',
+                  px: 1,
+                  py: 2.5,
+                  fontWeight: currentCategory === category.value ? 'bold' : 'normal',
+                  '&:hover': {
+                    bgcolor: currentCategory === category.value ? colors.accentBlue : colors.hoverBg,
+                  },
+                }}
+              />
+            ))}
+          </Box>
+        )}
         
-        {/* API source info */}
-        {apiSource && (
+        {/* API source info - only show when not in saved articles view */}
+        {apiSource && !showSavedArticles && (
           <Box sx={{ px: 3, pt: 2 }}>
             <Alert 
               severity="info" 
@@ -399,11 +512,11 @@ const ForexNews = () => {
         
         {/* Main content area */}
         <Box sx={{ p: 3 }}>
-          {loading && newsData.length === 0 ? (
+          {loading && displayedArticles.length === 0 ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
               <CircularProgress sx={{ color: colors.accentBlue }} />
             </Box>
-          ) : error ? (
+          ) : error && !showSavedArticles ? (
             <Paper sx={{ p: 3, bgcolor: colors.cardBg, color: colors.primaryText, borderRadius: 2 }}>
               <Typography color="error">{error}</Typography>
               <Button 
@@ -416,13 +529,26 @@ const ForexNews = () => {
             </Paper>
           ) : (
             <Box sx={{ maxWidth: '100%' }}>
-              {newsData.length === 0 ? (
+              {displayedArticles.length === 0 ? (
                 <Paper sx={{ p: 3, bgcolor: colors.cardBg, color: colors.primaryText, borderRadius: 2, textAlign: 'center' }}>
-                  <Typography>No news articles found for the selected category.</Typography>
+                  <Typography>
+                    {showSavedArticles 
+                      ? "You don't have any saved articles yet. Bookmark articles to see them here."
+                      : "No news articles found for the selected category."}
+                  </Typography>
+                  {showSavedArticles && (
+                    <Button
+                      variant="contained"
+                      onClick={handleReturnToNews}
+                      sx={{ mt: 2, bgcolor: colors.accentBlue }}
+                    >
+                      Browse News
+                    </Button>
+                  )}
                 </Paper>
               ) : (
                 <>
-                  {newsData.map(article => (
+                  {displayedArticles.map(article => (
                     <Paper
                       key={article.id}
                       elevation={0}
@@ -594,8 +720,8 @@ const ForexNews = () => {
                     </Paper>
                   ))}
                   
-                  {/* Pagination controls */}
-                  {totalPages > 1 && (
+                  {/* Pagination controls - only show when not in saved articles view */}
+                  {totalPages > 1 && !showSavedArticles && (
                     <Box
                       sx={{
                         display: 'flex',
@@ -638,6 +764,28 @@ const ForexNews = () => {
           )}
         </Box>
       </Box>
+
+      {/* Save/Remove notification */}
+      <Snackbar
+        open={saveNotification.open}
+        autoHideDuration={3000}
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleCloseNotification} 
+          severity={saveNotification.type} 
+          sx={{ 
+            bgcolor: saveNotification.type === 'success' ? 'rgba(0, 230, 118, 0.9)' : 
+                   saveNotification.type === 'error' ? 'rgba(255, 61, 87, 0.9)' : 
+                   'rgba(33, 150, 243, 0.9)',
+            color: '#fff'
+          }}
+        >
+          {saveNotification.message}
+        </Alert>
+      </Snackbar>
+      
     </Box>
   );
 };
