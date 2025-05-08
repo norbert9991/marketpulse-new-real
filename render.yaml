@@ -1,7 +1,7 @@
 # render.yaml
 services:
   - type: web
-    name: marketpulse-api
+    name: marketpulse-new-real-3-web
     env: python
     region: oregon
     buildCommand: pip install -r requirements.txt
@@ -24,7 +24,7 @@ services:
       - key: DB_PORT
         value: 5432
       - key: FRONTEND_URL
-        value: https://marketpulse-new-real-static-2-0.onrender.com
+        value: https://marketpulse-new-real-3.onrender.com
       # Email configuration
       - key: SMTP_SERVER
         value: smtp.gmail.com
@@ -38,7 +38,7 @@ services:
         value: norbertcabasag999@gmail.com
   
   - type: web
-    name: marketpulse-frontend
+    name: marketpulse-new-real-3
     env: static
     region: oregon
     buildCommand: npm install && npm run build
