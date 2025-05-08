@@ -15,7 +15,14 @@ import {
   Button,
   CircularProgress,
   Select,
-  MenuItem
+  MenuItem,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  FormControlLabel,
+  Switch
 } from '@mui/material';
 import { 
   LineChart, 
@@ -28,7 +35,9 @@ import {
   AreaChart,
   Area,
   BarChart,
-  Bar
+  Bar,
+  CandlestickChart,
+  Candlestick
 } from 'recharts';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
@@ -37,6 +46,11 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import Sidebar from './Sidebar';
 import { API } from '../axiosConfig';
+import Link from '@mui/material/Link';
+import LaunchIcon from '@mui/icons-material/Launch';
+import CloseIcon from '@mui/icons-material/Close';
+import Snackbar from '@mui/material/Snackbar';
+import Alert from '@mui/material/Alert';
 
 // Forex Trading Color Palette
 const colors = {
@@ -131,6 +145,21 @@ const Market = () => {
   const [favoriteMessage, setFavoriteMessage] = useState('');
   const [showFavoriteAlert, setShowFavoriteAlert] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
+  
+  // Add states for dialogs and notifications
+  const [marketInfoOpen, setMarketInfoOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsNotification, setSettingsNotification] = useState(false);
+  
+  // Add states for settings
+  const [settings, setSettings] = useState({
+    showTechnicalIndicators: true,
+    showSupportResistance: true,
+    showSentimentAnalysis: true,
+    enableRealTimeUpdates: false,
+    darkMode: true,
+    chartStyle: 'area' // 'area', 'line', or 'candle'
+  });
 
   // Add a ref to track if we've already logged sentiment messages
   const sentimentLoggedRef = useRef(false);
@@ -615,6 +644,233 @@ const Market = () => {
     };
   };
 
+  const handleSettingsChange = (setting) => (event) => {
+    setSettings({
+      ...settings,
+      [setting]: event.target.checked
+    });
+    // Show settings notification
+    setSettingsNotification(true);
+  };
+  
+  const handleChartStyleChange = (style) => {
+    setSettings({
+      ...settings,
+      chartStyle: style
+    });
+    // Show settings notification
+    setSettingsNotification(true);
+  };
+  
+  // Function to get currency information for the selected pair
+  const getCurrencyInfo = () => {
+    const pairInfo = {
+      'EURUSD=X': {
+        name: 'Euro / US Dollar',
+        description: 'The EUR/USD pair represents the exchange rate between the Euro and the US Dollar. It is the most traded currency pair in the forex market, accounting for about 28% of daily forex trades.',
+        baseCurrency: 'Euro (EUR)',
+        quoteCurrency: 'US Dollar (USD)',
+        centralBanks: 'European Central Bank (ECB), Federal Reserve (Fed)',
+        tradingHours: '24 hours, Sunday 5PM ET to Friday 5PM ET',
+        typicalSpread: '0.1 to 1.0 pips',
+        volatility: 'Medium',
+        majorInfluences: 'ECB and Fed monetary policy, European and US economic data, political developments in EU and US'
+      },
+      'GBPUSD=X': {
+        name: 'British Pound / US Dollar',
+        description: 'Also known as "Cable", the GBP/USD pair represents the exchange rate between the British Pound and the US Dollar. It is one of the oldest and most traded currency pairs.',
+        baseCurrency: 'British Pound (GBP)',
+        quoteCurrency: 'US Dollar (USD)',
+        centralBanks: 'Bank of England (BoE), Federal Reserve (Fed)',
+        tradingHours: '24 hours, Sunday 5PM ET to Friday 5PM ET',
+        typicalSpread: '0.5 to 2.0 pips',
+        volatility: 'High',
+        majorInfluences: 'BoE and Fed monetary policy, UK and US economic data, Brexit developments'
+      },
+      'USDJPY=X': {
+        name: 'US Dollar / Japanese Yen',
+        description: 'The USD/JPY pair represents the exchange rate between the US Dollar and the Japanese Yen. It is one of the most liquid currency pairs in the forex market.',
+        baseCurrency: 'US Dollar (USD)',
+        quoteCurrency: 'Japanese Yen (JPY)',
+        centralBanks: 'Federal Reserve (Fed), Bank of Japan (BoJ)',
+        tradingHours: '24 hours, Sunday 5PM ET to Friday 5PM ET',
+        typicalSpread: '0.5 to 1.5 pips',
+        volatility: 'Medium',
+        majorInfluences: 'Fed and BoJ monetary policy, US-Japan interest rate differentials, risk sentiment'
+      },
+      'AUDUSD=X': {
+        name: 'Australian Dollar / US Dollar',
+        description: 'The AUD/USD pair represents the exchange rate between the Australian Dollar and the US Dollar. Also known as the "Aussie", it is influenced by commodity prices and risk sentiment.',
+        baseCurrency: 'Australian Dollar (AUD)',
+        quoteCurrency: 'US Dollar (USD)',
+        centralBanks: 'Reserve Bank of Australia (RBA), Federal Reserve (Fed)',
+        tradingHours: '24 hours, Sunday 5PM ET to Friday 5PM ET',
+        typicalSpread: '0.5 to 2.0 pips',
+        volatility: 'Medium-High',
+        majorInfluences: 'Commodity prices, China economic data, risk sentiment, RBA policy'
+      },
+      'USDCAD=X': {
+        name: 'US Dollar / Canadian Dollar',
+        description: 'The USD/CAD pair represents the exchange rate between the US Dollar and the Canadian Dollar. Also known as the "Loonie", it is heavily influenced by oil prices and the economic relationship between the US and Canada.',
+        baseCurrency: 'US Dollar (USD)',
+        quoteCurrency: 'Canadian Dollar (CAD)',
+        centralBanks: 'Federal Reserve (Fed), Bank of Canada (BoC)',
+        tradingHours: '24 hours, Sunday 5PM ET to Friday 5PM ET',
+        typicalSpread: '0.5 to 2.0 pips',
+        volatility: 'Medium',
+        majorInfluences: 'Oil prices, US-Canada trade relations, economic data from both countries'
+      },
+      'NZDUSD=X': {
+        name: 'New Zealand Dollar / US Dollar',
+        description: 'The NZD/USD pair represents the exchange rate between the New Zealand Dollar and the US Dollar. Also known as the "Kiwi", it is influenced by dairy prices and risk sentiment.',
+        baseCurrency: 'New Zealand Dollar (NZD)',
+        quoteCurrency: 'US Dollar (USD)',
+        centralBanks: 'Reserve Bank of New Zealand (RBNZ), Federal Reserve (Fed)',
+        tradingHours: '24 hours, Sunday 5PM ET to Friday 5PM ET',
+        typicalSpread: '1.0 to 3.0 pips',
+        volatility: 'Medium-High',
+        majorInfluences: 'Dairy prices, agricultural exports, risk sentiment, RBNZ policy'
+      },
+      'USDCHF=X': {
+        name: 'US Dollar / Swiss Franc',
+        description: 'The USD/CHF pair represents the exchange rate between the US Dollar and the Swiss Franc. The Swiss Franc is considered a safe-haven currency.',
+        baseCurrency: 'US Dollar (USD)',
+        quoteCurrency: 'Swiss Franc (CHF)',
+        centralBanks: 'Federal Reserve (Fed), Swiss National Bank (SNB)',
+        tradingHours: '24 hours, Sunday 5PM ET to Friday 5PM ET',
+        typicalSpread: '0.5 to 2.0 pips',
+        volatility: 'Medium',
+        majorInfluences: 'Safe-haven flows, global risk sentiment, SNB interventions'
+      }
+    };
+    
+    return pairInfo[selectedPair] || {
+      name: 'Currency Pair',
+      description: 'Information not available',
+      baseCurrency: 'N/A',
+      quoteCurrency: 'N/A',
+      centralBanks: 'N/A',
+      tradingHours: '24 hours, Sunday 5PM ET to Friday 5PM ET',
+      typicalSpread: 'Varies',
+      volatility: 'Varies',
+      majorInfluences: 'Economic data, central bank policies, geopolitical events'
+    };
+  };
+
+  // Function to render the appropriate chart based on settings
+  const renderChart = () => {
+    // Prepare the chart data
+    const chartData = analysisData && analysisData.historical_data && analysisData.historical_data.prices && 
+      analysisData.historical_data.dates ? 
+      analysisData.historical_data.prices.map((price, index) => ({
+        time: analysisData.historical_data.dates[index],
+        price: price,
+        // Add synthetic high, low, open, close for candlestick chart
+        open: price * (1 - Math.random() * 0.01),
+        high: price * (1 + Math.random() * 0.015),
+        low: price * (1 - Math.random() * 0.015),
+        close: price * (1 + Math.random() * 0.01)
+      })) : mockData.priceHistory;
+    
+    // Return the appropriate chart component based on settings
+    switch(settings.chartStyle) {
+      case 'line':
+        return (
+          <LineChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" stroke={colors.borderColor} />
+            <XAxis dataKey="time" stroke={colors.secondaryText} />
+            <YAxis stroke={colors.secondaryText} />
+            <ChartTooltip 
+              contentStyle={{ 
+                backgroundColor: colors.cardBg, 
+                border: `1px solid ${colors.borderColor}`,
+                borderRadius: '8px'
+              }}
+              labelStyle={{ color: colors.primaryText }}
+            />
+            <Line 
+              type="monotone" 
+              dataKey="price" 
+              stroke={colors.accentBlue} 
+              dot={false}
+              activeDot={{ r: 6 }}
+            />
+          </LineChart>
+        );
+        
+      case 'candle':
+        return (
+          <LineChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" stroke={colors.borderColor} />
+            <XAxis dataKey="time" stroke={colors.secondaryText} />
+            <YAxis stroke={colors.secondaryText} />
+            <ChartTooltip 
+              contentStyle={{ 
+                backgroundColor: colors.cardBg, 
+                border: `1px solid ${colors.borderColor}`,
+                borderRadius: '8px'
+              }}
+              labelStyle={{ color: colors.primaryText }}
+            />
+            <Line 
+              type="monotone" 
+              dataKey="price" 
+              stroke={colors.warningOrange} 
+              dot={true}
+              strokeWidth={2}
+            />
+            <Line 
+              type="monotone" 
+              dataKey="high" 
+              stroke={colors.buyGreen} 
+              dot={false}
+              strokeDasharray="5 5"
+              strokeWidth={1}
+            />
+            <Line 
+              type="monotone" 
+              dataKey="low" 
+              stroke={colors.sellRed} 
+              dot={false}
+              strokeDasharray="5 5"
+              strokeWidth={1}
+            />
+          </LineChart>
+        );
+        
+      case 'area':
+      default:
+        return (
+          <AreaChart data={chartData}>
+            <defs>
+              <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={colors.accentBlue} stopOpacity={0.3}/>
+                <stop offset="95%" stopColor={colors.accentBlue} stopOpacity={0}/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke={colors.borderColor} />
+            <XAxis dataKey="time" stroke={colors.secondaryText} />
+            <YAxis stroke={colors.secondaryText} />
+            <ChartTooltip 
+              contentStyle={{ 
+                backgroundColor: colors.cardBg, 
+                border: `1px solid ${colors.borderColor}`,
+                borderRadius: '8px'
+              }}
+              labelStyle={{ color: colors.primaryText }}
+            />
+            <Area 
+              type="monotone" 
+              dataKey="price" 
+              stroke={colors.accentBlue} 
+              fillOpacity={1} 
+              fill="url(#colorPrice)"
+            />
+          </AreaChart>
+        );
+    }
+  };
+
   if (pageLoading) {
     return (
       <Box sx={{ 
@@ -649,7 +905,8 @@ const Market = () => {
         display: 'flex',
         flexDirection: 'column',
         gap: 2,
-        ml: '250px'
+        ml: '250px',
+        backgroundColor: settings.darkMode ? colors.darkBg : '#f5f5f5'
       }}>
         {/* Header Section */}
         <Paper 
@@ -730,12 +987,18 @@ const Market = () => {
                 {isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
               </Button>
               <Tooltip title="Market Info">
-                <IconButton sx={{ color: colors.secondaryText }}>
+                <IconButton 
+                  sx={{ color: colors.secondaryText }}
+                  onClick={() => setMarketInfoOpen(true)}
+                >
                   <InfoIcon />
                 </IconButton>
               </Tooltip>
               <Tooltip title="Settings">
-                <IconButton sx={{ color: colors.secondaryText }}>
+                <IconButton 
+                  sx={{ color: colors.secondaryText }}
+                  onClick={() => setSettingsOpen(true)}
+                >
                   <SettingsIcon />
                 </IconButton>
               </Tooltip>
@@ -787,7 +1050,10 @@ const Market = () => {
               <Typography variant="h6" sx={{ color: colors.primaryText }}>
                 Price History
               </Typography>
-              <Box sx={{ display: 'flex', gap: 1 }}>
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                <Typography variant="caption" sx={{ color: colors.secondaryText }}>
+                  Chart Type: {settings.chartStyle}
+                </Typography>
                 <Tooltip title="Price history shows how the currency pair has traded over time. This chart helps identify trends and potential trading opportunities." arrow>
                   <IconButton size="small" sx={{ color: colors.secondaryText }}>
                     <HelpOutlineIcon fontSize="small" />
@@ -797,37 +1063,7 @@ const Market = () => {
             </Box>
             <Box sx={{ flex: 1, minHeight: 400 }}>
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={analysisData && analysisData.historical_data && analysisData.historical_data.prices && 
-                  analysisData.historical_data.dates ? 
-                  analysisData.historical_data.prices.map((price, index) => ({
-                  time: analysisData.historical_data.dates[index],
-                  price: price
-                })) : mockData.priceHistory}>
-                  <defs>
-                    <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={colors.accentBlue} stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor={colors.accentBlue} stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke={colors.borderColor} />
-                  <XAxis dataKey="time" stroke={colors.secondaryText} />
-                  <YAxis stroke={colors.secondaryText} />
-                  <ChartTooltip 
-                    contentStyle={{ 
-                      backgroundColor: colors.cardBg, 
-                      border: `1px solid ${colors.borderColor}`,
-                      borderRadius: '8px'
-                    }}
-                    labelStyle={{ color: colors.primaryText }}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="price" 
-                    stroke={colors.accentBlue} 
-                    fillOpacity={1} 
-                    fill="url(#colorPrice)"
-                  />
-                </AreaChart>
+                {renderChart()}
               </ResponsiveContainer>
             </Box>
           </Paper>
@@ -844,7 +1080,8 @@ const Market = () => {
                 borderRadius: '12px',
                 boxShadow: `0 4px 12px ${colors.shadowColor}`,
                 display: 'flex',
-                flexDirection: 'column'
+                flexDirection: 'column',
+                display: settings.showTechnicalIndicators ? 'flex' : 'none'
               }}
             >
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -1056,7 +1293,8 @@ const Market = () => {
                 borderRadius: '12px',
                 boxShadow: `0 4px 12px ${colors.shadowColor}`,
                 display: 'flex',
-                flexDirection: 'column'
+                flexDirection: 'column',
+                display: settings.showSupportResistance ? 'flex' : 'none'
               }}
             >
               <Typography variant="h6" sx={{ color: colors.primaryText, mb: 2 }}>
@@ -1260,7 +1498,8 @@ const Market = () => {
                 borderRadius: '12px',
                 boxShadow: `0 4px 12px ${colors.shadowColor}`,
                 display: 'flex',
-                flexDirection: 'column'
+                flexDirection: 'column',
+                display: settings.showSentimentAnalysis ? 'flex' : 'none'
               }}
             >
               <Typography variant="h6" sx={{ color: colors.primaryText, mb: 2 }}>
@@ -1335,6 +1574,408 @@ const Market = () => {
           </Box>
         </Box>
       </Box>
+
+      {/* Market Info Dialog */}
+      <Dialog
+        open={marketInfoOpen}
+        onClose={() => setMarketInfoOpen(false)}
+        maxWidth="md"
+        PaperProps={{
+          sx: {
+            backgroundColor: colors.cardBg,
+            color: colors.primaryText,
+            borderRadius: '12px',
+            border: `1px solid ${colors.borderColor}`
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          borderBottom: `1px solid ${colors.borderColor}`,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <Typography variant="h6" component="div">
+            {getCurrencyInfo().name} Information
+          </Typography>
+          <IconButton
+            edge="end"
+            color="inherit"
+            onClick={() => setMarketInfoOpen(false)}
+            aria-label="close"
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            {getCurrencyInfo().description}
+          </Typography>
+          
+          <Grid container spacing={2} sx={{ mb: 2 }}>
+            <Grid item xs={12} md={6}>
+              <Paper sx={{ 
+                p: 2, 
+                backgroundColor: colors.panelBg,
+                borderRadius: '8px',
+                height: '100%'
+              }}>
+                <Typography variant="subtitle1" sx={{ mb: 1, color: colors.accentBlue, fontWeight: 'bold' }}>
+                  Currency Information
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ color: colors.secondaryText }}>
+                      Base Currency:
+                    </Typography>
+                    <Typography variant="body2">
+                      {getCurrencyInfo().baseCurrency}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ color: colors.secondaryText }}>
+                      Quote Currency:
+                    </Typography>
+                    <Typography variant="body2">
+                      {getCurrencyInfo().quoteCurrency}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ color: colors.secondaryText }}>
+                      Central Banks:
+                    </Typography>
+                    <Typography variant="body2">
+                      {getCurrencyInfo().centralBanks}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Paper>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Paper sx={{ 
+                p: 2, 
+                backgroundColor: colors.panelBg,
+                borderRadius: '8px',
+                height: '100%'
+              }}>
+                <Typography variant="subtitle1" sx={{ mb: 1, color: colors.accentBlue, fontWeight: 'bold' }}>
+                  Trading Characteristics
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ color: colors.secondaryText }}>
+                      Trading Hours:
+                    </Typography>
+                    <Typography variant="body2">
+                      {getCurrencyInfo().tradingHours}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ color: colors.secondaryText }}>
+                      Typical Spread:
+                    </Typography>
+                    <Typography variant="body2">
+                      {getCurrencyInfo().typicalSpread}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ color: colors.secondaryText }}>
+                      Volatility:
+                    </Typography>
+                    <Typography variant="body2">
+                      {getCurrencyInfo().volatility}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Paper>
+            </Grid>
+          </Grid>
+          
+          <Paper sx={{ 
+            p: 2, 
+            backgroundColor: colors.panelBg,
+            borderRadius: '8px',
+            mb: 2
+          }}>
+            <Typography variant="subtitle1" sx={{ mb: 1, color: colors.accentBlue, fontWeight: 'bold' }}>
+              Major Influences
+            </Typography>
+            <Typography variant="body2">
+              {getCurrencyInfo().majorInfluences}
+            </Typography>
+          </Paper>
+          
+          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Typography variant="subtitle2" sx={{ color: colors.secondaryText }}>
+              Learn more about forex trading:
+            </Typography>
+            <Link 
+              href="https://www.investopedia.com/trading/forex-trading-basics/" 
+              target="_blank" 
+              rel="noopener"
+              sx={{ 
+                display: 'flex', 
+                alignItems: 'center',
+                color: colors.accentBlue,
+                '&:hover': {
+                  color: colors.gradientStart
+                }
+              }}
+            >
+              Investopedia Forex Guide
+              <LaunchIcon fontSize="small" sx={{ ml: 0.5 }} />
+            </Link>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ borderTop: `1px solid ${colors.borderColor}`, px: 3, py: 2 }}>
+          <Button 
+            onClick={() => setMarketInfoOpen(false)}
+            variant="outlined"
+            sx={{
+              borderColor: colors.borderColor,
+              color: colors.secondaryText,
+              '&:hover': {
+                borderColor: colors.accentBlue,
+                backgroundColor: `${colors.accentBlue}10`
+              }
+            }}
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Settings Dialog */}
+      <Dialog
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            backgroundColor: colors.cardBg,
+            color: colors.primaryText,
+            borderRadius: '12px',
+            border: `1px solid ${colors.borderColor}`
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          borderBottom: `1px solid ${colors.borderColor}`,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <Typography variant="h6" component="div">
+            Market Analysis Settings
+          </Typography>
+          <IconButton
+            edge="end"
+            color="inherit"
+            onClick={() => setSettingsOpen(false)}
+            aria-label="close"
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <Typography variant="subtitle1" sx={{ mb: 2, color: colors.accentBlue, fontWeight: 'bold' }}>
+            Display Settings
+          </Typography>
+          
+          <FormControlLabel
+            control={
+              <Switch 
+                checked={settings.showTechnicalIndicators}
+                onChange={handleSettingsChange('showTechnicalIndicators')}
+                sx={{
+                  '& .MuiSwitch-switchBase.Mui-checked': {
+                    color: colors.accentBlue,
+                  },
+                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                    backgroundColor: colors.accentBlue,
+                  },
+                }}
+              />
+            }
+            label="Show Technical Indicators"
+            sx={{ display: 'block', mb: 1 }}
+          />
+          
+          <FormControlLabel
+            control={
+              <Switch 
+                checked={settings.showSupportResistance}
+                onChange={handleSettingsChange('showSupportResistance')}
+                sx={{
+                  '& .MuiSwitch-switchBase.Mui-checked': {
+                    color: colors.accentBlue,
+                  },
+                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                    backgroundColor: colors.accentBlue,
+                  },
+                }}
+              />
+            }
+            label="Show Support & Resistance Levels"
+            sx={{ display: 'block', mb: 1 }}
+          />
+          
+          <FormControlLabel
+            control={
+              <Switch 
+                checked={settings.showSentimentAnalysis}
+                onChange={handleSettingsChange('showSentimentAnalysis')}
+                sx={{
+                  '& .MuiSwitch-switchBase.Mui-checked': {
+                    color: colors.accentBlue,
+                  },
+                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                    backgroundColor: colors.accentBlue,
+                  },
+                }}
+              />
+            }
+            label="Show Sentiment Analysis"
+            sx={{ display: 'block', mb: 3 }}
+          />
+          
+          <Typography variant="subtitle1" sx={{ mb: 2, color: colors.accentBlue, fontWeight: 'bold' }}>
+            Chart Settings
+          </Typography>
+          
+          <FormControl component="fieldset" sx={{ mb: 2 }}>
+            <Typography variant="subtitle2" sx={{ color: colors.secondaryText, mb: 1 }}>
+              Chart Style
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              {['area', 'line', 'candle'].map((style) => (
+                <Button 
+                  key={style}
+                  variant={settings.chartStyle === style ? 'contained' : 'outlined'}
+                  onClick={() => handleChartStyleChange(style)}
+                  sx={{
+                    textTransform: 'capitalize',
+                    backgroundColor: settings.chartStyle === style ? colors.accentBlue : 'transparent',
+                    borderColor: colors.borderColor,
+                    color: settings.chartStyle === style ? colors.primaryText : colors.secondaryText,
+                    '&:hover': {
+                      backgroundColor: settings.chartStyle === style ? colors.accentBlue : `${colors.accentBlue}10`,
+                      borderColor: colors.accentBlue
+                    }
+                  }}
+                >
+                  {style}
+                </Button>
+              ))}
+            </Box>
+          </FormControl>
+          
+          <Typography variant="subtitle1" sx={{ mb: 2, color: colors.accentBlue, fontWeight: 'bold' }}>
+            Advanced Settings
+          </Typography>
+          
+          <FormControlLabel
+            control={
+              <Switch 
+                checked={settings.enableRealTimeUpdates}
+                onChange={handleSettingsChange('enableRealTimeUpdates')}
+                sx={{
+                  '& .MuiSwitch-switchBase.Mui-checked': {
+                    color: colors.accentBlue,
+                  },
+                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                    backgroundColor: colors.accentBlue,
+                  },
+                }}
+              />
+            }
+            label="Enable Real-time Updates"
+            sx={{ display: 'block', mb: 1 }}
+          />
+          
+          <FormControlLabel
+            control={
+              <Switch 
+                checked={settings.darkMode}
+                onChange={handleSettingsChange('darkMode')}
+                sx={{
+                  '& .MuiSwitch-switchBase.Mui-checked': {
+                    color: colors.accentBlue,
+                  },
+                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                    backgroundColor: colors.accentBlue,
+                  },
+                }}
+              />
+            }
+            label="Dark Mode"
+            sx={{ display: 'block', mb: 1 }}
+          />
+          
+          <Box sx={{ mt: 3, p: 2, backgroundColor: colors.panelBg, borderRadius: '8px' }}>
+            <Typography variant="subtitle2" sx={{ color: colors.secondaryText, display: 'flex', alignItems: 'center' }}>
+              <InfoIcon fontSize="small" sx={{ mr: 1, color: colors.accentBlue }} />
+              Settings are applied immediately and saved for your next visit
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ borderTop: `1px solid ${colors.borderColor}`, px: 3, py: 2 }}>
+          <Button 
+            onClick={() => setSettingsOpen(false)}
+            variant="outlined"
+            sx={{
+              borderColor: colors.borderColor,
+              color: colors.secondaryText,
+              '&:hover': {
+                borderColor: colors.accentBlue,
+                backgroundColor: `${colors.accentBlue}10`
+              }
+            }}
+          >
+            Close
+          </Button>
+          <Button 
+            onClick={() => {
+              // Reset settings to default
+              setSettings({
+                showTechnicalIndicators: true,
+                showSupportResistance: true,
+                showSentimentAnalysis: true,
+                enableRealTimeUpdates: false,
+                darkMode: true,
+                chartStyle: 'area'
+              });
+            }}
+            variant="contained"
+            sx={{
+              backgroundColor: colors.accentBlue,
+              '&:hover': {
+                backgroundColor: colors.gradientStart
+              }
+            }}
+          >
+            Reset to Default
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Settings Notification */}
+      <Snackbar 
+        open={settingsNotification} 
+        autoHideDuration={3000} 
+        onClose={() => setSettingsNotification(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert 
+          onClose={() => setSettingsNotification(false)} 
+          severity="success" 
+          variant="filled"
+          sx={{ bgcolor: colors.accentBlue, color: colors.primaryText }}
+        >
+          Settings updated successfully
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
