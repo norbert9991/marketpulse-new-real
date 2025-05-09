@@ -590,7 +590,7 @@ const AdminFAQ = () => {
                 <Avatar sx={{ bgcolor: colors.secondary, mr: 1.5 }}>
                   <AdminIcon />
                 </Avatar>
-                <Typography variant="h6">Admin Assistant</Typography>
+                <Typography variant="h6" sx={{ color: colors.primaryText }}>Admin Assistant</Typography>
               </Box>
               
               <MessagesArea 
@@ -665,7 +665,7 @@ const AdminFAQ = () => {
           {/* FAQ section */}
           <Grid item xs={12} lg={5}>
             <StyledCard sx={{ height: '400px', overflowY: 'auto' }}>
-              <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1, color: colors.primaryText }}>
                 <QuestionIcon fontSize="small" sx={{ color: colors.secondary }} />
                 Frequently Asked Questions
               </Typography>
@@ -759,7 +759,7 @@ const AdminFAQ = () => {
                   color: colors.secondaryText
                 }}>
                   <SearchIcon sx={{ fontSize: 48, mb: 2, opacity: 0.6 }} />
-                  <Typography>No matching FAQs found</Typography>
+                  <Typography sx={{ color: colors.primaryText }}>No matching FAQs found</Typography>
                   <Typography variant="body2">Try different search terms</Typography>
                 </Box>
               )}
@@ -768,7 +768,7 @@ const AdminFAQ = () => {
           
           {/* Quick guides section */}
           <Grid item xs={12} sx={{ mt: 3 }}>
-            <Typography variant="h5" sx={{ mb: 2, color: colors.primaryText }}>
+            <Typography variant="h5" sx={{ mb: 2, color: colors.primaryText, fontWeight: 'bold' }}>
               Admin Quick Guides
             </Typography>
             
@@ -779,7 +779,7 @@ const AdminFAQ = () => {
                     <Avatar sx={{ bgcolor: `${colors.primary}22`, mr: 1.5 }}>
                       <PersonIcon sx={{ color: colors.primary }} />
                     </Avatar>
-                    <Typography variant="h6">User Management Guide</Typography>
+                    <Typography variant="h6" sx={{ color: colors.primaryText }}>User Management Guide</Typography>
                   </Box>
                   
                   <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 2 }}>
@@ -823,7 +823,7 @@ const AdminFAQ = () => {
                     <Avatar sx={{ bgcolor: `${colors.secondary}22`, mr: 1.5 }}>
                       <SettingsIcon sx={{ color: colors.secondary }} />
                     </Avatar>
-                    <Typography variant="h6">System Management</Typography>
+                    <Typography variant="h6" sx={{ color: colors.primaryText }}>System Management</Typography>
                   </Box>
                   
                   <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 2 }}>
@@ -867,7 +867,7 @@ const AdminFAQ = () => {
                     <Avatar sx={{ bgcolor: `${colors.accentBlue}22`, mr: 1.5 }}>
                       <AnalyticsIcon sx={{ color: colors.accentBlue }} />
                     </Avatar>
-                    <Typography variant="h6">Analytics Overview</Typography>
+                    <Typography variant="h6" sx={{ color: colors.primaryText }}>Analytics Overview</Typography>
                   </Box>
                   
                   <Typography variant="body2" sx={{ color: colors.secondaryText, mb: 2 }}>
