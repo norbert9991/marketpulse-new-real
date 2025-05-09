@@ -27,6 +27,7 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import StarIcon from '@mui/icons-material/Star';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import CloseIcon from '@mui/icons-material/Close';
 import { API } from '../axiosConfig';
 
 // Forex Trading Color Palette
@@ -101,6 +102,12 @@ const UserDashboard = () => {
   const [marketLoading, setMarketLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  
+  // Notification state
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationAnchorEl, setNotificationAnchorEl] = useState(null);
+  const notificationsOpen = Boolean(notificationAnchorEl);
 
   // Debug current location
   useEffect(() => {
@@ -190,6 +197,58 @@ const UserDashboard = () => {
         const favoritesResponse = await API.favorites.getAll();
         console.log('UserDashboard - Got favorites:', favoritesResponse.data);
         setFavoriteMarkets(favoritesResponse.data.favorites || []);
+        
+        // Fetch notifications if user exists
+        try {
+          // This would be a real API call in production
+          // const notificationsResponse = await API.notifications.getAll();
+          // setNotifications(notificationsResponse.data.notifications || []);
+          
+          // For demo: Create sample notifications
+          const sampleNotifications = [
+            {
+              id: 1,
+              type: 'settings',
+              title: 'Password Updated',
+              message: 'Your account password was successfully changed',
+              timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
+              read: false
+            },
+            {
+              id: 2,
+              type: 'login',
+              title: 'New Login',
+              message: 'New login detected from Chrome on Windows',
+              timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
+              read: false
+            },
+            {
+              id: 3,
+              type: 'market',
+              title: 'Market Alert',
+              message: 'EUR/USD reached your price alert at 1.0825',
+              timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(), // 2 days ago
+              read: true
+            },
+            {
+              id: 4,
+              type: 'system',
+              title: 'System Maintenance',
+              message: 'Scheduled maintenance completed successfully',
+              timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(), // 5 days ago
+              read: true
+            }
+          ];
+          
+          setNotifications(sampleNotifications);
+          setUnreadCount(sampleNotifications.filter(n => !n.read).length);
+        } catch (notifError) {
+          console.error('Error fetching notifications:', notifError);
+          // Continue with empty notifications
+          setNotifications([]);
+          setUnreadCount(0);
+        }
+        
         setLoading(false);
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
@@ -328,6 +387,72 @@ const UserDashboard = () => {
       [symbol]: !prev[symbol]
     }));
   };
+  
+  // Notification handlers
+  const handleNotificationsOpen = (event) => {
+    setNotificationAnchorEl(event.currentTarget);
+  };
+  
+  const handleNotificationsClose = () => {
+    setNotificationAnchorEl(null);
+  };
+  
+  const handleNotificationRead = (id) => {
+    setNotifications(prev => 
+      prev.map(notif => 
+        notif.id === id ? { ...notif, read: true } : notif
+      )
+    );
+    setUnreadCount(prev => Math.max(0, prev - 1));
+  };
+  
+  const markAllAsRead = () => {
+    setNotifications(prev => 
+      prev.map(notif => ({ ...notif, read: true }))
+    );
+    setUnreadCount(0);
+  };
+  
+  const clearAllNotifications = () => {
+    setNotifications([]);
+    setUnreadCount(0);
+    handleNotificationsClose();
+  };
+  
+  // Add a new notification (can be called from other parts of the app)
+  const addNotification = (type, title, message) => {
+    const newNotification = {
+      id: Date.now(),
+      type,
+      title,
+      message,
+      timestamp: new Date().toISOString(),
+      read: false
+    };
+    
+    setNotifications(prev => [newNotification, ...prev]);
+    setUnreadCount(prev => prev + 1);
+  };
+  
+  // Handle clicking on a notification
+  const handleNotificationClick = (notification) => {
+    // Mark as read
+    handleNotificationRead(notification.id);
+    
+    // Navigate based on notification type
+    if (notification.type === 'settings') {
+      navigate('/settings');
+    } else if (notification.type === 'market') {
+      // Find the symbol in the notification message and select it
+      const symbolMatch = notification.message.match(/([A-Z]{3}\/[A-Z]{3})/);
+      if (symbolMatch && symbolMatch[1]) {
+        setSelectedSymbol(symbolMatch[1]);
+      }
+    }
+    
+    // Close notification menu
+    handleNotificationsClose();
+  };
 
   if (error) {
     return (
@@ -376,8 +501,34 @@ const UserDashboard = () => {
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <Tooltip title="Notifications">
-                <IconButton sx={{ color: colors.secondaryText }}>
+                <IconButton 
+                  sx={{ 
+                    color: unreadCount > 0 ? colors.accentBlue : colors.secondaryText,
+                    position: 'relative'
+                  }}
+                  onClick={handleNotificationsOpen}
+                >
                   <NotificationsIcon />
+                  {unreadCount > 0 && (
+                    <Box sx={{
+                      position: 'absolute',
+                      top: 0,
+                      right: 0,
+                      backgroundColor: colors.accentBlue,
+                      color: colors.primaryText,
+                      borderRadius: '50%',
+                      width: 18,
+                      height: 18,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.7rem',
+                      fontWeight: 'bold',
+                      border: `2px solid ${colors.panelBg}`
+                    }}>
+                      {unreadCount}
+                    </Box>
+                  )}
                 </IconButton>
               </Tooltip>
               <Box sx={{ 
@@ -934,6 +1085,141 @@ const UserDashboard = () => {
           )}
         </Box>
       </Box>
+      
+      {/* Notifications Menu */}
+      <Menu
+        anchorEl={notificationAnchorEl}
+        open={notificationsOpen}
+        onClose={handleNotificationsClose}
+        PaperProps={{
+          sx: {
+            mt: 1.5,
+            width: 320,
+            maxHeight: 400,
+            backgroundColor: colors.cardBg,
+            border: `1px solid ${colors.borderColor}`,
+            boxShadow: '0 8px 16px rgba(0, 0, 0, 0.4)',
+            '& .MuiList-root': {
+              padding: 0
+            }
+          }
+        }}
+        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+      >
+        <Box sx={{ 
+          p: 1.5, 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          borderBottom: `1px solid ${colors.borderColor}`
+        }}>
+          <Typography sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
+            Notifications
+          </Typography>
+          <Box>
+            <Tooltip title="Mark all as read">
+              <IconButton size="small" onClick={markAllAsRead} sx={{ color: colors.accentBlue }}>
+                <Box component="span" sx={{ fontSize: '0.75rem', fontWeight: 'bold' }}>Read All</Box>
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Clear all notifications">
+              <IconButton size="small" onClick={clearAllNotifications} sx={{ color: colors.sellRed }}>
+                <Box component="span" sx={{ fontSize: '0.75rem', fontWeight: 'bold' }}>Clear</Box>
+              </IconButton>
+            </Tooltip>
+          </Box>
+        </Box>
+        
+        <Box sx={{ maxHeight: 320, overflow: 'auto' }}>
+          {notifications.length === 0 ? (
+            <Box sx={{ 
+              p: 3, 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: colors.secondaryText
+            }}>
+              <NotificationsIcon sx={{ fontSize: 40, opacity: 0.6, mb: 1 }} />
+              <Typography variant="body2">No notifications</Typography>
+            </Box>
+          ) : (
+            notifications.map((notification) => (
+              <Box 
+                key={notification.id}
+                sx={{ 
+                  p: 1.5, 
+                  borderBottom: `1px solid ${colors.borderColor}`,
+                  backgroundColor: notification.read ? 'transparent' : `${colors.hoverBg}80`,
+                  '&:hover': {
+                    backgroundColor: colors.hoverBg
+                  },
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                }}
+              >
+                <Box sx={{ 
+                  mr: 1.5,
+                  mt: 0.5,
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  backgroundColor: notification.read ? 'transparent' : colors.accentBlue,
+                  flexShrink: 0
+                }} />
+                
+                <Box sx={{ flex: 1 }} onClick={() => handleNotificationClick(notification)}>
+                  <Typography variant="subtitle2" sx={{ 
+                    color: colors.primaryText,
+                    fontWeight: notification.read ? 'normal' : 'bold',
+                    fontSize: '0.9rem',
+                    mb: 0.5
+                  }}>
+                    {notification.title}
+                  </Typography>
+                  <Typography variant="body2" sx={{ 
+                    color: colors.secondaryText,
+                    fontSize: '0.8rem',
+                    mb: 0.5
+                  }}>
+                    {notification.message}
+                  </Typography>
+                  <Typography variant="caption" sx={{ 
+                    color: colors.secondaryText,
+                    fontSize: '0.7rem'
+                  }}>
+                    {new Date(notification.timestamp).toLocaleString()}
+                  </Typography>
+                </Box>
+                
+                <IconButton 
+                  size="small" 
+                  sx={{ 
+                    color: colors.secondaryText,
+                    '&:hover': {
+                      color: colors.accentBlue
+                    }
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleNotificationRead(notification.id);
+                  }}
+                >
+                  {notification.read ? (
+                    <CloseIcon fontSize="small" />
+                  ) : (
+                    <Typography variant="caption" sx={{ fontSize: '0.7rem', fontWeight: 'bold' }}>
+                      Mark read
+                    </Typography>
+                  )}
+                </IconButton>
+              </Box>
+            ))
+          )}
+        </Box>
+      </Menu>
     </Box>
   );
 };
