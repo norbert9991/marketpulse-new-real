@@ -135,7 +135,7 @@ const Sidebar = () => {
 
   const handleNavigation = (path) => {
     if (path !== activeTab) {
-      navigate(path);
+    navigate(path);
     }
   };
   

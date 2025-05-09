@@ -275,7 +275,7 @@ const Trade = () => {
       name: 'Triumph', 
       description: 'Aggressive momentum-based strategy', 
       totalNetPL: '+121%', 
-      oneYearNetPL: 14.37, 
+      oneYearNetPL: 14.37,
       threeMonthNetPL: 4.8,
       sixMonthNetPL: 8.9,
       riskLevel: 'high',
@@ -288,7 +288,7 @@ const Trade = () => {
       name: 'Legacy', 
       description: 'Long-term trend following strategy', 
       totalNetPL: '+538%', 
-      oneYearNetPL: 10.29, 
+      oneYearNetPL: 10.29,
       threeMonthNetPL: 2.1,
       sixMonthNetPL: 5.6,
       riskLevel: 'medium',
@@ -993,18 +993,18 @@ const Trade = () => {
                     
                     <Box sx={{ position: 'relative', mb: 3 }}>
                       {/* Balance amount at top right */}
-                      <Typography 
+            <Typography 
                         variant="body1" 
-                        sx={{ 
+              sx={{ 
                           position: 'absolute',
                           top: 5,
                           right: 5,
-                          color: colors.primaryText,
+                color: colors.primaryText,
                           fontWeight: 'bold'
-                        }}
-                      >
+              }}
+            >
                         ${simulationResults.endingBalance.toLocaleString()}
-                      </Typography>
+            </Typography>
             
                       {/* Main chart - Dynamic balance graph using actual data */}
                       <Box sx={{ height: '180px', position: 'relative', mt: 2 }}>
@@ -1087,9 +1087,9 @@ const Trade = () => {
                           }}
                         >
                           ${simulationResults.startingBalance.toLocaleString()}
-                        </Typography>
+              </Typography>
                       </Box>
-                    </Box>
+            </Box>
             
                     <Box sx={{ mt: 2 }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, borderBottom: `1px dashed ${colors.borderColor}`, pb: 1 }}>
@@ -1142,9 +1142,9 @@ const Trade = () => {
                 
                 <Grid item xs={12} lg={4}>
                   <Paper 
-                    sx={{ 
+                sx={{ 
                       p: 4, 
-                      backgroundColor: colors.panelBg,
+                  backgroundColor: colors.panelBg, 
                       border: `1px solid ${colors.borderColor}`,
                       borderRadius: '12px',
                       height: '100%'
@@ -1237,16 +1237,16 @@ const Trade = () => {
                         }}
                       >
                         ${(simulationResults.totalProfit / simulationResults.monthlyData.length).toFixed(2)}
-                      </Typography>
-                    </Box>
-                    
+                        </Typography>
+                      </Box>
+                      
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
                       <Typography variant="body2" sx={{ color: colors.secondaryText }}>
                         Monthly Trades
                       </Typography>
                       <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold' }}>
                         {(simulationResults.totalTrades / simulationResults.monthlyData.length).toFixed(0)}
-                      </Typography>
+                        </Typography>
                     </Box>
                   </Paper>
                 </Grid>
@@ -1452,9 +1452,9 @@ const Trade = () => {
                             <Box key={index} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                               <Box 
                                 sx={{ 
-                                  width: 10, 
-                                  height: 10, 
-                                  borderRadius: '50%', 
+                                    width: 10, 
+                                    height: 10, 
+                                    borderRadius: '50%', 
                                   backgroundColor: [
                                     '#4caf50', '#2196f3', '#ff9800', '#e91e63', 
                                     '#9c27b0', '#ffeb3b', '#00bcd4'
@@ -1464,11 +1464,11 @@ const Trade = () => {
                               />
                               <Typography variant="body2" sx={{ color: colors.primaryText, mr: 1 }}>
                                 {symbol.symbol}
-                              </Typography>
-                              <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                                  </Typography>
+                                <Typography variant="body2" sx={{ color: colors.secondaryText }}>
                                 {symbol.weight.toFixed(1)}%
-                              </Typography>
-                            </Box>
+                                </Typography>
+                              </Box>
                           ))}
                         </Box>
                       </Box>
@@ -1543,8 +1543,8 @@ const Trade = () => {
                                         </text>
                                       )}
                                     </g>
-                                  );
-                                })}
+                            );
+                          })}
                                 
                                 {/* Base line */}
                                 <line x1="0" y1="160" x2="300" y2="160" stroke={colors.borderColor} strokeWidth="1" />
