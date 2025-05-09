@@ -998,8 +998,25 @@ const AdminDashboard = () => {
                             fill: colors.secondaryText
                           }
                         }]}
+                        slotProps={{
+                          legend: {
+                            position: {
+                              vertical: 'top',
+                              horizontal: 'right',
+                            },
+                            padding: {
+                              top: 0,
+                              right: 10,
+                            },
+                            labelStyle: {
+                              fill: colors.primaryText,
+                              fontSize: 12,
+                              fontWeight: 'bold',
+                            },
+                          },
+                        }}
                         height={100}
-                        margin={{ top: 10, bottom: 30, left: 10, right: 10 }}
+                        margin={{ top: 20, bottom: 30, left: 10, right: 10 }}
                         sx={{
                           '.MuiBarElement-root': {
                             fill: colors.secondary,
