@@ -56,6 +56,7 @@ import {
   VerifiedUser as VerifiedUserIcon
 } from '@mui/icons-material';
 import { API } from '../axiosConfig';
+import { AdminNotificationEvents } from './admin-dashboard';
 
 
 // Define theme colors to match the user components
@@ -299,6 +300,14 @@ const AdminSettings = () => {
         username: formData.username,
         email: formData.email
       });
+
+      // Create notification
+      AdminNotificationEvents.createNotification(
+        'Profile Updated',
+        'Your admin profile information has been updated.',
+        'success',
+        '/adminsettings'
+      );
     } catch (err) {
       showNotification('error', 'Failed to update profile: ' + (err.response?.data?.message || err.message));
     } finally {
@@ -370,6 +379,14 @@ const AdminSettings = () => {
       setTimeout(() => {
         setShowAddAdminDialog(false);
       }, 1500);
+
+      // Create notification
+      AdminNotificationEvents.createNotification(
+        'New Admin Added',
+        `${newAdmin.username} has been added as an administrator.`,
+        'info',
+        '/adminsettings'
+      );
     } catch (err) {
       setNewAdminError('Failed to add admin: ' + (err.response?.data?.message || err.message));
     } finally {
@@ -403,6 +420,20 @@ const AdminSettings = () => {
       // Refresh admin list
       fetchAdmins();
       setShowDeleteDialog(false);
+
+      // Store admin username before nulling the deletingAdmin
+      const adminUsername = deletingAdminName;
+      
+      // Clear deleting admin
+      setDeletingAdminId(null);
+      
+      // Create notification
+      AdminNotificationEvents.createNotification(
+        'Admin Removed',
+        `${adminUsername} has been removed from administrator role.`,
+        'warning',
+        '/adminsettings'
+      );
     } catch (err) {
       console.error('Error deleting admin:', err);
       
@@ -479,6 +510,14 @@ const AdminSettings = () => {
       
       // Refresh admin list after a successful update
       fetchAdmins();
+
+      // Create notification
+      AdminNotificationEvents.createNotification(
+        'Admin Updated',
+        `${editingAdmin.username}'s information has been updated.`,
+        'info',
+        '/adminsettings'
+      );
     } catch (err) {
       console.error('Error updating admin:', err);
       showNotification('error', 'Failed to update admin: ' + (err.response?.data?.message || err.message));
@@ -516,6 +555,21 @@ const AdminSettings = () => {
     // In a real application, this would save to the server
     // For now, just show a notification
     showNotification('success', `Security setting '${setting}' updated successfully`);
+
+    // Create notification
+    const settingName = {
+      twoFactorAuth: 'Two-Factor Authentication',
+      passwordExpiry: 'Password Expiry',
+      sessionTimeout: 'Session Timeout',
+      activityLogging: 'Activity Logging'
+    }[setting];
+    
+    AdminNotificationEvents.createNotification(
+      'Security Setting Changed',
+      `${settingName} has been ${!securitySettings[setting] ? 'enabled' : 'disabled'}.`,
+      'info',
+      '/adminsettings'
+    );
   };
 
   if (loading) {

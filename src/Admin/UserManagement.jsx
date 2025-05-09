@@ -18,18 +18,29 @@ import {
   IconButton,
   Tooltip,
   Grid,
-  Avatar
+  Avatar,
+  MenuItem,
+  Menu,
+  Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions
 } from '@mui/material';
 import { styled } from '@mui/system';
 import { API } from '../axiosConfig';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { 
   Search as SearchIcon,
   Refresh as RefreshIcon,
   CheckCircle as CheckCircleIcon,
-  Cancel as CancelIcon
+  Cancel as CancelIcon,
+  FilterList as FilterListIcon,
+  MoreVert as MoreVertIcon
 } from '@mui/icons-material';
+import { AdminNotificationEvents } from './admin-dashboard';
 
 // Define theme colors to match the user components
 const colors = {
@@ -79,6 +90,7 @@ const UserManagement = () => {
     newUsers: 0
   });
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Get current admin user info
   const fetchCurrentAdmin = async () => {
@@ -157,25 +169,73 @@ const UserManagement = () => {
     return () => clearInterval(refreshInterval);
   }, [refreshing, loading]);
 
-  const updateUserStatus = async (userId, newStatus) => {
+  useEffect(() => {
+    fetchUsers();
+    // Check if we have a userId query parameter
+    const query = new URLSearchParams(location.search);
+    const userId = query.get('userId');
+    if (userId) {
+      // Find this user in our loaded users
+      fetchUserDetails(userId);
+    }
+  }, [location.search]);
+
+  const fetchUserDetails = async (userId) => {
     try {
-      setRefreshing(true);
+      const response = await API.admin.getUserDetails(userId);
+      const user = response.data.user;
+      if (user) {
+        // Create notification that we're viewing a specific user
+        AdminNotificationEvents.createNotification(
+          'User Details Viewed',
+          `You viewed detailed information for user ${user.username || user.email || userId}`,
+          'info',
+          `/UserManagement?userId=${userId}`
+        );
+      }
+    } catch (error) {
+      console.error("Error fetching user details:", error);
+    }
+  };
+
+  const updateUserStatus = async (userId, newStatus) => {
+    const userToUpdate = users.find(user => user.user_id === userId);
+    if (!userToUpdate) return;
+    
+    try {
+      setLoading(true);
       await API.admin.updateUserStatus(userId, newStatus);
       
-      // Refresh the user list
-      fetchUsers();
-      setRefreshing(false);
+      // Update local state
+      setUsers(users.map(user => 
+        user.user_id === userId ? { ...user, account_status: newStatus } : user
+      ));
+      
+      // Create notification
+      AdminNotificationEvents.createNotification(
+        `User ${newStatus === 'active' ? 'Activated' : 'Suspended'}`,
+        `${userToUpdate.username || userToUpdate.email} has been ${newStatus === 'active' ? 'activated' : 'suspended'}.`,
+        newStatus === 'active' ? 'success' : 'warning',
+        `/UserManagement?userId=${userId}`
+      );
+      
+      setLoading(false);
     } catch (error) {
-      console.error('Error updating user status:', error);
-      setError('Failed to update user status');
-      setRefreshing(false);
+      console.error("Error updating user status:", error);
+      setError(`Failed to ${newStatus === 'active' ? 'activate' : 'suspend'} user. Please try again.`);
+      setLoading(false);
     }
   };
 
   const handleRefresh = () => {
-    setRefreshing(true);
-    fetchUsers()
-      .finally(() => setRefreshing(false));
+    fetchUsers();
+    // Create notification
+    AdminNotificationEvents.createNotification(
+      'User List Refreshed',
+      'The user management list has been refreshed with the latest data.',
+      'info',
+      '/UserManagement'
+    );
   };
 
   // Get time difference as a string

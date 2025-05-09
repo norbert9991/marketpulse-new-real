@@ -58,6 +58,38 @@ const colors = {
   accentBlue: '#2196f3'
 };
 
+// Event bus for communication between components
+// This will allow other components to send notifications
+export const AdminNotificationEvents = {
+  // Create a notification in the admin dashboard
+  createNotification: (title, message, type = 'info', link = null) => {
+    const event = new CustomEvent('admin-notification', {
+      detail: { title, message, type, link }
+    });
+    window.dispatchEvent(event);
+    
+    // Also store in localStorage for persistence
+    try {
+      const existingNotifs = JSON.parse(localStorage.getItem('marketpulse_admin_notifications') || '[]');
+      const newNotif = {
+        id: Date.now(),
+        title,
+        message,
+        type,
+        timestamp: new Date().toISOString(),
+        read: false,
+        link
+      };
+      
+      localStorage.setItem('marketpulse_admin_notifications', 
+        JSON.stringify([newNotif, ...existingNotifs])
+      );
+    } catch (err) {
+      console.error('Error saving notification to localStorage:', err);
+    }
+  }
+};
+
 const DashboardContainer = styled('div')({
   display: 'flex',
   minHeight: '100vh',
@@ -243,6 +275,24 @@ const AdminDashboard = () => {
 
   // Local storage key for client-side notifications
   const LOCAL_NOTIFICATIONS_KEY = 'marketpulse_admin_notifications';
+  
+  // Listen for notification events from other components
+  useEffect(() => {
+    const handleNotificationEvent = (event) => {
+      if (event.detail) {
+        const { title, message, type, link } = event.detail;
+        createLocalNotification(title, message, type, link);
+      }
+    };
+    
+    // Add event listener
+    window.addEventListener('admin-notification', handleNotificationEvent);
+    
+    // Clean up on unmount
+    return () => {
+      window.removeEventListener('admin-notification', handleNotificationEvent);
+    };
+  }, []);
 
   // Load saved notifications from localStorage on initial render
   useEffect(() => {
@@ -260,6 +310,9 @@ const AdminDashboard = () => {
     } catch (err) {
       console.error('Error loading saved notifications:', err);
     }
+    
+    // Default to local notifications for better demo experience
+    setIsUsingLocalNotifications(true);
   }, []);
 
   // Save notifications to localStorage whenever they change
@@ -316,6 +369,24 @@ const AdminDashboard = () => {
         }, 500);
         
         setLoading(false);
+        
+        // Create a welcome notification if first login of the session
+        const lastLoginTime = localStorage.getItem('last_admin_login');
+        const currentTime = new Date().toISOString();
+        
+        if (!lastLoginTime || (new Date(currentTime) - new Date(lastLoginTime)) > 3600000) { // 1 hour
+          localStorage.setItem('last_admin_login', currentTime);
+          
+          // Add login notification after a short delay
+          setTimeout(() => {
+            createLocalNotification(
+              'Welcome Back, Admin',
+              `You've logged in successfully at ${new Date().toLocaleTimeString()}`,
+              'info',
+              null
+            );
+          }, 1500);
+        }
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
         setError('Failed to load dashboard data');
@@ -365,81 +436,16 @@ const AdminDashboard = () => {
     
     setNotifications(prev => [newNotification, ...prev]);
     setUnreadCount(prev => prev + 1);
-  };
-  
-  // Generate sample local notifications based on available data
-  const generateLocalNotifications = () => {
-    // Only if we have data to work with
-    if (users.length > 0 || favoriteSymbolsData.length > 0) {
-      // Set flag to use local notifications
-      setIsUsingLocalNotifications(true);
-      
-      // Clear existing notifications first
-      setNotifications([]);
-      
-      // Current time for timestamps
-      const now = new Date();
-      
-      // Sample notifications based on available data
-      const sampleNotifications = [];
-      
-      // Add user-based notification if we have users
-      if (users.length > 0) {
-        const randomUser = users[Math.floor(Math.random() * users.length)];
-        sampleNotifications.push({
-          id: 1,
-          title: 'New User Registration',
-          message: `${randomUser?.username || 'A new user'} has registered on the platform.`,
-          type: 'info',
-          timestamp: new Date(now.getTime() - 5 * 60000).toISOString(), // 5 minutes ago
-          read: false,
-          link: '/UserManagement'
-        });
-      }
-      
-      // Add symbol-based notification if we have symbol data
-      if (favoriteSymbolsData.length > 0) {
-        const topSymbol = favoriteSymbolsData[0];
-        sampleNotifications.push({
-          id: 2,
-          title: 'Symbol Activity Alert',
-          message: `${topSymbol?.symbol || 'Popular currency pair'} has seen increased trading activity.`,
-          type: 'warning',
-          timestamp: new Date(now.getTime() - 30 * 60000).toISOString(), // 30 minutes ago
-          read: false,
-          link: '/ReportPage'
-        });
-      }
-      
-      // Add system notifications
-      sampleNotifications.push(
-        {
-          id: 3,
-          title: 'System Status Update',
-          message: 'All systems operating normally. API response time: 45ms.',
-          type: 'success',
-          timestamp: new Date(now.getTime() - 2 * 3600000).toISOString(), // 2 hours ago
-          read: true,
-          link: null
-        },
-        {
-          id: 4,
-          title: 'Admin Settings Updated',
-          message: 'Admin profile settings were updated successfully.',
-          type: 'info',
-          timestamp: new Date(now.getTime() - 24 * 3600000).toISOString(), // 24 hours ago
-          read: true,
-          link: '/adminsettings'
-        }
-      );
-      
-      // Set the local notifications
-      setNotifications(sampleNotifications);
-      
-      // Calculate unread count
-      const unread = sampleNotifications.filter(notif => !notif.read).length;
-      setUnreadCount(unread);
+    
+    // Show browser notification if supported
+    if ("Notification" in window && Notification.permission === "granted") {
+      new Notification(title, { 
+        body: message,
+        icon: '/favicon.ico'
+      });
     }
+    // Return the notification ID in case we need to reference it later
+    return newNotification.id;
   };
   
   // Fetch notifications from API
@@ -476,7 +482,12 @@ const AdminDashboard = () => {
         if (!isUsingLocalNotifications) {
           setIsUsingLocalNotifications(true);
           // Generate some local notifications based on data we have
-          generateLocalNotifications();
+          createLocalNotification(
+            'CORS Error Detected',
+            'The API notifications are temporarily unavailable. Switching to local notifications mode.',
+            'warning',
+            null
+          );
         }
       } else if (!isUsingLocalNotifications) {
         // Reset to empty on non-CORS error if not using local mode
@@ -1331,7 +1342,18 @@ const AdminDashboard = () => {
                                 borderColor: `${colors.primary}33`
                               }
                             }}
-                            onClick={() => navigate(`/UserManagement?userId=${user.user_id}`)}
+                            onClick={() => {
+                              // Create notification when clicking on a user
+                              createLocalNotification(
+                                'User Profile Viewed',
+                                `You viewed ${user.username}'s profile`,
+                                'info',
+                                `/UserManagement?userId=${user.user_id}`
+                              );
+                              
+                              // Navigate to user management
+                              navigate(`/UserManagement?userId=${user.user_id}`);
+                            }}
                             >
                               <Avatar 
                                 sx={{ 
