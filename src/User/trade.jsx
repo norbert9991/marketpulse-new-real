@@ -535,18 +535,19 @@ const Trade = () => {
                     mx: 4
                   }} />
                   
+                  {/* Filled portion - calculate width based on position */}
                   <Box sx={{ 
                     position: 'absolute', 
                     top: '50%', 
                     left: 0,
-                    width: `${(Math.min(simulationAmount, 100000) - 1000) / (100000 - 1000) * 100}%`, 
+                    width: `calc(${(Math.min(simulationAmount, 100000) - 1000) / (100000 - 1000) * 100}% * (1 - 22px/100%))`,
                     height: '6px', 
                     transform: 'translateY(-50%)',
                     background: `linear-gradient(90deg, ${colors.accentBlue}, ${colors.buyGreen})`,
                     borderRadius: '3px',
                     transition: 'width 0.3s ease',
                     ml: 4,
-                    maxWidth: 'calc(100% - 32px)'
+                    maxWidth: 'calc(100% - 32px - 11px)' // Adjust so fill stops at center of thumb
                   }} />
                   
                   <input
@@ -583,6 +584,8 @@ const Trade = () => {
                       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
                       cursor: pointer;
                       margin-top: -8px;
+                      z-index: 3;
+                      position: relative;
                     }
                     input[type=range]::-moz-range-thumb {
                       height: 22px;
@@ -592,6 +595,8 @@ const Trade = () => {
                       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
                       cursor: pointer;
                       border: none;
+                      z-index: 3;
+                      position: relative;
                     }
                     input[type=range]::-ms-thumb {
                       height: 22px;
@@ -600,6 +605,8 @@ const Trade = () => {
                       background: ${colors.accentBlue};
                       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
                       cursor: pointer;
+                      z-index: 3;
+                      position: relative;
                     }
                     input[type=range]::-webkit-slider-runnable-track {
                       height: 6px;
@@ -1562,11 +1569,12 @@ const Trade = () => {
                               <Box sx={{ 
                                 position: 'absolute', 
                                 height: '4px', 
-                                width: `${(strategy.allocatedFunds / availableBalance) * 100}%`, 
+                                width: `calc(${(strategy.allocatedFunds / availableBalance) * 100}% * (1 - 22px/100%))`, 
                                 background: `linear-gradient(90deg, ${colors.accentBlue}, ${colors.buyGreen})`,
                                 borderRadius: '2px',
                                 top: '50%',
-                                transform: 'translateY(-50%)'
+                                transform: 'translateY(-50%)',
+                                maxWidth: 'calc(100% - 11px)' // Stop at center of thumb
                               }} />
                               
                               <input
