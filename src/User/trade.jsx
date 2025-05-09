@@ -1007,8 +1007,24 @@ const Trade = () => {
             </Typography>
             
                       {/* Main chart - Dynamic balance graph using actual data */}
-                      <Box sx={{ height: '180px', position: 'relative', mt: 2 }}>
-                        <svg width="100%" height="100%" viewBox="0 0 300 180" preserveAspectRatio="none">
+                      <Box sx={{ height: '200px', position: 'relative', mt: 2 }}>
+                        <svg width="100%" height="100%" viewBox="0 0 300 200" preserveAspectRatio="none">
+                          {/* Background grid lines for better readability */}
+                          <g>
+                            {[0, 50, 100, 150].map((y) => (
+                              <line 
+                                key={`grid-${y}`} 
+                                x1="0" 
+                                y1={y} 
+                                x2="300" 
+                                y2={y} 
+                                stroke={colors.borderColor} 
+                                strokeWidth="0.5" 
+                                strokeDasharray="5,5" 
+                              />
+                            ))}
+                          </g>
+                          
                           {/* Dynamic path for the balance curve */}
                           <path 
                             d={(() => {
@@ -1038,6 +1054,36 @@ const Trade = () => {
                             stroke={colors.accentBlue}
                             strokeWidth="3"
                           />
+                          
+                          {/* Small circle indicators at each data point */}
+                          {(() => {
+                            if (!simulationResults.monthlyData || simulationResults.monthlyData.length === 0) {
+                              return null;
+                            }
+                            
+                            const data = simulationResults.monthlyData;
+                            const minBalance = Math.min(simulationResults.startingBalance, ...data.map(d => d.balance));
+                            const maxBalance = Math.max(...data.map(d => d.balance));
+                            const range = maxBalance - minBalance;
+                            const scaleX = 300 / (data.length - 1);
+                            const scaleY = range > 0 ? 150 / range : 1;
+                            
+                            return data.map((point, i) => {
+                              const x = i * scaleX;
+                              const y = 160 - ((point.balance - minBalance) * scaleY) + 10;
+                              return (
+                                <circle 
+                                  key={`point-${i}`} 
+                                  cx={x} 
+                                  cy={y} 
+                                  r="3" 
+                                  fill="white" 
+                                  stroke={colors.accentBlue} 
+                                  strokeWidth="2" 
+                                />
+                              );
+                            });
+                          })()}
                           
                           {/* Gradient fill under the curve */}
                           <linearGradient id="balanceGradient" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -1074,9 +1120,38 @@ const Trade = () => {
                             })()}
                             fill="url(#balanceGradient)"
                           />
+                          
+                          {/* Month indicators on x-axis */}
+                          {(() => {
+                            if (!simulationResults.monthlyData || simulationResults.monthlyData.length === 0) {
+                              return null;
+                            }
+                            
+                            const data = simulationResults.monthlyData;
+                            const monthNames = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+                            const scaleX = 300 / (data.length - 1);
+                            
+                            return data.map((point, i) => {
+                              if (i % Math.max(1, Math.floor(data.length / 6)) !== 0 && i !== data.length - 1) return null;
+                              
+                              const x = i * scaleX;
+                              return (
+                                <text 
+                                  key={`month-${i}`} 
+                                  x={x} 
+                                  y={192} 
+                                  fontSize="10" 
+                                  fill={colors.secondaryText} 
+                                  textAnchor="middle"
+                                >
+                                  {monthNames[point.date.getMonth()]}
+                                </text>
+                              );
+                            });
+                          })()}
                         </svg>
                         
-                        {/* Starting balance label */}
+                        {/* Balance labels with currency */}
                         <Typography 
                           variant="body2" 
                           sx={{ 
@@ -1084,10 +1159,30 @@ const Trade = () => {
                             bottom: 5, 
                             left: 5, 
                             color: colors.secondaryText,
+                            fontWeight: 'bold',
+                            backgroundColor: 'rgba(20, 22, 32, 0.7)',
+                            px: 1,
+                            borderRadius: '4px',
                           }}
                         >
                           ${simulationResults.startingBalance.toLocaleString()}
-              </Typography>
+                        </Typography>
+                        
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            position: 'absolute', 
+                            top: 5, 
+                            right: 5, 
+                            color: colors.primaryText,
+                            fontWeight: 'bold',
+                            backgroundColor: 'rgba(20, 22, 32, 0.7)',
+                            px: 1,
+                            borderRadius: '4px',
+                          }}
+                        >
+                          ${simulationResults.endingBalance.toLocaleString()}
+                        </Typography>
                       </Box>
             </Box>
             
@@ -1154,25 +1249,39 @@ const Trade = () => {
                       Monthly P/L
                     </Typography>
                     
-                    <Box sx={{ height: '180px', position: 'relative', mt: 2, mb: 4 }}>
+                    <Box sx={{ height: '200px', position: 'relative', mt: 2, mb: 3 }}>
                       {/* Dynamic monthly P/L bar chart */}
-                      <svg width="100%" height="100%" viewBox="0 0 300 180" preserveAspectRatio="none">
+                      <svg width="100%" height="100%" viewBox="0 0 300 200" preserveAspectRatio="none">
+                        {/* Background grid for better readability */}
+                        <rect x="0" y="0" width="300" height="200" fill="transparent" />
+                        
+                        {/* Grid lines */}
+                        <line x1="0" y1="100" x2="300" y2="100" stroke={colors.borderColor} strokeWidth="1" opacity="0.5" />
+                        <line x1="0" y1="75" x2="300" y2="75" stroke={colors.borderColor} strokeWidth="0.5" opacity="0.3" strokeDasharray="5,5" />
+                        <line x1="0" y1="125" x2="300" y2="125" stroke={colors.borderColor} strokeWidth="0.5" opacity="0.3" strokeDasharray="5,5" />
+                        <line x1="0" y1="50" x2="300" y2="50" stroke={colors.borderColor} strokeWidth="0.5" opacity="0.3" strokeDasharray="5,5" />
+                        <line x1="0" y1="150" x2="300" y2="150" stroke={colors.borderColor} strokeWidth="0.5" opacity="0.3" strokeDasharray="5,5" />
+                        
+                        {/* Axis labels */}
+                        <text x="10" y="50" fill={colors.secondaryText} fontSize="8">+</text>
+                        <text x="10" y="150" fill={colors.secondaryText} fontSize="8">-</text>
+                        
                         {simulationResults.monthlyData && simulationResults.monthlyData.map((month, index) => {
                           const months = simulationResults.monthlyData.length;
-                          const barWidth = 300 / months - 4; // 4px spacing between bars
+                          const barWidth = (300 / months) - 4; // 4px spacing between bars
                           const x = index * (300 / months) + 2; // 2px offset from left
                           
                           // Find max profit across all months for scaling
                           const profits = simulationResults.monthlyData.map(m => parseFloat(m.profit));
                           const maxProfit = Math.max(...profits.map(p => Math.abs(p)));
                           
-                          // Scale profit to bar height (max height 150px)
+                          // Scale profit to bar height (max height 80px from center)
                           const profitValue = parseFloat(month.profit);
-                          const height = Math.min(Math.abs(profitValue) / maxProfit * 150, 150);
+                          const height = Math.min(Math.abs(profitValue) / maxProfit * 80, 80);
                           
                           // Position bar - negative values go below centerline
                           const isPositive = profitValue >= 0;
-                          const y = isPositive ? 90 - height : 90;
+                          const y = isPositive ? 100 - height : 100;
                           
                           // Format month abbreviation
                           const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
@@ -1181,6 +1290,14 @@ const Trade = () => {
                           
                           return (
                             <g key={index}>
+                              {/* Bar with glow effect for emphasis */}
+                              <defs>
+                                <filter id={`glow-${index}`} x="-20%" y="-20%" width="140%" height="140%">
+                                  <feGaussianBlur stdDeviation="1" result="blur" />
+                                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                                </filter>
+                              </defs>
+                              
                               {/* Bar */}
                               <rect 
                                 x={x} 
@@ -1188,28 +1305,33 @@ const Trade = () => {
                                 width={barWidth} 
                                 height={height > 0 ? height : 1} // Minimum height of 1px
                                 fill={isPositive ? colors.buyGreen : colors.sellRed}
-                                rx={1} // Slightly rounded corners
+                                rx={2} // Rounded corners
+                                filter={`url(#glow-${index})`}
                               />
                               
-                              {/* Month label */}
-                              <text 
-                                x={x + barWidth/2} 
-                                y={175} 
-                                textAnchor="middle" 
-                                fontSize="8" 
-                                fill={colors.secondaryText}
-                              >
-                                {monthName}
-                              </text>
-                              
-                              {/* Profit label (only for bars tall enough) */}
-                              {height > 25 && (
+                              {/* Month label - only show some months if there are many */}
+                              {(months <= 12 || index % Math.ceil(months / 12) === 0 || index === months - 1) && (
                                 <text 
                                   x={x + barWidth/2} 
-                                  y={isPositive ? y + 10 : y + height - 5} 
+                                  y={185} 
                                   textAnchor="middle" 
-                                  fontSize="8" 
+                                  fontSize="9" 
+                                  fill={colors.secondaryText}
+                                  fontWeight="bold"
+                                >
+                                  {monthName}
+                                </text>
+                              )}
+                              
+                              {/* Profit label (only for bars tall enough) */}
+                              {height > 20 && (
+                                <text 
+                                  x={x + barWidth/2} 
+                                  y={isPositive ? y + 12 : y + height - 6} 
+                                  textAnchor="middle" 
+                                  fontSize="9" 
                                   fill="white"
+                                  fontWeight="bold"
                                 >
                                   ${Math.abs(profitValue).toFixed(0)}
                                 </text>
@@ -1217,9 +1339,6 @@ const Trade = () => {
                             </g>
                           );
                         })}
-                        
-                        {/* Center line for positive/negative separation */}
-                        <line x1="0" y1="90" x2="300" y2="90" stroke={colors.borderColor} strokeWidth="1" opacity="0.5" />
                       </svg>
                     </Box>
                     
@@ -1372,10 +1491,18 @@ const Trade = () => {
                         Symbols Distribution
                       </Typography>
                       
-                      {/* Dynamic Pie Chart for Symbol Distribution */}
+                      {/* Dynamic Pie Chart for Symbol Distribution - Improved */}
                       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <Box sx={{ width: '180px', height: '180px', position: 'relative' }}>
+                        <Box sx={{ width: '220px', height: '220px', position: 'relative' }}>
                           <svg width="100%" height="100%" viewBox="0 0 100 100">
+                            {/* Highlight glow for pie pieces */}
+                            <defs>
+                              <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                                <feGaussianBlur stdDeviation="1" result="blur" />
+                                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                              </filter>
+                            </defs>
+                            
                             {/* Generate pie chart from symbol data */}
                             {(() => {
                               if (!simulationResults.symbols || simulationResults.symbols.length === 0) return null;
@@ -1412,7 +1539,7 @@ const Trade = () => {
                                 currentAngle += angle;
                               });
                               
-                              // Generate SVG arcs
+                              // Generate SVG arcs with improved visual effects
                               return symbolsWithAngles.map((symbol, index) => {
                                 // Convert angles to radians for SVG arc
                                 const startAngle = symbol.startAngle * Math.PI / 180;
@@ -1437,38 +1564,75 @@ const Trade = () => {
                                   ? `M ${centerX} ${centerY} L ${startX} ${startY} L ${endX} ${endY} Z`
                                   : `M ${centerX} ${centerY} L ${startX} ${startY} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY} Z`;
                                 
-                                return <path key={index} d={path} fill={symbol.color} />;
+                                return (
+                                  <g key={index} filter="url(#glow)">
+                                    <path d={path} fill={symbol.color} />
+                                    {/* Label for large segments */}
+                                    {symbol.weight > 10 && (
+                                      <text
+                                        x={centerX + (radius * 0.6) * Math.cos((startAngle + endAngle) / 2)}
+                                        y={centerY + (radius * 0.6) * Math.sin((startAngle + endAngle) / 2)}
+                                        textAnchor="middle"
+                                        fontSize="8"
+                                        fill="white"
+                                        fontWeight="bold"
+                                      >
+                                        {symbol.weight > 15 ? `${Math.round(symbol.weight)}%` : ''}
+                                      </text>
+                                    )}
+                                  </g>
+                                );
                               });
                             })()}
                             
                             {/* Central circle (empty space) */}
                             <circle cx="50" cy="50" r="25" fill={colors.panelBg} />
+                            
+                            {/* Center text */}
+                            <text x="50" y="50" textAnchor="middle" fontSize="8" fill={colors.primaryText} fontWeight="bold">
+                              Currency
+                            </text>
+                            <text x="50" y="58" textAnchor="middle" fontSize="8" fill={colors.primaryText} fontWeight="bold">
+                              Distribution
+                            </text>
                           </svg>
                         </Box>
                         
-                        {/* Symbol Legend */}
+                        {/* Symbol Legend - Enhanced */}
                         <Box sx={{ flex: 1, ml: 3 }}>
                           {simulationResults.symbols && simulationResults.symbols.map((symbol, index) => (
-                            <Box key={index} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                            <Box 
+                              key={index} 
+                              sx={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                mb: 1.5,
+                                py: 0.5,
+                                px: 1,
+                                borderRadius: '4px',
+                                backgroundColor: index % 2 === 0 ? 'rgba(0,0,0,0.1)' : 'transparent'
+                              }}
+                            >
                               <Box 
                                 sx={{ 
-                                    width: 10, 
-                                    height: 10, 
-                                    borderRadius: '50%', 
+                                  width: 12, 
+                                  height: 12, 
+                                  borderRadius: '50%', 
                                   backgroundColor: [
                                     '#4caf50', '#2196f3', '#ff9800', '#e91e63', 
                                     '#9c27b0', '#ffeb3b', '#00bcd4'
                                   ][index % 7],
-                                  mr: 1 
+                                  mr: 1.5,
+                                  boxShadow: '0 0 3px rgba(255,255,255,0.5)'
                                 }} 
                               />
-                              <Typography variant="body2" sx={{ color: colors.primaryText, mr: 1 }}>
+                              <Typography variant="body2" sx={{ color: colors.primaryText, mr: 1, fontWeight: 'bold', flex: 1 }}>
                                 {symbol.symbol}
-                                  </Typography>
-                                <Typography variant="body2" sx={{ color: colors.secondaryText }}>
+                              </Typography>
+                              <Typography variant="body2" sx={{ color: colors.primaryText, fontWeight: 'bold', minWidth: '45px', textAlign: 'right' }}>
                                 {symbol.weight.toFixed(1)}%
-                                </Typography>
-                              </Box>
+                              </Typography>
+                            </Box>
                           ))}
                         </Box>
                       </Box>
@@ -1490,64 +1654,85 @@ const Trade = () => {
                           Symbols P/L
                         </Typography>
                       
-                      <Box sx={{ height: '180px', position: 'relative', mt: 1, mb: 2 }}>
-                        <svg width="100%" height="100%" viewBox="0 0 300 180" preserveAspectRatio="none">
+                      {/* Symbols P/L Chart - Enhanced */}
+                      <Box sx={{ height: '220px', position: 'relative', mt: 1, mb: 2 }}>
+                        <svg width="100%" height="100%" viewBox="0 0 300 220" preserveAspectRatio="none">
+                          {/* Background grid and axes for better readability */}
+                          <rect x="0" y="0" width="300" height="200" fill="transparent" />
+                          <line x1="0" y1="160" x2="300" y2="160" stroke={colors.borderColor} strokeWidth="1" />
+                          <line x1="0" y1="120" x2="300" y2="120" stroke={colors.borderColor} strokeWidth="0.5" opacity="0.3" strokeDasharray="5,5" />
+                          <line x1="0" y1="80" x2="300" y2="80" stroke={colors.borderColor} strokeWidth="0.5" opacity="0.3" strokeDasharray="5,5" />
+                          <line x1="0" y1="40" x2="300" y2="40" stroke={colors.borderColor} strokeWidth="0.5" opacity="0.3" strokeDasharray="5,5" />
+                          
                           {(() => {
                             if (!simulationResults.symbols || simulationResults.symbols.length === 0) return null;
                             
                             // Find the max P/L value for scaling
                             const maxPL = Math.max(...simulationResults.symbols.map(s => Math.abs(s.pl)));
-                            const barWidth = 300 / simulationResults.symbols.length - 10;
+                            const barWidth = 300 / simulationResults.symbols.length - 12; // More spacing
                             
                             return (
                               <>
-                                {/* Draw bars */}
+                                {/* Draw bars with enhanced styling */}
                                 {simulationResults.symbols.map((symbol, index) => {
-                                  const x = index * (300 / simulationResults.symbols.length) + 5;
+                                  const x = index * (300 / simulationResults.symbols.length) + 6;
                                   const barHeight = Math.min((Math.abs(symbol.pl) / maxPL) * 140, 140); // Max height 140
                                   const y = symbol.pl >= 0 ? 160 - barHeight : 160;
                                   
+                                  // Add defs for gradient fills
+                                  const gradientId = `barGradient-${index}`;
+                                  const isPositive = symbol.pl >= 0;
+                                  
                                   return (
                                     <g key={index}>
+                                      <defs>
+                                        <linearGradient id={gradientId} x1="0%" y1="0%" x2="0%" y2="100%">
+                                          <stop offset="0%" stopColor={isPositive ? colors.buyGreen : colors.sellRed} stopOpacity="1" />
+                                          <stop offset="100%" stopColor={isPositive ? colors.buyGreen : colors.sellRed} stopOpacity="0.7" />
+                                        </linearGradient>
+                                        <filter id={`barGlow-${index}`} x="-20%" y="-20%" width="140%" height="140%">
+                                          <feGaussianBlur stdDeviation="1" result="blur" />
+                                          <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                                        </filter>
+                                      </defs>
+                                      
                                       {/* Bar */}
                                       <rect 
                                         x={x} 
                                         y={y} 
                                         width={barWidth} 
                                         height={barHeight > 0 ? barHeight : 1}
-                                        fill={symbol.pl >= 0 ? colors.buyGreen : colors.sellRed}
-                                        rx={2}
+                                        fill={`url(#${gradientId})`}
+                                        rx={3} // More rounded corners
+                                        filter={`url(#barGlow-${index})`}
                                       />
                                       
                                       {/* Symbol label */}
                                       <text 
                                         x={x + barWidth/2} 
-                                        y={175} 
+                                        y={190} 
                                         textAnchor="middle" 
-                                        fontSize="8" 
-                                        fill={colors.secondaryText}
+                                        fontSize="10" 
+                                        fill={colors.primaryText}
+                                        fontWeight="bold"
                                       >
                                         {symbol.symbol}
                                       </text>
                                       
-                                      {/* P/L value (only for larger bars) */}
-                                      {barHeight > 25 && (
-                                        <text 
-                                          x={x + barWidth/2} 
-                                          y={symbol.pl >= 0 ? y + 15 : y + barHeight - 5} 
-                                          textAnchor="middle" 
-                                          fontSize="8" 
-                                          fill="white"
-                                        >
-                                          ${Math.abs(symbol.pl).toFixed(0)}
-                                        </text>
-                                      )}
+                                      {/* P/L value (for all bars, positioned better) */}
+                                      <text 
+                                        x={x + barWidth/2} 
+                                        y={isPositive ? y + Math.min(barHeight/2, 15) : y + barHeight/2} 
+                                        textAnchor="middle" 
+                                        fontSize="10" 
+                                        fill="white"
+                                        fontWeight="bold"
+                                      >
+                                        ${Math.abs(symbol.pl).toFixed(0)}
+                                      </text>
                                     </g>
-                            );
-                          })}
-                                
-                                {/* Base line */}
-                                <line x1="0" y1="160" x2="300" y2="160" stroke={colors.borderColor} strokeWidth="1" />
+                                  );
+                                })}
                               </>
                             );
                           })()}
@@ -1573,25 +1758,58 @@ const Trade = () => {
                       Insights
                     </Typography>
                     
-                    <Box sx={{ height: 140, width: 1180, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: '300px', overflow: 'auto' }}>
                       {simulationResults.insights.map((insight, index) => (
-                        <Typography key={index} variant="body2" sx={{ 
-                          color: colors.primaryText,
-                          pl: 2,
-                          borderLeft: `3px solid ${colors.accentBlue}`
-                        }}>
-                          {insight}
-                        </Typography>
+                        <Paper
+                          key={index}
+                          elevation={0}
+                          sx={{ 
+                            p: 2,
+                            backgroundColor: `${colors.cardBg}`,
+                            borderRadius: '8px',
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            borderLeft: `4px solid ${colors.accentBlue}`,
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                          }}
+                        >
+                          <Box sx={{ mr: 2, color: colors.accentBlue, mt: 0.5 }}>
+                            <BarChartIcon fontSize="small" />
+                          </Box>
+                          <Typography variant="body2" sx={{ 
+                            color: colors.primaryText,
+                            fontWeight: 'medium',
+                            lineHeight: 1.5
+                          }}>
+                            {insight}
+                          </Typography>
+                        </Paper>
                       ))}
                       
-                      <Typography variant="body2" sx={{ 
-                        color: colors.primaryText,
-                        pl: 2,
-                        borderLeft: `3px solid ${colors.profitGreen}`,
-                        mt: 1
-                      }}>
-                        Legacy with a copy ratio of 6 achieved the most profit of 69.24% Net P/L for the simulation amount and {simulationPeriod} selected.
-                      </Typography>
+                      {/* Last insight with different styling */}
+                      <Paper
+                        elevation={0}
+                        sx={{ 
+                          p: 2,
+                          backgroundColor: `${colors.cardBg}`,
+                          borderRadius: '8px',
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          borderLeft: `4px solid ${colors.profitGreen}`,
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                        }}
+                      >
+                        <Box sx={{ mr: 2, color: colors.profitGreen, mt: 0.5 }}>
+                          <TrendingUpIcon fontSize="small" />
+                        </Box>
+                        <Typography variant="body2" sx={{ 
+                          color: colors.primaryText,
+                          fontWeight: 'medium',
+                          lineHeight: 1.5
+                        }}>
+                          Legacy with a copy ratio of 6 achieved the most profit of 69.24% Net P/L for the simulation amount and {simulationPeriod} selected.
+                        </Typography>
+                      </Paper>
                     </Box>
                   </Paper>
                 </Grid>
