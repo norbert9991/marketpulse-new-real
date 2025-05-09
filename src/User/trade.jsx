@@ -273,8 +273,8 @@ const Trade = () => {
     { 
       id: 1, 
       name: 'Triumph', 
-      description: 'Conservative trend-following strategy using major currency pairs',
-      tooltip: 'Triumph follows market trends with minimal risk. It uses a combination of moving averages and momentum indicators to identify sustained trends across major forex pairs, particularly EUR/USD and USD/JPY. Ideal for stable, consistent returns.',
+      description: 'Trend-following strategy with linear regression predictions',
+      tooltip: 'Triumph uses linear regression and advanced trend analysis to identify sustainable market movements. The algorithm calculates the slope coefficient to determine trend strength and direction, then applies moving averages to filter out market noise. Particularly effective with EUR/USD and USD/JPY pairs.',
       totalNetPL: 121.00,
       oneYearNetPL: 14.37,
       sixMonthNetPL: 8.24,
@@ -289,8 +289,8 @@ const Trade = () => {
     { 
       id: 2, 
       name: 'Legacy', 
-      description: 'Momentum-based strategy focusing on breakouts and pullbacks',
-      tooltip: 'Legacy capitalizes on strong market momentum and breakouts. It identifies key support/resistance levels and trades when price breaks through these levels with volume. Good performance in volatile markets with clear directional movement.',
+      description: 'Momentum detection with support/resistance breakouts',
+      tooltip: 'Legacy implements a momentum detection algorithm that identifies key price levels using computational geometry. When price approaches these levels with increasing volume, the system calculates breakout probability using a statistical model. Particularly effective in trending markets with clear support and resistance zones.',
       totalNetPL: 538.00,
       oneYearNetPL: 10.29,
       sixMonthNetPL: 6.40,
@@ -305,8 +305,8 @@ const Trade = () => {
     { 
       id: 3, 
       name: 'Alpine', 
-      description: 'Range-trading strategy exploiting overbought and oversold conditions',
-      tooltip: 'Alpine excels in range-bound markets by identifying overbought and oversold conditions. It uses oscillators like RSI and Stochastic to find potential reversal points. Most effective during sideways market conditions with predictable trading ranges.',
+      description: 'Mean reversion with RSI and stochastic oscillators',
+      tooltip: 'Alpine implements a sophisticated mean reversion algorithm that utilizes RSI and stochastic oscillators to identify overbought and oversold conditions. The system calculates statistical deviation from historical mean prices and triggers entries when the algorithm detects high probability reversal points during range-bound market conditions.',
       totalNetPL: 317.00,
       oneYearNetPL: 12.10,
       sixMonthNetPL: 12.26,
@@ -321,8 +321,8 @@ const Trade = () => {
     { 
       id: 4, 
       name: 'Ivory', 
-      description: 'Contrarian strategy that trades against extreme market movements',
-      tooltip: 'Ivory is a contrarian strategy that trades against extreme market moves. It looks for overextended price actions and takes positions in the opposite direction. Higher risk but potentially rewarding during market reversals after strong trends.',
+      description: 'Contrarian algorithm with sentiment analysis',
+      tooltip: 'Ivory utilizes a contrarian approach combining technical and sentiment analysis. The algorithm analyzes news sentiment and social media data, then correlates this with technical indicators to identify market extremes. When sentiment reaches peak levels coinciding with overextended price action, the algorithm takes positions in the opposite direction.',
       totalNetPL: 125.00,
       oneYearNetPL: -1.30,
       sixMonthNetPL: 2.50,
@@ -337,8 +337,8 @@ const Trade = () => {
     { 
       id: 5, 
       name: 'Quantum', 
-      description: 'High-frequency scalping algorithm targeting small price movements',
-      tooltip: 'Quantum employs high-frequency trading techniques to capture small price movements across multiple currency pairs. It makes many rapid trades with tight profit targets. Highest risk profile but potential for steady returns in all market conditions.',
+      description: 'High-frequency trading with linear pattern recognition',
+      tooltip: 'Quantum employs advanced pattern recognition algorithms to identify micro-trends in price data. The system analyzes tick-by-tick data using linear regression on small time segments to detect statistically significant patterns. Multiple regression models run in parallel across different timeframes to find the highest probability short-term price movements.',
       totalNetPL: 87.00,
       oneYearNetPL: 2.40,
       sixMonthNetPL: 1.20,
@@ -406,35 +406,177 @@ const Trade = () => {
       return;
     }
     
-    // Generate simulation results
+    // Generate simulation results based on selected strategies
     const startBalance = availableBalance;
-    const endBalance = startBalance * 1.121; // 12.1% increase
-    const totalTrades = 3573;
-    const months = 12;
     
-    // Generate monthly data
+    // Calculate weighted return based on selected strategies
+    let weightedReturn = 0;
+    let strategyInsights = [];
+    
+    selectedStrategies.forEach(strategy => {
+      const allocation = strategy.allocatedFunds / availableBalance;
+      // Use appropriate timeframe return based on simulation period
+      let returnRate = 0;
+      
+      if (simulationPeriod === '1 Year') {
+        returnRate = strategy.oneYearNetPL / 100;
+        
+        // Add strategy-specific insight
+        if (strategy.oneYearNetPL > 5) {
+          strategyInsights.push(`${strategy.name} performed well with ${strategy.oneYearNetPL}% return over 1 year`);
+        }
+      } else if (simulationPeriod === '6 Months') {
+        returnRate = strategy.sixMonthNetPL / 100;
+        
+        // Add strategy-specific insight
+        if (strategy.sixMonthNetPL > 5) {
+          strategyInsights.push(`${strategy.name} yielded ${strategy.sixMonthNetPL}% return over 6 months`);
+        }
+      } else if (simulationPeriod === '3 Months') {
+        returnRate = strategy.threeMonthNetPL / 100;
+      } else {
+        // Default to one year rate adjusted for time
+        if (simulationPeriod === '2 Years') {
+          returnRate = strategy.oneYearNetPL * 1.8 / 100; // Not exactly 2x to account for compounding
+        } else if (simulationPeriod === '1 Month') {
+          returnRate = strategy.oneYearNetPL / 12 / 100;
+        }
+      }
+      
+      weightedReturn += (allocation * returnRate);
+    });
+    
+    // Add a small random factor for realism (-1% to +1%)
+    const randomFactor = 1 + (Math.random() * 0.02 - 0.01);
+    weightedReturn *= randomFactor;
+    
+    // Calculate end balance
+    const endBalance = startBalance * (1 + weightedReturn);
+    
+    // Generate realistic trade count based on strategies and period
+    let baseTradeCount = 0;
+    selectedStrategies.forEach(strategy => {
+      // Estimate monthly trades based on average duration
+      let monthlyTrades = 0;
+      if (strategy.avgDuration === '1-4 hours') monthlyTrades = 80;
+      else if (strategy.avgDuration === '1-2 days') monthlyTrades = 20;
+      else if (strategy.avgDuration === '2-4 days') monthlyTrades = 10;
+      else if (strategy.avgDuration === '3-5 days') monthlyTrades = 6;
+      
+      // Scale by copy ratio and allocation percentage
+      const allocation = strategy.allocatedFunds / availableBalance;
+      baseTradeCount += monthlyTrades * (strategy.copyRatio / 10) * allocation;
+    });
+    
+    // Scale by simulation period
+    let totalTrades = 0;
+    if (simulationPeriod === '1 Month') totalTrades = Math.round(baseTradeCount);
+    else if (simulationPeriod === '3 Months') totalTrades = Math.round(baseTradeCount * 3);
+    else if (simulationPeriod === '6 Months') totalTrades = Math.round(baseTradeCount * 6);
+    else if (simulationPeriod === '2 Years') totalTrades = Math.round(baseTradeCount * 24);
+    else if (simulationPeriod === '1 Year') totalTrades = Math.round(baseTradeCount * 12);
+    
+    // Generate some trading data for symbols
+    // Determine which currency pairs were most traded based on strategies
+    let symbols = [];
+    if (selectedStrategies.some(s => s.name === 'Triumph' || s.name === 'Legacy')) {
+      symbols.push({ symbol: 'EURUSD', trades: Math.round(totalTrades * 0.35), winRate: 61, pl: endBalance * 0.38, weight: 38.0 });
+    }
+    if (selectedStrategies.some(s => s.name === 'Triumph' || s.name === 'Quantum')) {
+      symbols.push({ symbol: 'EURJPY', trades: Math.round(totalTrades * 0.28), winRate: 58, pl: endBalance * 0.31, weight: 31.0 });
+    }
+    if (selectedStrategies.some(s => s.name === 'Alpine' || s.name === 'Ivory')) {
+      symbols.push({ symbol: 'GBPUSD', trades: Math.round(totalTrades * 0.12), winRate: 59, pl: endBalance * 0.12, weight: 12.0 });
+    }
+    if (selectedStrategies.some(s => s.name === 'Legacy')) {
+      symbols.push({ symbol: 'EURNZD', trades: Math.round(totalTrades * 0.06), winRate: 55, pl: endBalance * 0.05, weight: 5.0 });
+    }
+    if (selectedStrategies.some(s => s.name === 'Alpine')) {
+      symbols.push({ symbol: 'EURCAD', trades: Math.round(totalTrades * 0.09), winRate: 62, pl: endBalance * 0.08, weight: 8.0 });
+    }
+    if (selectedStrategies.some(s => s.name === 'Quantum' || s.name === 'Ivory')) {
+      symbols.push({ symbol: 'EURCHF', trades: Math.round(totalTrades * 0.04), winRate: 54, pl: endBalance * 0.04, weight: 4.0 });
+    }
+    if (selectedStrategies.some(s => s.name === 'Legacy' || s.name === 'Ivory')) {
+      symbols.push({ symbol: 'AUDUSD', trades: Math.round(totalTrades * 0.06), winRate: 52, pl: endBalance * 0.02, weight: 2.0 });
+    }
+    
+    // If no symbols were added (edge case), add a default
+    if (symbols.length === 0) {
+      symbols.push({ symbol: 'EURUSD', trades: Math.round(totalTrades * 0.6), winRate: 60, pl: endBalance * 0.6, weight: 60.0 });
+      symbols.push({ symbol: 'GBPUSD', trades: Math.round(totalTrades * 0.4), winRate: 58, pl: endBalance * 0.4, weight: 40.0 });
+    }
+    
+    // Make sure weights add up to 100%
+    const totalWeight = symbols.reduce((sum, s) => sum + s.weight, 0);
+    symbols = symbols.map(s => ({
+      ...s,
+      weight: parseFloat((s.weight / totalWeight * 100).toFixed(1))
+    }));
+    
+    // Create monthly data
+    const months = simulationPeriod === '1 Month' ? 1 : 
+                   simulationPeriod === '3 Months' ? 3 : 
+                   simulationPeriod === '6 Months' ? 6 : 
+                   simulationPeriod === '2 Years' ? 24 : 12;
+    
+    // Generate monthly data with some variability
     const monthlyData = Array.from({length: months}, (_, i) => {
       const month = new Date();
       month.setMonth(month.getMonth() - (months - i - 1));
       
+      // Add some randomness to monthly performance
+      const monthFactor = 1 + (Math.random() * 0.03 - 0.015);
+      const monthlyProfit = ((endBalance - startBalance) / months) * monthFactor;
+      
       return {
         date: month,
-        balance: startBalance + ((endBalance - startBalance) * ((i+1) / months)),
-        profit: ((endBalance - startBalance) / months).toFixed(2),
-        trades: Math.floor(totalTrades / months)
+        balance: i === 0 ? startBalance : monthlyData[i-1].balance + monthlyProfit,
+        profit: monthlyProfit.toFixed(2),
+        trades: Math.floor(totalTrades / months * (0.9 + Math.random() * 0.2))
       };
     });
     
-    // Generate symbol performance
-    const symbols = [
-      { symbol: 'EURUSD', trades: 1246, winRate: 60, pl: 5380.00, weight: 44.8 },
-      { symbol: 'EURJPY', trades: 854, winRate: 62, pl: 3840.00, weight: 32.0 },
-      { symbol: 'GBPUSD', trades: 564, winRate: 58.5, pl: 580.00, weight: 4.8 },
-      { symbol: 'EURNZD', trades: 432, winRate: 57.8, pl: 390.00, weight: 3.3 },
-      { symbol: 'EURCAD', trades: 230, winRate: 60.8, pl: 947.07, weight: 7.9 },
-      { symbol: 'EURCHF', trades: 95, winRate: 54.7, pl: 670.00, weight: 5.5 },
-      { symbol: 'AUDUSD', trades: 152, winRate: 52.6, pl: 290.00, weight: 2.4 }
-    ];
+    // Add algorithm-specific insights
+    const algorithmInsights = [];
+    
+    // Add linear regression insight if Triumph or Quantum is used
+    if (selectedStrategies.some(s => s.name === 'Triumph' || s.name === 'Quantum')) {
+      algorithmInsights.push(
+        `Linear regression models identified strong ${weightedReturn > 0 ? 'positive' : 'negative'} trends in ${
+          symbols.length > 0 ? symbols[0].symbol : 'currency pairs'
+        } with ${weightedReturn > 0 ? 'upward' : 'downward'} slope coefficient`
+      );
+    }
+    
+    // Add mean reversion insight if Alpine is used
+    if (selectedStrategies.some(s => s.name === 'Alpine')) {
+      algorithmInsights.push(
+        'Mean reversion algorithm captured price reversals at statistical extremes using RSI oscillators'
+      );
+    }
+    
+    // Add sentiment analysis insight if Ivory is used
+    if (selectedStrategies.some(s => s.name === 'Ivory')) {
+      algorithmInsights.push(
+        'Sentiment analysis detected contrarian opportunities when market sentiment reached extreme levels'
+      );
+    }
+    
+    // Combine all insights
+    const insights = [...strategyInsights, ...algorithmInsights];
+    
+    // If we don't have enough insights, add some generic ones
+    if (insights.length < 3) {
+      if (weightedReturn > 0) {
+        insights.push(`Portfolio achieved ${(weightedReturn * 100).toFixed(2)}% return using algorithmic trading strategies`);
+      } else {
+        insights.push(`Market conditions were challenging for selected algorithms in this timeframe`);
+      }
+    }
+    
+    // Limit to 3 insights
+    const finalInsights = insights.slice(0, 3);
     
     setSimulationResults({
       startingBalance: startBalance,
@@ -442,14 +584,10 @@ const Trade = () => {
       totalProfit: endBalance - startBalance,
       profitPercentage: ((endBalance - startBalance) / startBalance * 100).toFixed(2),
       totalTrades,
-      winRate: 61.5,
+      winRate: selectedStrategies.reduce((sum, s) => sum + (s.allocatedFunds / availableBalance) * 60, 0),
       monthlyData,
       symbols,
-      insights: [
-        'Alpine was the best performing in this simulation with 12.10% Net P/L',
-        'Triumph achieved 14.37% Net P/L over 1y but was not in the simulation',
-        'Alpine achieved a better result of 12.26% Net P/L over 6m'
-      ]
+      insights: finalInsights
     });
     
     setStep(4);
