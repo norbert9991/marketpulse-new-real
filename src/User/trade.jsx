@@ -521,7 +521,9 @@ const Trade = () => {
                    simulationPeriod === '2 Years' ? 24 : 12;
     
     // Generate monthly data with some variability
-    const monthlyData = Array.from({length: months}, (_, i) => {
+    const monthlyData = [];
+    
+    for (let i = 0; i < months; i++) {
       const month = new Date();
       month.setMonth(month.getMonth() - (months - i - 1));
       
@@ -529,13 +531,15 @@ const Trade = () => {
       const monthFactor = 1 + (Math.random() * 0.03 - 0.015);
       const monthlyProfit = ((endBalance - startBalance) / months) * monthFactor;
       
-      return {
+      const previousBalance = i === 0 ? startBalance : monthlyData[i-1].balance;
+      
+      monthlyData.push({
         date: month,
-        balance: i === 0 ? startBalance : monthlyData[i-1].balance + monthlyProfit,
+        balance: previousBalance + monthlyProfit,
         profit: monthlyProfit.toFixed(2),
         trades: Math.floor(totalTrades / months * (0.9 + Math.random() * 0.2))
-      };
-    });
+      });
+    }
     
     // Add algorithm-specific insights
     const algorithmInsights = [];
