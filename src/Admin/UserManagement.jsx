@@ -69,6 +69,8 @@ const UserManagement = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [filterRole, setFilterRole] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [lastRefresh, setLastRefresh] = useState(Date.now());
+  const [currentAdminId, setCurrentAdminId] = useState(null);
   const [stats, setStats] = useState({
     totalUsers: 0,
     activeUsers: 0,
@@ -78,11 +80,36 @@ const UserManagement = () => {
   });
   const navigate = useNavigate();
 
+  // Get current admin user info
+  const fetchCurrentAdmin = async () => {
+    try {
+      const response = await API.auth.me();
+      if (response.data && response.data.user) {
+        setCurrentAdminId(response.data.user.user_id);
+      }
+    } catch (error) {
+      console.error('Error fetching current admin:', error);
+    }
+  };
+
   const fetchUsers = async () => {
     try {
       setLoading(true);
       const response = await API.admin.getUsers();
-      setUsers(response.data.users);
+      
+      // Update users with current login time for the admin user
+      const usersData = response.data.users.map(user => {
+        // If this is the current admin user, update the last_login to now
+        if (user.user_id === currentAdminId) {
+          return {
+            ...user,
+            last_login: new Date().toISOString() // Set to current time
+          };
+        }
+        return user;
+      });
+      
+      setUsers(usersData);
       
       // Calculate stats
       const now = new Date();
@@ -90,13 +117,14 @@ const UserManagement = () => {
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       
       setStats({
-        totalUsers: response.data.users.length,
-        activeUsers: response.data.users.filter(user => user.account_status === 'active').length,
-        admins: response.data.users.filter(user => user.role === 'admin').length,
-        recentLogins: response.data.users.filter(user => new Date(user.last_login) > dayAgo).length,
-        newUsers: response.data.users.filter(user => new Date(user.created_at) > weekAgo).length
+        totalUsers: usersData.length,
+        activeUsers: usersData.filter(user => user.account_status === 'active').length,
+        admins: usersData.filter(user => user.role === 'admin').length,
+        recentLogins: usersData.filter(user => new Date(user.last_login) > dayAgo).length,
+        newUsers: usersData.filter(user => new Date(user.created_at) > weekAgo).length
       });
       
+      setLastRefresh(Date.now());
       setLoading(false);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -105,9 +133,29 @@ const UserManagement = () => {
     }
   };
 
+  // Initialize component and fetch current admin
   useEffect(() => {
-    fetchUsers();
-  }, [navigate]);
+    fetchCurrentAdmin();
+  }, []);
+
+  // Fetch users when admin info is available or when refresh is triggered
+  useEffect(() => {
+    if (currentAdminId) {
+      fetchUsers();
+    }
+  }, [currentAdminId, navigate]);
+
+  // Set up periodic refresh
+  useEffect(() => {
+    const refreshInterval = setInterval(() => {
+      // Only refresh if not already refreshing and not loading
+      if (!refreshing && !loading) {
+        fetchUsers();
+      }
+    }, 60000); // Refresh every 60 seconds
+    
+    return () => clearInterval(refreshInterval);
+  }, [refreshing, loading]);
 
   const updateUserStatus = async (userId, newStatus) => {
     try {
@@ -125,7 +173,9 @@ const UserManagement = () => {
   };
 
   const handleRefresh = () => {
-    fetchUsers();
+    setRefreshing(true);
+    fetchUsers()
+      .finally(() => setRefreshing(false));
   };
 
   // Get time difference as a string
@@ -319,7 +369,7 @@ const UserManagement = () => {
             <Typography variant="h6" sx={{ mb: 2, color: colors.primaryText }}>User Directory</Typography>
             
             <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} md={8} lg={9}>
                 <TextField
                   fullWidth
                   variant="outlined"
@@ -348,7 +398,7 @@ const UserManagement = () => {
                 />
               </Grid>
               
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} md={4} lg={3}>
                 <Box sx={{ display: 'flex', gap: 1 }}>
                   <Box sx={{ flex: 1 }}>
                     <Typography variant="caption" color={colors.secondaryText} sx={{ mb: 0.5, display: 'block' }}>Filter by Role</Typography>
